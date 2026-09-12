@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {defaults,metrics,sample,csv,sites}from'../lib/physiology.ts';
+test('PAT decomposes into PEP and PTT at every site',()=>{for(const site of Object.keys(sites)){const m=metrics({...defaults,site});assert.equal(m.pat,m.pep+m.ptt);assert.ok(m.ptt>0);}});
+test('distal finger arrival is later than radial wrist arrival',()=>{const wrist=metrics(defaults),finger=metrics({...defaults,site:'finger'});assert.ok(finger.pat>wrist.pat);assert.ok(Math.abs(finger.ptt-wrist.ptt-wrist.radialToFinger)<1e-9);});
+test('stiffening increases velocity and shortens transit',()=>{const soft=metrics({...defaults,stiffness:0}),stiff=metrics({...defaults,stiffness:100});assert.ok(stiff.pwv>soft.pwv);assert.ok(stiff.ptt<soft.ptt);});
+test('all signals remain finite at allowed parameter extremes',()=>{for(const motion of ['rest','walk','run'])for(const hr of [40,180])for(const rr of [6,40])for(const contact of [0,100]){const p={...defaults,motion,hr,rr,contact};for(let i=-100;i<500;i++)for(const v of Object.values(sample(i/37,p)))assert.ok(Number.isFinite(v));}});
+test('lung volume and capacitance respect modeled bounds and coupling',()=>{const p={...defaults,tidal:800};for(let i=0;i<1000;i++){const s=sample(i/100,p);assert.ok(s.RESP>=0&&s.RESP<=p.tidal);assert.equal(s.CAP,s.RESP*.004);}});
+test('CSV has exact rate, duration, signal agreement and site metadata',()=>{const p={...defaults,site:'ear'};const lines=csv(p,10,250,20).split('\n');assert.equal(lines.length,2501);const first=lines[1].split(',').map(Number),last=lines.at(-1).split(',').map(Number);assert.equal(first.length,10);assert.equal(first[0],20);assert.equal(last[0],29.996);assert.ok(Math.abs(first[2]-sample(20,p).PPG)<1e-5);assert.ok(Math.abs(first[7]-metrics(p).pat)<1e-5);});
