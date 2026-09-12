@@ -37,5 +37,7 @@ Original contributors / rights holders: Manuel Bastioni, Data Collection AB, Joe
 - https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html
 - https://creativecommons.org/publicdomain/zero/1.0/
 
-Used assets: caucasian-male-young, universal-male-young-maxmuscle-averageweight, idealproportions, bilateral eye-height targets, young_caucasian_male skin, high-poly eyes / brown_eye, short04 hair and eyebrow005.
+Used assets: caucasian-male-young, universal-male-young-maxmuscle-averageweight, idealproportions, bilateral eye-height targets, young_caucasian_male skin, high-poly eyes / brown_eye, short02 hair and eyebrow002.
 Modifications: adult male morph blending, anatomical landmark registration, relaxed limb pose, one subdivision level for body and eyes, removal of opaque corneal helper geometry, hair material tint, Draco-compressed GLB export. The resulting exterior is a visualization layer, not a patient-specific skin or tissue model. The skin asset is CC0, separate from the Z-Anatomy assets above.
+
+Portrait revision: face-local blend of adult male macro targets, oval contour, chin, eye, mouth and nose targets; rigid head position retained. Source materials and meshes remain CC0.

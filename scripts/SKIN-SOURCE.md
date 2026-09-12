@@ -23,7 +23,12 @@ Cache the following source files under `.asset-cache/makehuman/`, preserving pat
 From the official [MakeHuman system assets pack](https://files2.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip), extract these folders beneath `.asset-cache/mh-assets/`:
 
 - `skins/young_caucasian_male/`
-- `hair/short04/`
-- `eyebrows/eyebrow005/`
+- `hair/short02/`
+- `eyebrows/eyebrow002/`
 
 The source cache is excluded from version control; the exported model is self-contained and contains all four material textures. All inputs are CC0. See `public/models/ATTRIBUTION.md`.
+
+
+## Adult portrait revision
+
+The `portrait_targets` list in `build-skin.py` adds face-local adult facial morphs (oval contour, narrower/softer jaw, subtle eye and lip shaping). Download each listed `.target` from the same MakeHuman data source to `.asset-cache/makehuman/targets/`. The original body scale is retained; rigid head displacement from macro targets is removed before export. Body vertices below the face mask are unchanged. The hair uses `short02` and brows use `eyebrow002` from the same CC0 system asset pack.

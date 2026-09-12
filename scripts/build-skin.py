@@ -28,6 +28,38 @@ for target,weight in [('macrodetails/caucasian-male-young.target',1),('eyes/l-ey
         if len(t)==4 and not t[0].startswith('#'):base[int(t[0])]+=Vector(map(float,t[1:]))*weight
 body_indices={v for f,g in zip(faces,groups) if g=='body' for v in f}
 low=min(base[v].y for v in body_indices);high=max(base[v].y for v in body_indices);scale=1.72/(high-low)
+# Adult flower-boy portrait: local facial changes only. Keep the original body
+# normalization and all vertices below the neck untouched.
+def face_weight(y):
+    t=max(0,min(1,(y-5.95)/.65));return t*t*(3-2*t)
+face_mask=[face_weight(v.y) for v in base]
+portrait_reference=[v.copy() for v in base]
+portrait_targets=[
+    ('macrodetails/caucasian-male-young.target',-.72),
+    ('macrodetails/asian-male-young.target',.72),
+    ('head/head-oval.target',.22),
+    ('chin/chin-bones-decr.target',.30),
+    ('chin/chin-width-decr.target',.22),
+    ('chin/chin-height-decr.target',.12),
+    ('eyes/l-eye-scale-incr.target',.10),
+    ('eyes/r-eye-scale-incr.target',.10),
+    ('mouth/mouth-angles-up.target',.18),
+    ('mouth/mouth-upperlip-volume-incr.target',.16),
+    ('mouth/mouth-lowerlip-volume-incr.target',.12),
+    ('nose/nose-point-width-decr.target',.12),
+    ('nose/nose-hump-decr.target',.28),
+]
+for target,weight in portrait_targets:
+    for line in (MH/'targets'/target).read_text().splitlines():
+        t=line.split()
+        if len(t)==4 and not t[0].startswith('#'):
+            i=int(t[0]);base[i]+=Vector(map(float,t[1:]))*(weight*face_mask[i])
+
+# Macro ethnicity targets also carry a global stature offset. Remove the rigid
+# head displacement so facial styling cannot shorten the neck or shift sensors.
+head_ids={i for f,g in zip(faces,groups) if g=='joint-head' for i in f}
+head_delta=sum((portrait_reference[i]-base[i] for i in head_ids),Vector())/len(head_ids)
+for i,v in enumerate(base):v+=head_delta*face_mask[i]
 def joint(name):
     ids={v for f,g in zip(faces,groups) if g==name for v in f}
     return sum((base[i] for i in ids),Vector())/len(ids)
@@ -71,17 +103,17 @@ def conform(v):
 def material(name,texture,rough=.55,alpha=False):
     m=bpy.data.materials.new(name);m.use_nodes=True
     nodes=m.node_tree.nodes;p=nodes.get('Principled BSDF');p.inputs['Roughness'].default_value=rough
-    p.inputs['Metallic'].default_value=0;p.inputs['Specular IOR Level'].default_value=.12 if name=='Hair' else .3
+    p.inputs['Metallic'].default_value=0;p.inputs['Specular IOR Level'].default_value=.045 if name=='Hair' else .3
     tex=nodes.new('ShaderNodeTexImage');tex.image=bpy.data.images.load(str(texture));m.node_tree.links.new(tex.outputs['Color'],p.inputs['Base Color'])
     if alpha:m.node_tree.links.new(tex.outputs['Alpha'],p.inputs['Alpha']);m.surface_render_method='DITHERED'
     if name=='Hair':
-        mult=nodes.new('ShaderNodeMixRGB');mult.blend_type='MULTIPLY';mult.inputs[0].default_value=1;mult.inputs[2].default_value=(.16,.10,.065,1);m.node_tree.links.new(tex.outputs['Color'],mult.inputs[1]);m.node_tree.links.new(mult.outputs[0],p.inputs['Base Color'])
+        mult=nodes.new('ShaderNodeMixRGB');mult.blend_type='MULTIPLY';mult.inputs[0].default_value=1;mult.inputs[2].default_value=(.11,.075,.052,1);m.node_tree.links.new(tex.outputs['Color'],mult.inputs[1]);m.node_tree.links.new(mult.outputs[0],p.inputs['Base Color'])
     if name=='Skin':p.inputs['Subsurface Weight'].default_value=.07;p.inputs['Subsurface Radius'].default_value=(1,.4,.2)
     return m
 skinmat=material('Skin',ASSETS/'skins/young_caucasian_male/young_lightskinned_male_diffuse.png')
-hairmat=material('Hair',ASSETS/'hair/short04/short04_diffuse.png',.62,True)
+hairmat=material('Hair',ASSETS/'hair/short02/short02_diffuse.png',.82,True)
 eyemat=material('Eyes',MH/'eyes/materials/brown_eye.png',.25)
-browmat=material('Eyebrows',ASSETS/'eyebrows/eyebrow005/eyebrow005.png',.7,True)
+browmat=material('Eyebrows',ASSETS/'eyebrows/eyebrow002/eyebrow002.png',.7,True)
 def mesh_obj(name,verts,uvs,fs,ufs,mat,subdiv=0):
     used=sorted({i for f in fs for i in f});remap={v:i for i,v in enumerate(used)}
     mesh=bpy.data.meshes.new(name);mesh.from_pydata([conform(verts[i]) for i in used],[],[[remap[i]for i in f]for f in fs]);mesh.update()
@@ -117,8 +149,8 @@ def fitted_asset(folder,name,mat,subdiv=0):
     assert len(out)==len(verts),(name,len(out),len(verts))
     return mesh_obj(name,out,uvs,fs,ufs,mat,subdiv)
 fitted_asset(MH/'eyes/high-poly','high-poly',eyemat,1)
-fitted_asset(ASSETS/'hair/short04','short04',hairmat)
-fitted_asset(ASSETS/'eyebrows/eyebrow005','eyebrow005',browmat)
+fitted_asset(ASSETS/'hair/short02','short02',hairmat)
+fitted_asset(ASSETS/'eyebrows/eyebrow002','eyebrow002',browmat)
 # All four meshes share the atlas coordinates, so the runtime's existing deformation remains aligned.
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.export_scene.gltf(filepath=str(ROOT/'public/models/skin-web.glb'),export_format='GLB',use_selection=True,export_draco_mesh_compression_enable=True,export_draco_mesh_compression_level=6,export_image_format='AUTO')
