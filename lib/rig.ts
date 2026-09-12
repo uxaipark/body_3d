@@ -143,23 +143,25 @@ export class HumanRig {
    }
    p.updateMatrixWorld(true);
    // Stabilize the gaze in world space: cancelling only a local neck roll
-   // would still inherit the captured chest lean. Retain pitch/yaw and bob.
+   // would still inherit the captured chest lean. Walking keeps level gaze;
+   // running retains captured pitch. Both retain yaw and vertical body motion.
    const level=new THREE.Euler(0,0,0,'YXZ');
    const neck=this.bone('neck'),head=this.bone('head');
    neck.getWorldQuaternion(qa);head.getWorldQuaternion(qc);
    for(const [bone,world]of [[neck,qa],[head,qc]]as const){
-     level.setFromQuaternion(world,'YXZ');level.z=0;world.setFromEuler(level);
+     level.setFromQuaternion(world,'YXZ');level.z=0;level.x*=run;world.setFromEuler(level);
      bone.quaternion.copy(bone.parent!.getWorldQuaternion(qb).invert()).multiply(world);
      bone.updateMatrixWorld(true);
    }
    // Blending different captured poses can put a sole slightly below the floor.
    // Correct the common root, preserving bone lengths and captured flight.
-   let floor=0;
+   let floor=Infinity;
    for(const side of ['l','r']){
      const foot=this.bone(`foot.${side}`),q=foot.getWorldQuaternion(qb),ankle=foot.getWorldPosition(new THREE.Vector3());
      for(const sole of [new THREE.Vector3(0,-.073,-.055),new THREE.Vector3(0,-.073,.145)])floor=Math.min(floor,sole.applyQuaternion(q).add(ankle).y);
    }
-   p.position.y-=floor;p.updateMatrixWorld(true);this.updatePalette();
+   // Walking always has a supporting foot; retain captured flight only for running.
+   p.position.y-=floor<0?floor:floor*(1-run);p.updateMatrixWorld(true);this.updatePalette();
  }
  updatePalette(){
    this.skeleton.update();const matrix=new THREE.Matrix4(),q=new THREE.Quaternion(),t=new THREE.Vector3(),scale=new THREE.Vector3();

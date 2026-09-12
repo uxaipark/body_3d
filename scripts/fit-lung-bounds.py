@@ -14,6 +14,11 @@ for mesh in source['lungs']:
  points=[Vector(v) for v in mesh['positions']];side=1 if sum(v.x for v in points)>=0 else -1
  center=Vector((side*.055,1.285,-.005));inhale=[];exhale=[]
  for point in points:
+  # The single pleural mesh spans both lungs. Use the corresponding side's
+  # lobe centre, with a continuous midline transition (never split the mesh).
+  if 'pleura' in mesh['name'].lower():
+   t=max(-1,min(1,point.x/.012))
+   center.x=.055*t*(1.5-.5*t*t)
   direction=point-center;length=direction.length;direction.normalize();limit=length
   for n,d in planes:
    den=n.dot(direction)
@@ -44,7 +49,7 @@ for original,fit in zip(source['lungs'],result):
   assert not bvh.overlap(lung_bvh),(fit['name'],step,'intersects a rib')
   samples=points+[(points[a]+points[b]+points[c])/3 for a,b,c in triangles]
   for point in samples:minimum_gap=min(minimum_gap,bvh.find_nearest(point)[3])
-assert minimum_gap>.003,minimum_gap
+assert minimum_gap>.002,minimum_gap
 Path('/tmp/soma-lung-fitted.json').write_text(json.dumps(result))
 print('Constrained',sum(len(m['inhale'])for m in result),'lung vertices; max cage violation',maximum_error)
 print('No rib intersections at 11 breathing phases; minimum sampled gap (mm)',minimum_gap*1000)

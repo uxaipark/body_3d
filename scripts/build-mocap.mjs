@@ -15,7 +15,7 @@ function frame(up,lateral){
  return Q().setFromRotationMatrix(new T.Matrix4().makeBasis(x,y,z));
 }
 const output={};
-for(const [mode,id,start,end]of [['walk','07_01',60,192],['run','09_01',8,94]]){
+for(const [mode,id,start,end]of [['walk','35_01',144,278],['run','09_01',8,94]]){
  const raw=fs.readFileSync(`.asset-cache/mocap/${id}.bvh`,'utf8');
  const {skeleton,clip}=new BVHLoader().parse(raw),src=skeleton.bones[0],mixer=new T.AnimationMixer(src);mixer.clipAction(clip).play();
  const sb=Object.fromEntries(skeleton.bones.filter(b=>b.name!=='ENDSITE').map(b=>[b.name,b]));
@@ -105,12 +105,23 @@ for(const [mode,id,start,end]of [['walk','07_01',60,192],['run','09_01',8,94]]){
   }
   return out;
  };
- const duration=period/120,n=Math.round(duration*60),data=[];
+ const duration=period/120,n=mode==='walk'?2*Math.round(duration*30):Math.round(duration*60),data=[];
  for(let i=0;i<n;i++){const f=sample(i/n);data.push([...f.position,...f.quaternions.flat()].map(v=>+v.toFixed(7)));}
  // Symmetric filtering removes capture/retargeting chatter without delaying
  // footfalls. Shorter running window preserves the faster impact/flight rhythm.
  const smoothingSeconds=mode==='walk'?.050:.040;
- const filtered=smoothCapture(data,duration,smoothingSeconds).map(f=>f.map(v=>+v.toFixed(7)));
+ // Balance the retargeted sides using the opposite captured half-stride.
+ // A YZ reflection maps q=(x,y,z,w) to (x,-y,-z,w). An even sample count
+ // keeps the half-cycle exact and prevents unequal support times/limping.
+ const balanced=mode==='walk'?data.map((f,i)=>{
+  const other=data[(i+n/2)%n],out=[(f[0]-other[0])/2,(f[1]+other[1])/2,(f[2]+other[2])/2];
+  BONE_NAMES.forEach((name,j)=>{
+   const opposite=name.endsWith('.l')?name.replace('.l','.r'):name.endsWith('.r')?name.replace('.r','.l'):name;
+   const q=Q().fromArray(other,3+BONE_NAMES.indexOf(opposite)*4);q.y*=-1;q.z*=-1;
+   out.push(...Q().fromArray(f,3+j*4).slerp(q,.5).toArray());
+  });return out;
+ }):data;
+ const filtered=smoothCapture(balanced,duration,smoothingSeconds).map(f=>f.map(v=>+v.toFixed(7)));
  output[mode]={source:`CMU ${id}`,sha256:crypto.createHash('sha256').update(raw).digest('hex'),sourceFrames:[start,end],duration,smoothingSeconds,frames:filtered};
  console.log(mode,'frames',n,'duration',duration,'height',Math.min(...data.map(f=>f[1])),Math.max(...data.map(f=>f[1])));
  rig.dispose();mixer.stopAllAction();mixer.uncacheRoot(src);

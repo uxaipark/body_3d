@@ -32,3 +32,7 @@ The source cache is excluded from version control; the exported model is self-co
 ## Restored initial portrait
 
 The exterior uses the initial Western adult male morph, photographic skin texture, `short04` hair and `eyebrow005` brows. Later face-local morphs, sculpted cinematic hair and solid skin materials are no longer applied. The GLB and its build script are restored byte-for-byte from the first exterior revision (3141ddb). Current runtime joint animation and organ binding remain separate from this restored asset. All source inputs above are CC0.
+
+## Skeletal registration
+
+The restored source GLB stays unchanged. `lib/skin-registration.js` registers all exterior meshes at load time, before rig weights are assigned: cranial centre and eye level, both limb axes, and paired-bone wrist/ankle envelopes. Source landmarks are measured after the original MakeHuman repose; target centres come from the visible atlas bone cross-sections. Eyes, eyebrows, hair and the body share the same smooth field. The central perineum keeps a single pelvis anchor. This is template registration, not subject-specific tissue reconstruction.

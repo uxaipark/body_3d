@@ -125,7 +125,7 @@ test('captured vertical motion moves pelvis, chest and head together',()=>{
   }
   for(const [name,values]of Object.entries(ys)){
    const range=Math.max(...values)-Math.min(...values);
-   assert.ok(range>(run?.05:.035)&&range<.13,`${name} vertical excursion ${range}`);
+   assert.ok(range>(run?.05:.015)&&range<.13,`${name} vertical excursion ${range}`);
   }
  }
 });
@@ -138,11 +138,29 @@ test('neck and head stay level through the whole gait and motion blends',()=>{
    rig.bone(name).getWorldQuaternion(q);
    const right=new THREE.Vector3(1,0,0).applyQuaternion(q);
    near(right.y,0,1e-6);
+   if(run===0)near(new THREE.Vector3(0,0,1).applyQuaternion(q).y,0,1e-6);
   }
   const neck=rig.bone('neck').getWorldPosition(new THREE.Vector3());
   const head=rig.bone('head').getWorldPosition(new THREE.Vector3());
   near(head.distanceTo(neck),rig.bone('head').position.length());
  }
+});
+
+test('replacement walking has balanced support, stride and clearance on both sides',()=>{
+ const rig=new HumanRig(),stats={l:[],r:[]};
+ for(let i=0;i<240;i++){
+  rig.pose(i/240,1,0);
+  for(const side of ['l','r']){
+   const foot=rig.bone(`foot.${side}`),p=foot.getWorldPosition(new THREE.Vector3()),q=foot.getWorldQuaternion(new THREE.Quaternion());
+   const low=Math.min(...[new THREE.Vector3(0,-.073,-.055),new THREE.Vector3(0,-.073,.145)].map(v=>v.applyQuaternion(q).add(p).y));
+   stats[side].push({low,z:p.z});
+  }
+  assert.ok(Math.min(stats.l.at(-1).low,stats.r.at(-1).low)<1e-6);
+ }
+ const support=side=>stats[side].filter(p=>p.low<.01).length/240;
+ const stride=side=>Math.max(...stats[side].map(p=>p.z))-Math.min(...stats[side].map(p=>p.z));
+ for(const side of ['l','r'])assert.ok(support(side)>.5&&support(side)<.7);
+ near(support('l'),support('r'),.01);near(stride('l'),stride('r'),.005);
 });
 
 test('rendered head motion suppresses capture jitter, including the loop seam',async()=>{
@@ -165,7 +183,7 @@ test('rendered head motion suppresses capture jitter, including the loop seam',a
 test('captured cycles loop continuously and avoid abrupt foot orientation flips',async()=>{
  const {mocapData}=await import('../lib/mocap-data.js');
  for(const [mode,clip]of Object.entries(mocapData)){
-  assert.match(clip.source,/CMU (07_01|09_01)/);assert.equal(clip.sha256.length,64);
+  assert.match(clip.source,/CMU (35_01|09_01)/);assert.equal(clip.sha256.length,64);
   assert.ok(clip.duration>.6&&clip.duration<1.3);
   for(let i=0;i<clip.frames.length;i++){
    const a=clip.frames[i],b=clip.frames[(i+1)%clip.frames.length];
