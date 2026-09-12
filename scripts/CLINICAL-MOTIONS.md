@@ -76,7 +76,7 @@ is inferred from it.
 
 ## Comfort display
 
-The top-bar circular switch is off by default and independent of sensor parameters.
+The top-bar circular switch is on by default and independent of sensor parameters.
 It hides named genital organ meshes and applies a local rest-space display mask
 while preserving surrounding limbs/abdomen. No replacement cover or genital proxy is rendered. Original assets,
 physiology and exports are unchanged. The mode also remains stable during pause.

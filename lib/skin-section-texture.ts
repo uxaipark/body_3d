@@ -3,14 +3,14 @@ import {tissueBoundary,type SectionProfile} from './skin-section-model';
 /** Rest-space histology illustration. Generated once, then deformed on the GPU
  * with the volumetric section; microstructures never float over moving layers. */
 export function makeSectionTexture(p:SectionProfile){
- const canvas=document.createElement('canvas'),scale=2048/p.width,height=p.total+.16;
+ const canvas=document.createElement('canvas'),scale=2048/24,height=p.total+.16;
  canvas.width=2048;canvas.height=Math.ceil(height*scale);
- const c=canvas.getContext('2d')!;c.scale(scale,scale);c.translate(p.width/2,.08);
+ const c=canvas.getContext('2d')!;c.scale(scale,scale);c.translate(12,.08);
  let seed=90217;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return(seed+.5)/4294967296;};
  const band=(a:number,b:number)=>{c.beginPath();for(let i=0;i<=240;i++){const x=-12+i*.1;i?c.lineTo(x,tissueBoundary(x,a,p)):c.moveTo(x,tissueBoundary(x,a,p));}for(let i=240;i>=0;i--){const x=-12+i*.1;c.lineTo(x,tissueBoundary(x,b,p));}c.closePath();};
  const ellipse=(x:number,y:number,rx:number,ry:number,color:string,angle=0)=>{c.beginPath();c.ellipse(x,y,rx,ry,angle,0,Math.PI*2);c.fillStyle=color;c.fill();};
  const stroke=(color:string,width:number,points:[number,number][])=>{c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.strokeStyle=color;c.lineWidth=width;c.lineCap='round';c.stroke();};
- const colors=['#e6c3a7','#ba827d','#d59b9a','#b9767b','#c7a361','#856c73'];
+ const colors=['#e6c3a7','#ba827d','#d59b9a','#b9767b','#c7a361',p.regionId==='ear'?'#c7a361':'#82717c'];
  for(let layer=0;layer<6;layer++){band(layer,layer+1);c.fillStyle=colors[layer];c.fill();}
 
  // Adipose lobules: irregular Voronoi territories, fibrous septa, and smaller

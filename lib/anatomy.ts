@@ -30,7 +30,7 @@ export class AnatomyScene{
  root=new THREE.Group();chair=new THREE.Group();bedGroup=new THREE.Group();bedLoad={value:0};draco=new DRACOLoader();params:Parameters;layers:Layers;time=0;running=true;rotate=false;disposed=false;
  frame=0;last=0;lastStats=0;frameCount=0;slowFrames=0;resizeObserver:ResizeObserver;raycaster=new THREE.Raycaster();pointerDown=[0,0];
  rig=new HumanRig();skinRig=new HumanRig();softBody=new SoftBody();
- comfortMode=false;comfortUniform={value:0};
+ comfortMode=true;comfortUniform={value:1};
  skinInspection=false;skinMarkers=new Map<string,THREE.Mesh>();
  cardiacCycles=0;selectedSites=new Set<Site>();
  uniforms={uResp:{value:0},uLungInflation:{value:0},uBeat:{value:0},uCardiacCycles:{value:0},uHeartRate:{value:72},uPWV:{value:6.8},uDistension:{value:.019},uPulseGain:{value:1}};
