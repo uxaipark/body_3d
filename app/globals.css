@@ -97,6 +97,56 @@ body {
 @media(min-width:621px) and (max-width:900px){.work-area{--left-panel-width:220px;grid-template-columns:var(--left-panel-width) minmax(240px,1fr)}.right-panel .signal-section{grid-column:2;grid-row:2/8;margin:0;border:0;padding:0}.right-panel.collapsed{display:block;grid-column:1/-1}.right-panel.collapsed>.panel-collapse-header{justify-content:space-between}.right-panel.collapsed>.panel-collapse-header>span{display:block}}
 @media(max-width:620px){.panel.collapsed>.panel-collapse-header{justify-content:space-between;padding:4px 10px}.panel.collapsed>.panel-collapse-header>span{display:block}.right-panel .signal-section{margin-top:20px;border-top:1px solid #2c3840;padding-top:20px}}
 .immersive .work-area{grid-template-columns:1fr}
+
+/* Compact sensor workspace, with the selected modality owning its controls. */
+.right-panel{display:flex;flex-direction:column;padding:0;gap:0}
+.right-panel>.panel-collapse-header{position:sticky;top:0;z-index:3;flex-shrink:0;min-height:38px;margin:0;padding:3px 10px 3px 13px;background:#151d23;border-bottom:1px solid #2b363e;border-radius:8px 8px 0 0}
+.right-panel>#sensor-panel-content{display:block;padding:10px 12px 13px}
+.right-panel .sensor-header{margin-bottom:8px}
+.right-panel .site-picker{gap:5px}
+.right-panel .site-picker .site-option{justify-content:flex-start;gap:7px;min-height:32px;padding:5px 7px;font-size:13px;text-align:left}
+.sensor-round-switch{width:16px;height:16px;flex:0 0 16px;border-radius:50%;border:1px solid #6f8780;display:grid;place-items:center;background:#101a17;transition:background .15s,border-color .15s}
+.sensor-round-switch:after{content:'';width:8px;height:8px;border-radius:50%;background:#d0f3e3;transform:scale(0);transition:transform .15s}
+.site-option[aria-checked=true] .sensor-round-switch{background:#3f7660;border-color:#b4e8d0}
+.site-option[aria-checked=true] .sensor-round-switch:after{transform:scale(1)}
+.site-option:focus-visible{outline:2px solid #b4e8d0;outline-offset:2px}
+.right-panel .sensor-detail{margin-top:7px;min-height:20px;font-size:11px}
+.right-panel .sensor-legend{gap:4px;margin-top:6px}
+.right-panel .sensor-legend button{padding:4px 6px}
+.right-panel .signal-section{margin-top:12px;padding-top:12px;border-top:1px solid #2c3840}
+.right-panel .channel-tabs{margin-top:8px;height:32px!important}
+.right-panel .modality-content{min-width:0}
+.right-panel .signal-heading{margin:8px 0}
+.right-panel .time-axis{margin:5px 0 8px}
+.right-panel .modality-settings{margin-top:12px;padding-top:12px;border-top:1px solid #2c3840}
+.right-panel .wavelengths{margin-top:8px;gap:5px}
+.right-panel .wavelengths button{padding:7px 6px}
+.right-panel .parameter{margin-top:13px}
+.right-panel .parameter>div:first-child{margin-bottom:7px;font-size:13px}
+.right-panel .modality-note{margin:10px 0 0}
+.right-panel .timing-card{margin-top:13px;padding:10px}
+.right-panel .sensor-timing-table{margin:8px 0}
+.right-panel .sensor-timing-table th,.right-panel .sensor-timing-table td{padding:5px 2px}
+.right-panel.collapsed>.panel-collapse-header{position:static;padding:0;border:0;justify-content:center}
+.motion-dock{display:flex;align-items:center;gap:12px;flex-shrink:0;min-height:38px;margin:8px 20px 0;color:#bacdc5}
+.motion-dock>span{font-size:13px}.motion-dock>small{font-size:11px;color:#7b958a}
+.motion-dock .motion-tabs{width:210px!important;margin:0;height:32px!important}
+.motion-dock+.bottom-strip{margin-top:6px}
+@media(max-width:400px){.motion-dock>small{display:none}}
+@media(max-width:1150px){.motion-dock{margin-left:12px;margin-right:12px}}
+@media(min-width:621px) and (max-width:900px){
+ .right-panel>#sensor-panel-content{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:12px}
+ .right-panel .sensor-sites{grid-column:1}
+ .right-panel .signal-section{grid-column:2;grid-row:1;margin:0;padding:0;border:0}
+ .right-panel.collapsed>.panel-collapse-header{justify-content:space-between}
+}
+@media(max-width:620px){
+ .right-panel>.panel-collapse-header{padding:3px 10px 3px 13px}
+ .right-panel .signal-section{margin-top:12px;padding-top:12px}
+ .right-panel.collapsed>.panel-collapse-header{justify-content:space-between;padding:3px 8px}
+ .motion-dock{gap:8px;margin:10px 10px 0}.motion-dock>small{margin-left:auto;font-size:10px}
+ .motion-dock .motion-tabs{width:180px!important}
+}
 .skin-region-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}.skin-region-list button{background:#192e29;border:1px solid #35584c;border-radius:5px;padding:8px 5px;color:#b6dacd;font-size:12px;text-align:left}
 .skin-section-dialog{width:min(1080px,96vw)!important;max-width:min(1080px,96vw)!important;max-height:94dvh;overflow:auto;padding:24px!important;background:#131e26;gap:13px!important}.section-chip{display:inline-block;font-size:12px;padding:4px 8px;background:#284337;border:1px solid #466657;color:#bedfce;border-radius:4px;margin-left:8px;font-weight:400}.section-tools{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.section-tools>label{display:flex;align-items:center;gap:9px;font-size:13px;color:#bbcec8}.section-play{display:flex;align-items:center;gap:6px;border:1px solid #405d52;background:#223d32;color:#c3e6d5;border-radius:5px;padding:7px 11px;font-size:13px}.section-drive{display:flex;align-items:center;gap:7px;margin-left:auto;color:#8bc7b0;font-size:13px}.section-canvas{display:block;width:100%;height:470px;border:1px solid #31494e;border-radius:8px}.section-hud{min-height:20px;font-size:13px;font-variant-numeric:tabular-nums;color:#bed6cb;line-height:1.6}.section-controls{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:23px;align-items:start}.section-controls>label>span{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:#a5bec1;margin-bottom:13px}.section-controls strong{font-weight:500;color:#d3e8db}.section-note{display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:1.7;color:#8fa7ae;margin:3px 0}.section-note svg{flex-shrink:0;margin-top:3px}
 @media(max-width:700px){.skin-section-dialog{padding:18px!important}.section-canvas{height:390px}.section-controls{grid-template-columns:1fr 1fr;gap:20px}.section-tools{gap:9px}.section-drive{margin-left:0}.section-hud{font-size:12px}.section-controls [data-slot=tabs-trigger]{padding:3px 5px;font-size:11px}}

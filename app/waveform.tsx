@@ -3,7 +3,7 @@ import {useEffect,useRef,type MutableRefObject}from'react';
 import {sample,sensorColors,type Site,type Channel,type Parameters}from'@/lib/physiology';
 import type{AnatomyScene}from'@/lib/anatomy';
 const settings:Record<Channel,{color:string;min:number;max:number}>={ECG:{color:'#a4e4d0',min:-.4,max:1.3},PPG:{color:'#e5b886',min:-.2,max:1.5},EEG:{color:'#b4a2e0',min:-40,max:40},EMG:{color:'#e5a2a5',min:-.6,max:.6},RESP:{color:'#88b8df',min:0,max:1000},CAP:{color:'#8fcabd',min:0,max:4}};
-export default function Waveform({channel,params,selectedSites,sceneRef,windowSeconds=5}:{channel:Channel;params:Parameters;selectedSites:Site[];sceneRef:MutableRefObject<AnatomyScene|null>;windowSeconds?:number}){
+export default function Waveform({channel,params,selectedSites,sceneRef,windowSeconds=5,displayGain=1}:{channel:Channel;params:Parameters;selectedSites:Site[];sceneRef:MutableRefObject<AnatomyScene|null>;windowSeconds?:number;displayGain?:number}){
  const canvas=useRef<HTMLCanvasElement>(null);const pref=useRef(params);pref.current=params;const selectedRef=useRef(selectedSites);selectedRef.current=selectedSites;
  useEffect(()=>{const el=canvas.current!;const ctx=el.getContext('2d')!;let id=0,last=0;const draw=(now:number)=>{id=requestAnimationFrame(draw);if(now-last<32||document.hidden)return;last=now;
  const w=el.clientWidth,h=el.clientHeight;if(w<1||h<1)return;const dpr=Math.min(devicePixelRatio,2);if(el.width!==Math.round(w*dpr)||el.height!==Math.round(h*dpr)){el.width=Math.round(w*dpr);el.height=Math.round(h*dpr);}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
@@ -14,7 +14,7 @@ export default function Waveform({channel,params,selectedSites,sceneRef,windowSe
  for(const site of traces){
   const parameters={...pref.current,site};ctx.beginPath();ctx.strokeStyle=channel==='PPG'?sensorColors[site]:s.color;ctx.lineWidth=1.6;ctx.lineJoin='round';
   const points=channel==='EEG'||channel==='EMG'?Math.ceil(w*2):Math.ceil(w);
-  for(let i=0;i<=points;i++){const x=i*w/points;const t=end-windowSeconds+i/points*windowSeconds;const v=sample(t,parameters)[channel];const y=h-8-(v-s.min)/(s.max-s.min)*(h-16);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.fillStyle=ctx.strokeStyle;const val=sample(end,parameters)[channel];ctx.beginPath();ctx.arc(w-2,h-8-(val-s.min)/(s.max-s.min)*(h-16),2.5,0,Math.PI*2);ctx.fill();}
- };id=requestAnimationFrame(draw);return()=>cancelAnimationFrame(id);},[channel,windowSeconds]);
+  for(let i=0;i<=points;i++){const x=i*w/points;const t=end-windowSeconds+i/points*windowSeconds;const v=sample(t,parameters)[channel]*displayGain;const y=h-8-(v-s.min)/(s.max-s.min)*(h-16);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.fillStyle=ctx.strokeStyle;const val=sample(end,parameters)[channel]*displayGain;ctx.beginPath();ctx.arc(w-2,h-8-(val-s.min)/(s.max-s.min)*(h-16),2.5,0,Math.PI*2);ctx.fill();}
+ };id=requestAnimationFrame(draw);return()=>cancelAnimationFrame(id);},[channel,windowSeconds,displayGain]);
  return <canvas ref={canvas} className="wave-canvas" aria-label={`${channel} 합성 생체신호, 최근 ${windowSeconds}초`}/>;
 }
