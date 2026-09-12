@@ -46,24 +46,38 @@ actual native sole clearance, fitted hand edge stretch and CSV/signal timing.
 
 ## Bed transfer
 
-`lie` is a one-shot, 21-second authored sequence: 2 s seated preparation,
-1 s seated hold, feet lift before recline (3–7 s), stable supine posture
-(7–17 s), and reverse transfer to sitting (17–21 s). Physiological breathing
-continues during the hold. The existing pause, replay, task stage and CSV clock
-also apply. No sleep stage, orthostatic circulation or blood-pressure response
-is inferred from the animation.
+`lie` now starts beside the left long edge at the midpoint of the bed. The body
+faces outward, sits at that edge (0–2 s), prepares the right supporting hand,
+then lowers sideways toward the head end with bent knees (3–7.2 s). The legs
+extend along the bed (7–9.5 s), followed by a longitudinal roll onto the back
+(9.5–12 s). Both legs and the upper body settle, and the final supine posture
+holds indefinitely from 13 s while physiological breathing continues. Replay
+restarts the sequence; there is no automatic seated return.
 
-A stationary bed uses the same height field for its rendered mattress and
-support constraints, including a shallow head rest and 2–8 mm illustrative
-load-dependent mattress depressions. Two-link leg IK changes its knee pole
-from forward to upward during transfer. Skin, skeleton and sensors use the
-same final pose. Heel contact is solved separately from torso contact using
-the actual dual-quaternion exterior, so a low heel does not lift the torso.
-Hands rest over the abdomen in the supine pose.
+The right arm reaches a support target using two-link IK. Hip translation,
+lateral trunk lowering, leg lift, leg extension and longitudinal roll have
+separate smooth phases. Full extension adjusts ankle reach to current hip
+height while preserving bone lengths. Knee poles rotate from outward to upward.
 
-Contact witnesses are generated from the native exterior with
-`node --experimental-strip-types scripts/build-bed-support.mjs`. Full native
-geometry is independently checked throughout the entire transfer, along with
-limb lengths, gaze, continuous movement, stable hold, pause, replay and CSV
-phase. Mattress response is a prescribed geometric approximation, not a
-patient-calibrated pressure distribution or soft-tissue contact FEM.
+The stationary bed shares a height field between its rendered mattress and
+contact constraints, including a head rest and 2–8 mm illustrative mattress
+indentation. Heel contact is solved separately from torso contact using the
+actual DQ exterior. Pausing/restarting while paused retains the mattress load
+of the displayed pose. The same final palette drives skin, skeleton and sensors.
+
+Regenerate witnesses with
+`node --experimental-strip-types scripts/build-bed-support.mjs`. Independent
+full-native-mesh tests cover mattress/floor clearance over the entire sequence,
+left-edge seating, a true side-lying orientation, head-end travel, final knee
+extension, limb lengths, continuous movement, pause, replay and CSV phase.
+This is an authored kinematic sequence, not captured motion or a calibrated
+force/pressure model. No sleep stage, orthostatic flow or blood-pressure response
+is inferred from it.
+
+## Comfort display
+
+The top-bar circular switch is off by default and independent of sensor parameters.
+It hides named genital organ meshes and applies a local rest-space display mask
+while preserving surrounding limbs/abdomen. When exterior skin is visible, a
+small opaque neutral cover follows the single pelvis transform. Original assets,
+physiology and exports are unchanged. The mode also remains stable during pause.

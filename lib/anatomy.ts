@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {chair} from './chair.js';
+import {applyComfortMask,comfortCover,comfortRegion} from './comfort';
 import {bed,bedShader} from './bed.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
@@ -29,6 +30,7 @@ export class AnatomyScene{
  root=new THREE.Group();chair=new THREE.Group();bedGroup=new THREE.Group();bedLoad={value:0};draco=new DRACOLoader();params:Parameters;layers:Layers;time=0;running=true;rotate=false;disposed=false;
  frame=0;last=0;lastStats=0;frameCount=0;slowFrames=0;resizeObserver:ResizeObserver;raycaster=new THREE.Raycaster();pointerDown=[0,0];
  rig=new HumanRig();skinRig=new HumanRig();softBody=new SoftBody();
+ comfortMode=false;comfortUniform={value:0};comfortPatch=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),new THREE.MeshStandardMaterial({color:0x7c918b,roughness:1,metalness:0}));
  skinInspection=false;skinMarkers=new Map<string,THREE.Mesh>();
  cardiacCycles=0;selectedSites=new Set<Site>();
  uniforms={uResp:{value:0},uLungInflation:{value:0},uBeat:{value:0},uCardiacCycles:{value:0},uHeartRate:{value:72},uPWV:{value:6.8},uDistension:{value:.019},uPulseGain:{value:1}};
@@ -39,7 +41,7 @@ export class AnatomyScene{
  this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
  this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));this.renderer.setClearColor(0x0c1013,0);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.4;
  container.appendChild(this.renderer.domElement);this.camera.position.set(.7,1.04,3.7);this.controls=new OrbitControls(this.camera,this.renderer.domElement);this.controls.target.set(0,.91,0);this.controls.enableDamping=true;this.controls.dampingFactor=.075;this.controls.minDistance=.22;this.controls.maxDistance=6;this.controls.maxPolarAngle=Math.PI*.95;
- this.scene.add(this.root);this.scene.add(new THREE.HemisphereLight(0xcce6f4,0x423b32,2));
+ this.scene.add(this.root);this.comfortPatch.scale.set(...comfortCover.radius);this.comfortPatch.visible=false;this.root.add(this.comfortPatch);this.scene.add(new THREE.HemisphereLight(0xcce6f4,0x423b32,2));
  for(const [pos,color,intensity] of [[[2,3,3],0xffffff,3],[[-2,1,1],0x76bdce,2],[[0,2,-2],0xb4e5d0,3]] as const){const light=new THREE.DirectionalLight(color,intensity);light.position.set(pos[0],pos[1],pos[2]);this.scene.add(light);}
  const grid=new THREE.GridHelper(8,80,0x354743,0x202a2e);grid.position.y=-.015;(grid.material as THREE.Material).transparent=true;(grid.material as THREE.Material).opacity=.5;this.scene.add(grid);
  const ring=new THREE.Mesh(new THREE.RingGeometry(.38,.383,96),new THREE.MeshBasicMaterial({color:0x92cbbb,side:THREE.DoubleSide,transparent:true,opacity:.32}));ring.rotation.x=-Math.PI/2;ring.position.y=-.01;this.scene.add(ring);
@@ -97,7 +99,7 @@ export class AnatomyScene{
   const support=surfaceFootSupport(geometry);this.rig.floorSamples=support;this.skinRig.floorSamples=support;
   geometry.computeBoundingSphere();if(geometry.boundingSphere)geometry.boundingSphere.radius+=.6;
  }else{bindGeometry(geometry,undefined,true);for(const i of pelvicAnchors){geometry.getAttribute('rigIndex').setXYZW(i,0,0,0,0);geometry.getAttribute('rigWeight').setXYZW(i,1,0,0,0);}}
- this.applyDeformation(mat,layer);if(layer!=='skin'||/Atlas[_ ]Skin/i.test(obj.name))applySkinTissue(mat,layer);
+ this.applyDeformation(mat,layer);if(layer!=='skin'||/Atlas[_ ]Skin/i.test(obj.name))applySkinTissue(mat,layer);applyComfortMask(mat,this.comfortUniform);
  const mesh=new THREE.Mesh(geometry,mat);mesh.renderOrder=layer==='skin'?8:layer==='dermis'?7:6;mesh.userData={layer,ranges:[{end:Infinity,name:layer==='adipose'?'피하지방':layer==='dermis'?'진피':/short|hair/i.test(obj.name)?'헤어':/eyebrow/i.test(obj.name)?'눈썹':/high.poly/i.test(obj.name)?'눈':'피부 · BodyParts3D 성인 남성'}]};group.add(mesh);this.meshes.push(mesh);
  obj.geometry.dispose();source.dispose();
  });
@@ -136,7 +138,8 @@ export class AnatomyScene{
  if(part==='lung')applyCardiacClearance(mat);
  if(part==='heart'||part==='lung'){mat.metalness=0;mat.roughness=part==='heart'?.42:.7;applyOrganSurface(mat,part);}
  if(layer==='muscular'){mat.metalness=0;mat.roughness=part==='tendon'?.4:.57;applyMuscleSurface(mat,part as Tissue);}
- const mesh=new THREE.Mesh(geometry,mat);mesh.userData={layer,organSurface:part==='heart'||part==='lung',ranges:batch.ranges,opacityScale:part==='fascia'?.13:part==='pleura'?.18:1};mesh.renderOrder=part==='fascia'?6:layer==='muscular'?4:layer==='skeleton'?3:part==='pleura'?1:0;this.meshes.push(mesh);group.add(mesh);}
+ applyComfortMask(mat,this.comfortUniform);
+ const mesh=new THREE.Mesh(geometry,mat);mesh.userData={layer,genital:part==='pelvic',organSurface:part==='heart'||part==='lung',ranges:batch.ranges,opacityScale:part==='fascia'?.13:part==='pleura'?.18:1};mesh.renderOrder=part==='fascia'?6:layer==='muscular'?4:layer==='skeleton'?3:part==='pleura'?1:0;this.meshes.push(mesh);group.add(mesh);}
  this.groups.set(layer,group);this.root.add(group);this.setLayers(this.layers);gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose());}});onProgress(Math.round(++done/6*100));
  }
  }
@@ -169,11 +172,12 @@ export class AnatomyScene{
  };mat.customProgramCacheKey=()=>`joint-dq-tissue-costal-v4-${part}-${rigid}-${cardiac}`;
  }
 
- setLayers(l:Layers){this.layers=l;for(const m of this.meshes){const v=l[m.userData.layer as Layer];const layer=m.userData.layer as Layer;const cover=l.skin>=100?'skin':l.dermis>=100?'dermis':l.adipose>=100?'adipose':null;const exterior=['skin','dermis','adipose'];m.visible=v>0&&(!cover||(exterior.includes(layer)&&exterior.indexOf(layer)<=exterior.indexOf(cover)));const mat=m.material as THREE.MeshStandardMaterial;mat.opacity=v/100*(m.userData.opacityScale??1);mat.depthWrite=mat.opacity>=(m.userData.organSurface?.5:.95);}}
+ setLayers(l:Layers){this.layers=l;for(const m of this.meshes){const v=l[m.userData.layer as Layer];const layer=m.userData.layer as Layer;const cover=l.skin>=100?'skin':l.dermis>=100?'dermis':l.adipose>=100?'adipose':null;const exterior=['skin','dermis','adipose'];m.visible=v>0&&!(this.comfortMode&&m.userData.genital)&&(!cover||(exterior.includes(layer)&&exterior.indexOf(layer)<=exterior.indexOf(cover)));const mat=m.material as THREE.MeshStandardMaterial;mat.opacity=v/100*(m.userData.opacityScale??1);mat.depthWrite=mat.opacity>=(m.userData.organSurface?.5:.95);}}
+ setComfortMode(enabled:boolean){this.comfortMode=enabled;this.comfortUniform.value=enabled?1:0;this.setLayers(this.layers);}
  setSkinInspection(enabled:boolean){this.skinInspection=enabled;for(const marker of this.skinMarkers.values())marker.visible=enabled;}
  setSensors(selected:Site[]){this.selectedSites=new Set(selected);for(const [key,m]of this.markers)m.visible=this.selectedSites.has(key);}
  setParameters(p:Parameters){const previous=this.params.motion;this.params=p;if(previous!==p.motion){if(p.motion==='lie')this.focus('bed');else if(previous==='lie')this.focus('body');}for(const [key,m]of this.markers){m.scale.setScalar(key===p.site?1.4:.65);(m.material as THREE.MeshBasicMaterial).color.set(sensorColors[key]);}}
- focus(target:'body'|'chest'|'head'|'sensor'|'front'|'back'|'hands'|'bed'){if(target==='body'||target==='front'){this.controls.target.set(0,.91,0);this.camera.position.set(target==='front'?0:.7,1.04,3.7);}else if(target==='back'){this.controls.target.set(0,.91,0);this.camera.position.set(0,1.04,-3.7);}else if(target==='bed'){this.controls.target.set(0,.68,-.9);this.camera.position.set(2.1,1.95,2.45);}else if(target==='hands'){const p=this.rig.bone('hand.r').getWorldPosition(new THREE.Vector3()).add(this.rig.bone('hand.l').getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);this.controls.target.copy(p);this.camera.position.copy(p).add(new THREE.Vector3(.15,.12,1.45));}else{const p=target==='sensor'?this.markers.get(this.params.site)!.position.toArray():target==='head'?[0,1.62,0]:[0,1.28,0];this.controls.target.set(p[0],p[1],p[2]);this.camera.position.set(p[0]+.12,p[1]+.02,p[2]+(target==='sensor'?.5:.85));}this.controls.update();}
+ focus(target:'body'|'chest'|'head'|'sensor'|'front'|'back'|'hands'|'bed'){if(target==='body'||target==='front'){this.controls.target.set(0,.91,0);this.camera.position.set(target==='front'?0:.7,1.04,3.7);}else if(target==='back'){this.controls.target.set(0,.91,0);this.camera.position.set(0,1.04,-3.7);}else if(target==='bed'){this.controls.target.set(0,.68,-.9);this.camera.position.set(-2.1,1.95,2.45);}else if(target==='hands'){const p=this.rig.bone('hand.r').getWorldPosition(new THREE.Vector3()).add(this.rig.bone('hand.l').getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);this.controls.target.copy(p);this.camera.position.copy(p).add(new THREE.Vector3(.15,.12,1.45));}else{const p=target==='sensor'?this.markers.get(this.params.site)!.position.toArray():target==='head'?[0,1.62,0]:[0,1.28,0];this.controls.target.set(p[0],p[1],p[2]);this.camera.position.set(p[0]+.12,p[1]+.02,p[2]+(target==='sensor'?.5:.85));}this.controls.update();}
  zoom(factor:number){this.camera.position.sub(this.controls.target).multiplyScalar(factor).add(this.controls.target);this.controls.update();}
  pointerStart=(e:PointerEvent)=>{this.pointerDown=[e.clientX,e.clientY]};
  pick=(e:PointerEvent)=>{if(Math.hypot(e.clientX-this.pointerDown[0],e.clientY-this.pointerDown[1])>5)return;const r=this.renderer.domElement.getBoundingClientRect();this.raycaster.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),this.camera);
@@ -197,7 +201,7 @@ export class AnatomyScene{
   const material=new THREE.MeshBasicMaterial({side:THREE.DoubleSide}),mesh=new THREE.Mesh(geometry,material);mesh.matrixWorld.copy(source.matrixWorld);
   const hit=this.raycaster.intersectObject(mesh,false)[0];let result:[number,number,number]|null=null;
   if(hit?.face){const {a,b,c}=hit.face,local=mesh.worldToLocal(hit.point.clone()),bary=THREE.Triangle.getBarycoord(local,new THREE.Vector3().fromBufferAttribute(position,a),new THREE.Vector3().fromBufferAttribute(position,b),new THREE.Vector3().fromBufferAttribute(position,c),new THREE.Vector3());if(bary){const point=new THREE.Vector3().fromBufferAttribute(original,a).multiplyScalar(bary.x).addScaledVector(new THREE.Vector3().fromBufferAttribute(original,b),bary.y).addScaledVector(new THREE.Vector3().fromBufferAttribute(original,c),bary.z);result=point.toArray() as [number,number,number];}}
-  geometry.dispose();material.dispose();return result;
+  geometry.dispose();material.dispose();return result&&this.comfortMode&&comfortRegion(...result)?null:result;
  }
  animate=(now:number)=>{if(this.disposed)return;const delta=this.last?Math.min((now-this.last)/1000,.05):0;this.last=now;if(this.running&&!document.hidden)this.time+=delta;
  this.uniforms.uLungInflation.value=(1+Math.sin(this.time*Math.PI*2*this.params.rr/60))/2*Math.min(1,this.params.tidal/1000);
@@ -206,6 +210,7 @@ export class AnatomyScene{
  this.softBody.update(this.running&&!document.hidden?delta:0,(1+Math.sin(this.time*Math.PI*2*this.params.rr/60))/2,this.params.tidal);
  this.rig.update(this.running&&!document.hidden?delta:0,this.params.motion,this.params.motionRevision||0);
  this.skinRig.copyPose(this.rig);
+ this.comfortPatch.visible=this.comfortMode&&this.layers.skin>0;this.comfortPatch.position.copy(this.rig.transform(new THREE.Vector3(...comfortCover.center),{indices:[0,0,0,0],weights:[1,0,0,0]}));this.comfortPatch.quaternion.copy(this.rig.bone('pelvis').getWorldQuaternion(new THREE.Quaternion()));
  this.chair.visible=this.params.motion==='stand'||this.params.motion==='sitStand';
  this.bedGroup.visible=this.params.motion==='lie';this.bedLoad.value=this.params.motion==='lie'?this.rig.bedLoad:0;
  this.controls.autoRotate=this.rotate;this.controls.autoRotateSpeed=.5;this.controls.update();
