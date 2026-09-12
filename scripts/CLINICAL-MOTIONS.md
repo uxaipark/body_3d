@@ -54,9 +54,10 @@ the same bed anchor.
 
 The patient sits with the free arm down (0–2 s) while the near hand reaches the
 mattress beside the hip, then lowers sideways toward the head end (3–7.2 s).
-The supporting hand releases as the trunk lowers; both elbows are tucked by
-side lying and stay close through the roll. Legs extend (7–9.5 s), the body rolls
-supine (9.5–12 s), and both arms settle onto the mattress (12–14 s). The final pose
+The supporting hand releases as the trunk lowers; the right elbow folds near the ribs while the left arm remains extended
+alongside the torso through side lying and the roll. Legs extend (7–9.5 s), the body rolls
+supine (9.5–12 s), and the right arm settles onto the mattress (12–14 s). The left arm settles with the
+body roll and has no additional raise-and-lower gesture after 12 s. The final pose
 holds with breathing, without automatically returning to sitting.
 
 The supporting arm uses a sagittal elbow pole and a bounded downward wrist

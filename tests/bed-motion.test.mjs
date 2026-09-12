@@ -37,6 +37,10 @@ test('full native skin clears the actual mattress and remains supported through 
  rig.poseBed(2.5);let handGap=Infinity;
  for(const s of points){if(s.point.x>-.24||s.point.y>.84||s.point.y<.66)continue;const v=rig.transform(s.point,s.w),[x,z]=worldToBed(v.x,v.z,rig.bedAnchor);if(aboveBed(x,z))handGap=Math.min(handGap,v.y-bedSurface(x,z,rig.bedLoad));}
  assert.ok(handGap<.025,`supporting hand floats ${handGap}m over the bed while sitting`);
+ rig.poseBed(12);let leftGap=Infinity;
+ for(const s of points){if(s.point.x<.24||s.point.y>.84||s.point.y<.66)continue;const v=rig.transform(s.point,s.w),[x,z]=worldToBed(v.x,v.z,rig.bedAnchor);if(aboveBed(x,z))leftGap=Math.min(leftGap,v.y-bedSurface(x,z,rig.bedLoad));}
+ assert.ok(leftGap<.025,`extended left hand floats ${leftGap}m when the roll ends`);
+
 
 });
 test('bed task pauses and restarts on the shared clock and CSV records its phase',()=>{
@@ -63,11 +67,11 @@ test('bed joints retain hinge alignment and bounded angular speed without wrist 
  }
 });
 
-test('side transfer keeps both elbows tucked and only lowers the arms after the roll',()=>{
+test('side transfer keeps the supporting arm tucked and the free arm extended',()=>{
  const rig=new HumanRig();
  for(let i=0;i<=62;i++){
   const time=6.85+i/12;rig.poseBed(time);const chest=rig.bone('chest').matrixWorld.clone().invert();
-  for(const side of ['l','r']){
+  for(const side of ['r']){
    const local=name=>rig.bone(`${name}.${side}`).getWorldPosition(new T.Vector3()).applyMatrix4(chest),shoulder=local('upperArm'),elbow=local('forearm'),wrist=local('hand');
    assert.ok(Math.abs(elbow.x)<=Math.abs(shoulder.x)+.012,'elbow stays beside the ribs during side lying and roll');
    assert.ok(Math.abs(wrist.x)<.21,'wrists do not reach sideways');
@@ -88,4 +92,15 @@ test('bed appears behind the current standing position without relocating or tur
 
 test('sitting keeps the free arm down and uses a downward-facing supporting hand',()=>{
  const rig=new HumanRig();for(const t of[2,2.5,3]){rig.poseBed(t);const root=rig.bones[0].position,left=rig.bone('hand.l').getWorldPosition(new T.Vector3());assert.ok(left.y<root.y,'free hand stays below the pelvis while sitting');const normal=new T.Vector3(0,0,1).applyQuaternion(rig.bone('hand.r').getWorldQuaternion(new T.Quaternion()));assert.ok(normal.y<-.7,'supporting palm faces toward the mattress');}
+});
+
+test('left arm remains extended while lying down and is already resting when supine',()=>{
+ const rig=new HumanRig();
+ for(let i=0;i<=840;i++){
+  rig.poseBed(i/60);const shoulder=rig.bone('upperArm.l').getWorldPosition(new T.Vector3()),elbow=rig.bone('forearm.l').getWorldPosition(new T.Vector3()),wrist=rig.bone('hand.l').getWorldPosition(new T.Vector3());
+  assert.ok(elbow.clone().sub(shoulder).angleTo(wrist.clone().sub(elbow))<.36,'left elbow must not fold to a right angle');
+  const local=rig.bone('chest').matrixWorld.clone().invert();elbow.applyMatrix4(local);wrist.applyMatrix4(local);assert.ok(wrist.y<elbow.y-.20,'left forearm stays extended toward the hip');
+ }
+ rig.poseBed(12);const rotations=['upperArm.l','forearm.l','hand.l'].map(n=>rig.bone(n).getWorldQuaternion(new T.Quaternion()));
+ rig.poseBed(14);['upperArm.l','forearm.l','hand.l'].forEach((n,i)=>assert.ok(rig.bone(n).getWorldQuaternion(new T.Quaternion()).angleTo(rotations[i])<1e-6,'left arm has no post-roll raise-and-lower gesture'));
 });
