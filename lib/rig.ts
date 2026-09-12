@@ -344,22 +344,15 @@ export class HumanRig {
    const inBed=ease(.40,.95,lift),target=new THREE.Vector3(THREE.MathUtils.lerp(-.77,-.37,inBed),THREE.MathUtils.lerp(ankle.y,.59+sign*.045,ease(0,.65,lift))+.05*Math.sin(Math.PI*lift),THREE.MathUtils.lerp(-1.2+sign*.078,-.78+sign*.025,ease(0,.65,lift)));
    target.x=THREE.MathUtils.lerp(target.x,sign*.078,roll);target.z=THREE.MathUtils.lerp(target.z,-.35,extend);target.y=THREE.MathUtils.lerp(target.y,.52,roll);
    this.solveBedLeg(side,target,footRotation);
-   // Articulate the elbow in the upper-arm frame; do not independently aim
-   // it in world space or add the previous 180-degree forearm roll.
-   const carry=ease(6.2,8.8,time)*(1-ease(11.2,13,time));
-   this.bone(`upperArm.${side}`).rotation.set(-.15*state.arm-.35*carry,0,sign*(.10*state.arm+.07*roll));
-   this.bone(`forearm.${side}`).rotation.set(-.55*state.arm*(1-roll)-.90*carry-.12*roll,0,0);
+   // Gather both arms before lowering sideways. The atlas bind pose already
+   // splays the upper arms, so a little adduction brings elbows toward the ribs.
+   // Keep them gathered through the roll, then lower beside the torso only once
+   // the back is on the mattress. All angles remain local to their parent joint.
+   const gather=ease(.5,2.5,time),settle=ease(12,14,time),tuck=gather*(1-settle);
+   this.bone(`upperArm.${side}`).rotation.set(-.34*tuck+.30*settle,0,-sign*(.20*tuck+.025*settle));
+   this.bone(`forearm.${side}`).rotation.set(-1.15*tuck-.08*settle,0,-sign*.12*tuck);
    const forearm=this.bone(`forearm.${side}`),axis=this.bone(`hand.${side}`).position.clone().normalize();
-   forearm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,sign*.65*state.arm));
-  }
-  p.updateMatrixWorld(true);
-  const support=ease(2.3,3.2,time)*(1-ease(6.2,8.8,time));
-  if(support>0){
-   const names=['upperArm.r','forearm.r','hand.r'],rest=names.map(n=>this.bone(n).quaternion.clone());
-   const contact=new THREE.Vector3(-.35,.60,-1.46),pole=new THREE.Vector3(-.7,0,-1).applyQuaternion(body);
-   this.solveBedLimb(names[0],names[1],names[2],contact,pole,2.35,true);
-   this.bone('hand.r').rotation.set(.25,0,0);
-   names.forEach((name,i)=>{const bone=this.bone(name);bone.quaternion.copy(rest[i].slerp(bone.quaternion.clone(),support));});
+   forearm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,sign*(.40*tuck+.65*settle)));
   }
   p.updateMatrixWorld(true);this.updatePalette();this.groundTask(false);this.constrainBed(lower);
  }

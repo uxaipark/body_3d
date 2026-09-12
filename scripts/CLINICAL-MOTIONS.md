@@ -47,14 +47,14 @@ actual native sole clearance, fitted hand edge stretch and CSV/signal timing.
 ## Bed transfer
 
 `lie` now starts beside the left long edge at the midpoint of the bed. The body
-faces outward, sits at that edge (0–2 s), prepares the right supporting hand,
+faces outward, sits at that edge (0–2 s), gathers both arms close to the ribs,
 then lowers sideways toward the head end with bent knees (3–7.2 s). The legs
 extend along the bed (7–9.5 s), followed by a longitudinal roll onto the back
 (9.5–12 s). Both legs and the upper body settle, and the final supine posture
-holds indefinitely from 13 s while physiological breathing continues. Replay
+lowers the arms beside the body at 12–14 s and holds indefinitely from 14 s while physiological breathing continues. Replay
 restarts the sequence; there is no automatic seated return.
 
-The right arm reaches a support target using two-link IK with a shared elbow hinge frame and a soft reach limit. A bounded local wrist angle replaces forced world-space palm rotation. The arm releases support before rolling and settles beside the trunk. Hip translation,
+Both elbows stay near the ribs through side lying and the longitudinal roll. The upper-arm adduction compensates for the atlas’s splayed bind pose, and the forearms fold in front of the torso. The arms only unfold and settle beside the body after the roll finishes; there is no lateral support-arm reach. Hip translation,
 lateral trunk lowering, leg lift, leg extension and longitudinal roll have
 separate smooth phases. Full extension adjusts ankle reach to current hip
 height while preserving bone lengths. The hinge frame follows the pelvis through side lying and roll; both leg segments share the same bend plane. Knee flexion is bounded at 2.10 radians. The feet clear the mattress edge before moving inward. Ankles relax after leaving the floor.

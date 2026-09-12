@@ -30,8 +30,8 @@ test('full native skin clears the actual mattress and remains supported through 
   for(const sample of points){const v=rig.transform(sample.point,sample.w);assert.ok(v.y>-.008,'body penetrates floor');if(aboveBed(v.x,v.z)){const gap=v.y-bedSurface(v.x,v.z,load);worst=Math.min(worst,gap);assert.ok(gap>.0005,`mattress penetration at ${time}: ${gap} / ${sample.point.toArray()}`);}}
  }
  assert.ok(worst<.006,'support constraint must not leave the whole body hovering');
- rig.poseBed(14);const contacts={head:Infinity,back:Infinity,pelvis:Infinity,heels:Infinity};
- for(const s of points){const v=rig.transform(s.point,s.w);if(!aboveBed(v.x,v.z))continue;const region=s.point.y>1.5?'head':s.point.y>1.05?'back':s.point.y>.75?'pelvis':s.point.y<.13?'heels':null;if(region)contacts[region]=Math.min(contacts[region],v.y-bedSurface(v.x,v.z,1));}
+ rig.poseBed(14);const contacts={head:Infinity,back:Infinity,pelvis:Infinity,heels:Infinity,leftHand:Infinity,rightHand:Infinity};
+ for(const s of points){const v=rig.transform(s.point,s.w);if(!aboveBed(v.x,v.z))continue;const region=s.point.y>1.5?'head':s.point.y>1.05?'back':s.point.y>.75?'pelvis':s.point.y<.13?'heels':null;if(region)contacts[region]=Math.min(contacts[region],v.y-bedSurface(v.x,v.z,1));if(s.point.y>.66&&s.point.y<.84&&Math.abs(s.point.x)>.24){const side=s.point.x>0?'leftHand':'rightHand';contacts[side]=Math.min(contacts[side],v.y-bedSurface(v.x,v.z,1));}}
  for(const [region,gap]of Object.entries(contacts))assert.ok(gap<.025,`${region} floats ${gap}m above support`);
 });
 test('bed task pauses and restarts on the shared clock and CSV records its phase',()=>{
@@ -56,4 +56,19 @@ test('bed joints retain hinge alignment and bounded angular speed without wrist 
    assert.ok(knee.clone().sub(hip).angleTo(ankle.clone().sub(knee))<=2.101,'knee flexion stays below 121 degrees');
   }
  }
+});
+
+test('side transfer keeps both elbows tucked and only lowers the arms after the roll',()=>{
+ const rig=new HumanRig();
+ for(let i=0;i<=102;i++){
+  const time=3.5+i/12;rig.poseBed(time);const chest=rig.bone('chest').matrixWorld.clone().invert();
+  for(const side of ['l','r']){
+   const local=name=>rig.bone(`${name}.${side}`).getWorldPosition(new T.Vector3()).applyMatrix4(chest),shoulder=local('upperArm'),elbow=local('forearm'),wrist=local('hand');
+   assert.ok(Math.abs(elbow.x)<=Math.abs(shoulder.x)+.012,'elbow stays beside the ribs during side lying and roll');
+   assert.ok(Math.abs(wrist.x)<.21,'wrists do not reach sideways');
+   assert.ok(wrist.z>.25,'forearms remain folded in front of the torso until the back is down');
+  }
+ }
+ assert.equal(taskState('lie',13).complete,false);assert.equal(taskState('lie',14).complete,true);
+ rig.poseBed(14);for(const side of ['l','r']){const elbow=rig.bone(`forearm.${side}`).getWorldPosition(new T.Vector3()),wrist=rig.bone(`hand.${side}`).getWorldPosition(new T.Vector3());assert.ok(Math.abs(wrist.y-elbow.y)<.04,'forearm rests approximately level on the mattress');}
 });
