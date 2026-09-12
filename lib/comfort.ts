@@ -1,7 +1,6 @@
 import * as T from 'three';
 /** A local rest-space privacy mask; torso, legs and other organs stay visible. */
 export function comfortRegion(x:number,y:number,z:number){return Math.abs(x)<.044&&y>.695&&y<.835&&z>.005;}
-export const comfortCover={center:[0,.773,.053] as const,radius:[.050,.080,.074] as const};
 export function applyComfortMask(material:T.MeshStandardMaterial,uniform:{value:number}){
  const previous=material.onBeforeCompile.bind(material),key=material.customProgramCacheKey.bind(material);
  material.onBeforeCompile=(shader,renderer)=>{

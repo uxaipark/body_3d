@@ -41,3 +41,19 @@ test('bed task pauses and restarts on the shared clock and CSV records its phase
  const first=rig.bone('head').getWorldPosition(new T.Vector3());rig.update(1/60,'lie',2);assert.ok(rig.bone('head').getWorldPosition(new T.Vector3()).distanceTo(first)<.03);assert.ok(rig.taskTime<.02);
  const rows=csv({...defaults,motion:'lie',motionStartedAt:10},1,10,28).split('\n');assert.ok(rows[1].includes('lie,18.00000,누운 자세 · 안정 호흡'));
 });
+
+test('bed joints retain hinge alignment and bounded angular speed without wrist or ankle flips',()=>{
+ const rig=new HumanRig(),identity=new T.Quaternion();let previous;
+ for(let i=0;i<=840;i++){
+  const t=i/60;rig.poseBed(t);
+  if(previous)rig.bones.forEach((b,j)=>assert.ok(b.quaternion.angleTo(previous[j])*60<2.5,`${b.name} rotates too abruptly at ${t}`));
+  previous=rig.bones.map(b=>b.quaternion.clone());
+  for(const side of ['l','r']){
+   const shin=rig.bone(`shin.${side}`).quaternion;
+   assert.ok(Math.hypot(shin.y,shin.z)<.04,`knee twists away from its hinge: ${side} at ${t}`);
+   for(const [name,limit]of [['thigh',2.0],['shin',2.15],['upperArm',1.1],['forearm',2.2],['hand',.30],['foot',.50]])assert.ok(rig.bone(`${name}.${side}`).quaternion.angleTo(identity)<limit,`${name}.${side} exceeds the authored rotation envelope at ${t}`);
+   const hip=rig.bone(`thigh.${side}`).getWorldPosition(new T.Vector3()),knee=rig.bone(`shin.${side}`).getWorldPosition(new T.Vector3()),ankle=rig.bone(`foot.${side}`).getWorldPosition(new T.Vector3());
+   assert.ok(knee.clone().sub(hip).angleTo(ankle.clone().sub(knee))<=2.101,'knee flexion stays below 121 degrees');
+  }
+ }
+});

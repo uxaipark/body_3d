@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {chair} from './chair.js';
-import {applyComfortMask,comfortCover,comfortRegion} from './comfort';
+import {applyComfortMask,comfortRegion} from './comfort';
 import {bed,bedShader} from './bed.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
@@ -30,7 +30,7 @@ export class AnatomyScene{
  root=new THREE.Group();chair=new THREE.Group();bedGroup=new THREE.Group();bedLoad={value:0};draco=new DRACOLoader();params:Parameters;layers:Layers;time=0;running=true;rotate=false;disposed=false;
  frame=0;last=0;lastStats=0;frameCount=0;slowFrames=0;resizeObserver:ResizeObserver;raycaster=new THREE.Raycaster();pointerDown=[0,0];
  rig=new HumanRig();skinRig=new HumanRig();softBody=new SoftBody();
- comfortMode=false;comfortUniform={value:0};comfortPatch=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),new THREE.MeshStandardMaterial({color:0x7c918b,roughness:1,metalness:0}));
+ comfortMode=false;comfortUniform={value:0};
  skinInspection=false;skinMarkers=new Map<string,THREE.Mesh>();
  cardiacCycles=0;selectedSites=new Set<Site>();
  uniforms={uResp:{value:0},uLungInflation:{value:0},uBeat:{value:0},uCardiacCycles:{value:0},uHeartRate:{value:72},uPWV:{value:6.8},uDistension:{value:.019},uPulseGain:{value:1}};
@@ -41,7 +41,7 @@ export class AnatomyScene{
  this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
  this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));this.renderer.setClearColor(0x0c1013,0);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.4;
  container.appendChild(this.renderer.domElement);this.camera.position.set(.7,1.04,3.7);this.controls=new OrbitControls(this.camera,this.renderer.domElement);this.controls.target.set(0,.91,0);this.controls.enableDamping=true;this.controls.dampingFactor=.075;this.controls.minDistance=.22;this.controls.maxDistance=6;this.controls.maxPolarAngle=Math.PI*.95;
- this.scene.add(this.root);this.comfortPatch.scale.set(...comfortCover.radius);this.comfortPatch.visible=false;this.root.add(this.comfortPatch);this.scene.add(new THREE.HemisphereLight(0xcce6f4,0x423b32,2));
+ this.scene.add(this.root);this.scene.add(new THREE.HemisphereLight(0xcce6f4,0x423b32,2));
  for(const [pos,color,intensity] of [[[2,3,3],0xffffff,3],[[-2,1,1],0x76bdce,2],[[0,2,-2],0xb4e5d0,3]] as const){const light=new THREE.DirectionalLight(color,intensity);light.position.set(pos[0],pos[1],pos[2]);this.scene.add(light);}
  const grid=new THREE.GridHelper(8,80,0x354743,0x202a2e);grid.position.y=-.015;(grid.material as THREE.Material).transparent=true;(grid.material as THREE.Material).opacity=.5;this.scene.add(grid);
  const ring=new THREE.Mesh(new THREE.RingGeometry(.38,.383,96),new THREE.MeshBasicMaterial({color:0x92cbbb,side:THREE.DoubleSide,transparent:true,opacity:.32}));ring.rotation.x=-Math.PI/2;ring.position.y=-.01;this.scene.add(ring);
@@ -210,7 +210,6 @@ export class AnatomyScene{
  this.softBody.update(this.running&&!document.hidden?delta:0,(1+Math.sin(this.time*Math.PI*2*this.params.rr/60))/2,this.params.tidal);
  this.rig.update(this.running&&!document.hidden?delta:0,this.params.motion,this.params.motionRevision||0);
  this.skinRig.copyPose(this.rig);
- this.comfortPatch.visible=this.comfortMode&&this.layers.skin>0;this.comfortPatch.position.copy(this.rig.transform(new THREE.Vector3(...comfortCover.center),{indices:[0,0,0,0],weights:[1,0,0,0]}));this.comfortPatch.quaternion.copy(this.rig.bone('pelvis').getWorldQuaternion(new THREE.Quaternion()));
  this.chair.visible=this.params.motion==='stand'||this.params.motion==='sitStand';
  this.bedGroup.visible=this.params.motion==='lie';this.bedLoad.value=this.params.motion==='lie'?this.rig.bedLoad:0;
  this.controls.autoRotate=this.rotate;this.controls.autoRotateSpeed=.5;this.controls.update();

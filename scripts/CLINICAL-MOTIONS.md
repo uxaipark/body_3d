@@ -54,10 +54,10 @@ extend along the bed (7–9.5 s), followed by a longitudinal roll onto the back
 holds indefinitely from 13 s while physiological breathing continues. Replay
 restarts the sequence; there is no automatic seated return.
 
-The right arm reaches a support target using two-link IK. Hip translation,
+The right arm reaches a support target using two-link IK with a shared elbow hinge frame and a soft reach limit. A bounded local wrist angle replaces forced world-space palm rotation. The arm releases support before rolling and settles beside the trunk. Hip translation,
 lateral trunk lowering, leg lift, leg extension and longitudinal roll have
 separate smooth phases. Full extension adjusts ankle reach to current hip
-height while preserving bone lengths. Knee poles rotate from outward to upward.
+height while preserving bone lengths. The hinge frame follows the pelvis through side lying and roll; both leg segments share the same bend plane. Knee flexion is bounded at 2.10 radians. The feet clear the mattress edge before moving inward. Ankles relax after leaving the floor.
 
 The stationary bed shares a height field between its rendered mattress and
 contact constraints, including a head rest and 2–8 mm illustrative mattress
@@ -69,7 +69,7 @@ Regenerate witnesses with
 `node --experimental-strip-types scripts/build-bed-support.mjs`. Independent
 full-native-mesh tests cover mattress/floor clearance over the entire sequence,
 left-edge seating, a true side-lying orientation, head-end travel, final knee
-extension, limb lengths, continuous movement, pause, replay and CSV phase.
+extension, limb lengths, knee hinge alignment, joint rotation envelopes, angular speed (60 Hz), continuous movement, pause, replay and CSV phase.
 This is an authored kinematic sequence, not captured motion or a calibrated
 force/pressure model. No sleep stage, orthostatic flow or blood-pressure response
 is inferred from it.
@@ -78,6 +78,5 @@ is inferred from it.
 
 The top-bar circular switch is off by default and independent of sensor parameters.
 It hides named genital organ meshes and applies a local rest-space display mask
-while preserving surrounding limbs/abdomen. When exterior skin is visible, a
-small opaque neutral cover follows the single pelvis transform. Original assets,
+while preserving surrounding limbs/abdomen. No replacement cover or genital proxy is rendered. Original assets,
 physiology and exports are unchanged. The mode also remains stable during pause.
