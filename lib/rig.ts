@@ -133,11 +133,22 @@ export function relaxSurfaceBinding(geometry:THREE.BufferGeometry){
  }
 }
 
+/** Extreme points of the actual exterior soles, shared by all body layers. */
+export function surfaceFootSupport(geometry:THREE.BufferGeometry){
+ const p=geometry.getAttribute('position'),indices=geometry.getAttribute('rigIndex'),weights=geometry.getAttribute('rigWeight'),chosen=new Set<number>();
+ for(const side of[-1,1])for(let tilt=0;tilt<=5;tilt++)for(let az=0;az<16;az++){
+  const angle=tilt*Math.PI/10,phi=az*Math.PI/8,d=new THREE.Vector3(Math.sin(angle)*Math.cos(phi),-Math.cos(angle),Math.sin(angle)*Math.sin(phi));let best=-1,projection=-Infinity;
+  for(let i=0;i<p.count;i++)if(p.getY(i)<.13&&p.getX(i)*side>0){const value=p.getX(i)*d.x+p.getY(i)*d.y+p.getZ(i)*d.z;if(value>projection){projection=value;best=i;}}
+  if(best>=0)chosen.add(best);
+ }
+ return [...chosen].map(i=>({point:new THREE.Vector3().fromBufferAttribute(p,i),w:{indices:[indices.getX(i),indices.getY(i),indices.getZ(i),indices.getW(i)],weights:[weights.getX(i),weights.getY(i),weights.getZ(i),weights.getW(i)]}}));
+}
 export class HumanRig {
  bones:THREE.Bone[]=[];skeleton:THREE.Skeleton;bind=specs.map(s=>new THREE.Vector3(...s[2]));
  real=specs.map(()=>new THREE.Vector4(0,0,0,1));dual=specs.map(()=>new THREE.Vector4());
  uniforms={uRigReal:{value:this.real},uRigDual:{value:this.dual}};
  amount=0;runMix=0;phase=0;forearmRoll=Math.PI/2;
+ floorSamples:{point:THREE.Vector3;w:Weights}[]=[];
  constructor(){
    for(let i=0;i<specs.length;i++){
      const [name,parent]=specs[i],bone=new THREE.Bone();bone.name=name;
@@ -198,6 +209,8 @@ export class HumanRig {
      const foot=this.bone(`foot.${side}`),q=foot.getWorldQuaternion(qb),ankle=foot.getWorldPosition(new THREE.Vector3());
      for(const sole of [new THREE.Vector3(0,-.073,-.055),new THREE.Vector3(0,-.073,.145)])floor=Math.min(floor,sole.applyQuaternion(q).add(ankle).y);
    }
+   // The imported exterior can have a longer forefoot than the old proxy sole.
+   if(this.floorSamples.length){this.updatePalette();floor=Math.min(...this.floorSamples.map(s=>this.transform(s.point,s.w).y))-.001;}
    // Walking always has a supporting foot; retain captured flight only for running.
    p.position.y-=floor<0?floor:floor*(1-run);p.updateMatrixWorld(true);this.updatePalette();
  }

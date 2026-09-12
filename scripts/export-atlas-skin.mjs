@@ -1,0 +1,9 @@
+import fs from'node:fs';import *as T from'three';import{Document,NodeIO}from'@gltf-transform/core';import{ALL_EXTENSIONS}from'@gltf-transform/extensions';import{draco}from'@gltf-transform/functions';import draco3d from'draco3dgltf';
+const source=JSON.parse(fs.readFileSync('/tmp/soma-atlas-skin-rigged.json','utf8'));
+const doc=new Document(),buffer=doc.createBuffer(),g=new T.BufferGeometry().setAttribute('position',new T.Float32BufferAttribute(source.positions.flat(),3)).setIndex(source.indices.flat());g.computeVertexNormals();
+const attr=(type,array)=>doc.createAccessor().setType(type).setArray(array).setBuffer(buffer);
+const p=doc.createPrimitive().setAttribute('POSITION',attr('VEC3',g.getAttribute('position').array)).setAttribute('NORMAL',attr('VEC3',g.getAttribute('normal').array)).setIndices(attr('SCALAR',new Uint32Array(source.indices.flat()))).setAttribute('_RIG_INDEX',attr('VEC4',new Uint16Array(source.rigIndex.flat()))).setAttribute('_RIG_WEIGHT',attr('VEC4',new Float32Array(source.rigWeight.flat())));
+p.setMaterial(doc.createMaterial('Natural skin').setBaseColorFactor([.58,.36,.25,1]).setRoughnessFactor(.62).setMetallicFactor(0));
+doc.createScene().addChild(doc.createNode('Atlas Skin').setMesh(doc.createMesh('BodyParts3D FMA7163 exterior').addPrimitive(p)));
+doc.getRoot().setExtras({source:'BodyParts3D 3.0 FMA7163',registration:'Global uniform scale and translation only; no local surface warp',surfaceCleanup:'1.5 mm exterior flood-fill and isosurface extraction',boneBinding:'Blender bone heat weights; dual quaternion animation'});
+const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.encoder':await draco3d.createEncoderModule()});await doc.transform(draco());await io.write('public/models/skin-atlas-web.glb',doc);console.log('Native atlas skin:',source.positions.length,'vertices,',source.indices.length,'triangles');

@@ -1,4 +1,34 @@
-# Male exterior build inputs
+# Current native atlas exterior
+
+The viewer loads `public/models/skin-atlas-web.glb`, based on **BodyParts3D 3.0 / 20110915, FMA7163 (Skin)**. The MakeHuman exterior and registration scripts below are retained as historical inputs; they are not loaded by the current viewer.
+
+Source: https://github.com/kevin-mattheus-moerman/BodyParts3D/tree/main/assets/BodyParts3D_data/stl (DBCLS BodyParts3D data, converted from OBJ to STL by Kevin Mattheus Moerman). Cache `FMA7163.stl` as `.asset-cache/bodyparts3d-skin-v3.stl`, and `FMA24474.stl`, `FMA23130.stl`, `FMA52788.stl`, `FMA24477.stl` under their own names in `.asset-cache/`.
+
+One global similarity transform is fitted against four independent atlas bones (maximum bounding-landmark residual 1.64 mm). No separate arm/leg warp, radial muscle projection or local silhouette inflation is applied. The source contains nested tissue faces; offline 1.5 mm rasterization, exterior flood-fill and isosurface extraction remove these internal faces. The cleaned surface is reduced to 110,000 triangles with consistent outward normals. This processing changes sub-voxel detail and is not a preservation of every source vertex.
+
+Blender bone-heat binding solves weights on the connected exterior. The pelvic midline uses a continuous anchoring transition. Runtime dual-quaternion skinning shares the anatomy's motion phase and uses support samples from the actual new feet. Skin pores are rest-space procedural shading; the source has no photographic texture map.
+
+Rebuild (Blender 5.1.1 and Python with NumPy, SciPy, scikit-image):
+
+```sh
+node --experimental-strip-types scripts/prepare-atlas-skin.mjs
+/Applications/Blender.app/Contents/MacOS/Blender --background --python-exit-code 1 --python scripts/build-atlas-skin.py
+python3 scripts/clean-atlas-surface.py
+/Applications/Blender.app/Contents/MacOS/Blender --background --python-exit-code 1 --python scripts/rig-atlas-skin.py
+node scripts/export-atlas-skin.mjs
+```
+
+The optional local Python dependencies can be installed beneath `.asset-cache/python`; this directory is not shipped. Verify atlas containment with `scripts/check-atlas-fit.py` in Blender after preparing `scripts/check-cardiorespiratory.mjs` data. Run `npm test` for native motion, ground support and cardiac display-envelope checks.
+
+## Cardiac/pulmonary display separation
+
+The supplied atlas meshes intersect in the mediastinum. The renderer reserves a convex envelope around the cardiac contraction/respiratory sweep with 3 mm display clearance and discards pulmonary fragments within it. Both organs share the chest transform; cardiac tissue is excluded from outward abdominal expansion. The standalone continuous pleural sheet is omitted from display. Distinct materials and edge shading make the boundary readable. This is a **render-space anatomical correction**, not a Boolean repair of the source meshes or a physical contact simulation.
+
+Rebuild the envelope with `node --experimental-strip-types scripts/check-cardiorespiratory.mjs` followed by `node scripts/build-cardiac-space.mjs`. `scripts/check-cardiorespiratory.py` verifies rib clearance and coverage of the rendered cardiac envelope across breathing/contraction states.
+
+---
+
+# Historical MakeHuman exterior build inputs
 
 `build-skin.py` is an offline Blender script. Run from the `web` directory:
 

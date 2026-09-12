@@ -46,6 +46,17 @@ Muscular appearance revision: original procedural fibre shading and per-structur
 
 `dermis-web.glb` and `adipose-web.glb` are CC0 derivatives of the original MakeHuman exterior, generated as closed inset tissue shells with illustrative thicknesses. Their procedural surface detail is original code.
 
-## Fitted exterior (`skin-fitted-web.glb`)
+## Archived fitted exterior (`skin-fitted-web.glb`, not displayed)
 
 Derived from the CC0 MakeHuman exterior above and registered to Z-Anatomy/BodyParts3D skeletal landmarks. The fitted geometry is distributed under CC BY-SA 4.0 with the anatomical source notices above retained; the original MakeHuman skin, eye, hair and eyebrow textures remain CC0. Modifications include anatomical registration, smooth displacement registration, UV-seam normal welding, neutral-palm normalization and baked topology-aware joint weights. Face, UVs and original mesh topology are retained.
+
+
+## Current native exterior (`skin-atlas-web.glb`)
+
+BodyParts3D, © The Database Center for Life Science, licensed under CC Attribution 4.0 International. Creator: Kousaku Okubo / DBCLS. Source dataset: BodyParts3D 3.0 (20110915), FMA7163 Skin; reference bones FMA24474, FMA23130, FMA52788, FMA24477. DOI: https://doi.org/10.18908/lsdba.nbdc00837-000 . Current official license (updated 2025-02-27): https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html .
+
+Downloaded through Kevin Mattheus Moerman's OBJ-to-STL mirror: https://github.com/kevin-mattheus-moerman/BodyParts3D . That mirror retains the original CC BY-SA 2.1 Japan notice; see its README and the official current license above. The bundled adapted geometry is distributed under CC BY-SA 4.0, with these attribution notices retained.
+
+Modifications: one global uniform scale/translation to the Z-Anatomy frame, removal of nested internal tissue surfaces through a 1.5 mm exterior flood-fill, surface simplification, outward normals, Blender bone-heat joint weights, continuous pelvic anchoring and glTF/Draco packaging. Surface shading is original procedural code, with no MakeHuman skin/face/hair texture applied to this new model. No patient-specific fit is claimed.
+
+Reference: Mitsuhashi N et al., BodyParts3D: 3D structure database for anatomical concepts. Nucleic Acids Research 37 (2009), D782–D785. https://doi.org/10.1093/nar/gkn613 .
