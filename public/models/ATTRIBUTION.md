@@ -48,4 +48,4 @@ Muscular appearance revision: original procedural fibre shading and per-structur
 
 ## Fitted exterior (`skin-fitted-web.glb`)
 
-Derived from the CC0 MakeHuman exterior above and fitted to the Z-Anatomy/BodyParts3D skeletal and muscular surfaces. The fitted geometry is distributed under CC BY-SA 4.0 with the anatomical source notices above retained; the original MakeHuman skin, eye, hair and eyebrow textures remain CC0. Modifications include anatomical registration, regional tissue-envelope fitting, surface relaxation, neutral-palm normalization and baked topology-aware joint weights. Face, UVs and original mesh topology are retained.
+Derived from the CC0 MakeHuman exterior above and registered to Z-Anatomy/BodyParts3D skeletal landmarks. The fitted geometry is distributed under CC BY-SA 4.0 with the anatomical source notices above retained; the original MakeHuman skin, eye, hair and eyebrow textures remain CC0. Modifications include anatomical registration, smooth displacement registration, UV-seam normal welding, neutral-palm normalization and baked topology-aware joint weights. Face, UVs and original mesh topology are retained.

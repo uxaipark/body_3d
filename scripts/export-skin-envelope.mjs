@@ -8,7 +8,8 @@ for(const f of fits){
  p.setAttribute('POSITION',p.getAttribute('POSITION').clone().setArray(positions));
  for(const [name,array]of [['_SKIN_ARM_SIDE',f.arms],['_PELVIC_ANCHOR',f.pelvic]])p.setAttribute(name,doc.createAccessor().setType('SCALAR').setArray(new Float32Array(array)).setBuffer(buffer));
  const geometry=new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(positions,3)).setIndex(new T.BufferAttribute(p.getIndices().getArray(),1));geometry.computeVertexNormals();
- p.setAttribute('NORMAL',p.getAttribute('NORMAL').clone().setArray(geometry.getAttribute('normal').array));
+ const normals=f.normals?new Float32Array(f.normals.flatMap(v=>new T.Vector3(...v).transformDirection(inverse).toArray())):geometry.getAttribute('normal').array;
+ p.setAttribute('NORMAL',p.getAttribute('NORMAL').clone().setArray(normals));
  geometry.applyMatrix4(new T.Matrix4().fromArray(n.getWorldMatrix()));geometry.setAttribute('skinArmSide',new T.Float32BufferAttribute(f.arms,1));bindGeometry(geometry,undefined,true);
  for(let i=0;i<f.pelvic.length;i++)if(f.pelvic[i]){geometry.getAttribute('rigIndex').setXYZW(i,0,0,0,0);geometry.getAttribute('rigWeight').setXYZW(i,1,0,0,0);}
  relaxSurfaceBinding(geometry);
