@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import {mocapData} from './mocap-data.js';
+import {chair,aboveSeat} from './chair.js';
+import {seatSupport} from './seat-support.js';
 import {handLandmarks} from './hand-landmarks.js';
 import {taskState,isClinicalMotion,ease} from './clinical-motion.js';
 import type {Motion} from './physiology';
@@ -203,7 +205,8 @@ export class HumanRig {
  uniforms={uRigReal:{value:this.real},uRigDual:{value:this.dual}};
  amount=0;runMix=0;phase=0;forearmRoll=Math.PI/2;
  motion:Motion='rest';taskTime=0;revision=0;transition=1;
- transitionQuaternions:THREE.Quaternion[]=[];transitionRoot=new THREE.Vector3();
+ transitionQuaternions:THREE.Quaternion[]=[];transitionFeet:THREE.Vector3[]=[];transitionRoot=new THREE.Vector3();
+ seatSamples:{point:THREE.Vector3;w:Weights}[]=seatSupport.map(s=>({point:new THREE.Vector3(...s.point),w:s.w}));
  floorSamples:{point:THREE.Vector3;w:Weights}[]=[];
  constructor(){
    for(let i=0;i<specs.length;i++){
@@ -217,7 +220,7 @@ export class HumanRig {
  update(dt:number,motion:Motion,revision=0){
    const changed=motion!==this.motion||revision!==this.revision;
    if(changed){
-    this.transitionQuaternions=this.bones.map(b=>b.quaternion.clone());this.transitionRoot.copy(this.bones[0].position);
+    this.transitionQuaternions=this.bones.map(b=>b.quaternion.clone());this.transitionRoot.copy(this.bones[0].position);this.transitionFeet=['l','r'].map(side=>this.bone(`foot.${side}`).getWorldPosition(new THREE.Vector3()));
     this.transition=isClinicalMotion(motion)||isClinicalMotion(this.motion)?0:1;
     this.motion=motion;this.revision=revision;this.taskTime=0;
    }
@@ -232,9 +235,12 @@ export class HumanRig {
    }
    if(this.transition<1){
     this.transition=Math.min(1,this.transition+dt/.65);const blend=ease(0,1,this.transition);
+    const feet=['l','r'].map(side=>this.bone(`foot.${side}`).getWorldPosition(new THREE.Vector3()));
     this.bones[0].position.lerpVectors(this.transitionRoot,this.bones[0].position.clone(),blend);
     this.bones.forEach((b,i)=>b.quaternion.slerpQuaternions(this.transitionQuaternions[i],b.quaternion.clone(),blend));
-    this.bones[0].updateMatrixWorld(true);this.updatePalette();this.groundTask(false);
+    this.bones[0].updateMatrixWorld(true);
+    if(motion==='stand'||motion==='sitStand')for(let i=0;i<2;i++){const side=i===0?'l':'r',rotation=this.bone(`foot.${side}`).getWorldQuaternion(new THREE.Quaternion());this.solveLeg(side,this.transitionFeet[i].clone().lerp(feet[i],blend));this.setWorldRotation(`foot.${side}`,rotation);}
+    this.bones[0].updateMatrixWorld(true);this.updatePalette();this.groundTask(false);if(motion==='stand'||motion==='sitStand')this.constrainSeat();
    }
  }
  /** One final palette is shared by skeleton, native skin, vessels and markers. */
@@ -277,6 +283,21 @@ export class HumanRig {
    }
   }
   p.updateMatrixWorld(true);this.updatePalette();this.groundTask(true);
+  if(motion==='stand'||motion==='sitStand')this.constrainSeat();
+ }
+ /** Unilateral seat contact acts on the whole body, never clips the buttock mesh.
+  * Re-solve the legs after raising the pelvis so the feet do not float upward. */
+ constrainSeat(){
+  if(!this.seatSamples.length)return;
+  const targets=['l','r'].map(side=>this.bone(`foot.${side}`).getWorldPosition(new THREE.Vector3()));
+  for(let iteration=0;iteration<6;iteration++){
+   let penetration=0;
+   for(const sample of this.seatSamples){const point=this.transform(sample.point,sample.w);if(aboveSeat(point.x,point.z))penetration=Math.max(penetration,chair.seatTop+chair.clearance-point.y);}
+   if(penetration<.00005)break;
+   this.bones[0].position.y+=penetration;this.bones[0].updateMatrixWorld(true);
+   for(let i=0;i<2;i++)this.solveLeg(i===0?'l':'r',targets[i]);
+   this.bones[0].updateMatrixWorld(true);this.updatePalette();
+  }
  }
  groundTask(always:boolean){
   let floor=0;

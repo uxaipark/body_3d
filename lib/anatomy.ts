@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {chair} from './chair.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -44,7 +45,7 @@ export class AnatomyScene{
  // A stationary seat makes the sit-to-stand support phase legible.
  const chairMaterial=new THREE.MeshStandardMaterial({color:0x506d69,roughness:.8,metalness:.15});
  const chairPart=(size:number[],position:number[])=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(...size),chairMaterial);mesh.position.set(position[0],position[1],position[2]);this.chair.add(mesh)};
- chairPart([.43,.026,.36],[0,.417,-.37]);chairPart([.43,.25,.022],[0,.64,-.56]);
+ chairPart([chair.width,chair.seatThickness,chair.depth],[0,chair.seatTop-chair.seatThickness/2,chair.centerZ]);chairPart([chair.width,.25,.022],[0,.64,-.56]);
  for(const x of [-.18,.18])for(const z of [-.51,-.23])chairPart([.022,.404,.022],[x,.202,z]);
  this.chair.visible=false;this.scene.add(this.chair);
  for(const [key,site]of Object.entries(sites)){const marker=new THREE.Mesh(new THREE.SphereGeometry(.012,16,12),new THREE.MeshBasicMaterial({color:0xa4e4d0,transparent:true,opacity:.75,depthTest:false}));marker.position.set(...site.position);marker.visible=false;marker.renderOrder=10;marker.userData.site=key;this.markers.set(key as Site,marker);this.root.add(marker);const halo=new THREE.Mesh(new THREE.TorusGeometry(.021,.0015,6,32),new THREE.MeshBasicMaterial({color:0xa4e4d0,transparent:true,opacity:.6,depthTest:false}));halo.name='halo';marker.add(halo);}

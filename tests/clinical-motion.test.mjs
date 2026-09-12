@@ -15,7 +15,7 @@ test('chair tasks keep both feet planted, bones rigid and gaze level throughout 
   }
   near(rig.bone('head').getWorldQuaternion(new T.Quaternion()).angleTo(new T.Quaternion()),0);
  }
- assert.ok(max-min>.38);assert.ok(maxFlex>1.4&&maxFlex<2);
+ assert.ok(max-min>.25&&max-min<.34);assert.ok(maxFlex>1.2&&maxFlex<2);
  rig.poseTask('stand',7);const end=rig.bones.map(b=>b.matrixWorld.clone());rig.poseTask('stand',100);rig.bones.forEach((b,i)=>b.matrixWorld.elements.forEach((v,j)=>near(v,end[i].elements[j])));
 });
 test('repeated tasks have continuous loop boundaries and single stand remains complete',()=>{
