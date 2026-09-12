@@ -1,6 +1,6 @@
 import {taskState,isClinicalMotion} from './clinical-motion.js';
 export type Site = 'wrist' | 'finger' | 'ear' | 'forehead' | 'chest' | 'arm';
-export type Motion = 'rest' | 'walk' | 'run' | 'stand' | 'sitStand' | 'grip';
+export type Motion = 'rest' | 'walk' | 'run' | 'stand' | 'sitStand' | 'grip' | 'lie';
 export type Channel = 'ECG'|'PPG'|'EEG'|'EMG'|'RESP'|'CAP';
 export interface Parameters { hr:number; rr:number; stiffness:number; spo2:number; tidal:number; contact:number; wavelength:number; motion:Motion; motionStartedAt?:number; motionRevision?:number; site:Site; }
 export const defaults:Parameters={hr:72,rr:14,stiffness:35,spo2:98,tidal:500,contact:90,wavelength:530,motion:'rest',site:'wrist'};

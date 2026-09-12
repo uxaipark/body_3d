@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {chair} from './chair.js';
+import {bed,bedShader} from './bed.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -25,7 +26,7 @@ interface PickRange{end:number;name:string}
 export class AnatomyScene{
  renderer:THREE.WebGLRenderer;scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(31,1,.01,30);controls:OrbitControls;
  groups=new Map<Layer,THREE.Group>(); meshes:THREE.Mesh[]=[]; markers=new Map<Site,THREE.Mesh>();
- root=new THREE.Group();chair=new THREE.Group();draco=new DRACOLoader();params:Parameters;layers:Layers;time=0;running=true;rotate=false;disposed=false;
+ root=new THREE.Group();chair=new THREE.Group();bedGroup=new THREE.Group();bedLoad={value:0};draco=new DRACOLoader();params:Parameters;layers:Layers;time=0;running=true;rotate=false;disposed=false;
  frame=0;last=0;lastStats=0;frameCount=0;slowFrames=0;resizeObserver:ResizeObserver;raycaster=new THREE.Raycaster();pointerDown=[0,0];
  rig=new HumanRig();skinRig=new HumanRig();softBody=new SoftBody();
  skinInspection=false;skinMarkers=new Map<string,THREE.Mesh>();
@@ -48,6 +49,21 @@ export class AnatomyScene{
  chairPart([chair.width,chair.seatThickness,chair.depth],[0,chair.seatTop-chair.seatThickness/2,chair.centerZ]);chairPart([chair.width,.25,.022],[0,.64,-.56]);
  for(const x of [-.18,.18])for(const z of [-.51,-.23])chairPart([.022,.404,.022],[x,.202,z]);
  this.chair.visible=false;this.scene.add(this.chair);
+ const bedFrameMaterial=new THREE.MeshStandardMaterial({color:0x40544f,roughness:.65,metalness:.25});
+ const bedPart=(size:number[],position:number[])=>{const mesh=new THREE.Mesh(new THREE.BoxGeometry(...size),bedFrameMaterial);mesh.position.set(position[0],position[1],position[2]);this.bedGroup.add(mesh)};
+ bedPart([bed.width+.03,.06,bed.depth+.03],[0,bed.top-bed.thickness-.03,bed.centerZ]);
+ for(const x of [-.43,.43])for(const z of [-2.12,-.28])bedPart([.04,.25,.04],[x,.125,z]);
+ const mattressGeometry=new THREE.BoxGeometry(bed.width,bed.thickness,bed.depth,24,1,52).translate(0,bed.top-bed.thickness/2,bed.centerZ);
+ const mattressMaterial=new THREE.MeshStandardMaterial({color:0xb5c8bf,roughness:.94,metalness:0});
+ mattressMaterial.onBeforeCompile=shader=>{
+  shader.uniforms.uBedLoad=this.bedLoad;shader.vertexShader=bedShader+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+   transformed.y+=(bedTop(position.xz)-.43)*clamp((position.y-.31)/.12,0.,1.);
+  `).replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
+   if(objectNormal.y>.5){float dx=(bedTop(position.xz+vec2(.001,0.))-bedTop(position.xz-vec2(.001,0.)))/.002;float dz=(bedTop(position.xz+vec2(0.,.001))-bedTop(position.xz-vec2(0.,.001)))/.002;objectNormal=normalize(vec3(-dx,1.,-dz));}
+  `);
+ };mattressMaterial.customProgramCacheKey=()=> 'support-mattress-v1';
+ this.bedGroup.add(new THREE.Mesh(mattressGeometry,mattressMaterial));this.bedGroup.visible=false;this.scene.add(this.bedGroup);
  for(const [key,site]of Object.entries(sites)){const marker=new THREE.Mesh(new THREE.SphereGeometry(.012,16,12),new THREE.MeshBasicMaterial({color:0xa4e4d0,transparent:true,opacity:.75,depthTest:false}));marker.position.set(...site.position);marker.visible=false;marker.renderOrder=10;marker.userData.site=key;this.markers.set(key as Site,marker);this.root.add(marker);const halo=new THREE.Mesh(new THREE.TorusGeometry(.021,.0015,6,32),new THREE.MeshBasicMaterial({color:0xa4e4d0,transparent:true,opacity:.6,depthTest:false}));halo.name='halo';marker.add(halo);}
  for(const region of skinRegions){const marker=new THREE.Mesh(new THREE.SphereGeometry(.014,12,10),new THREE.MeshBasicMaterial({color:0x82e4d4,depthTest:false,transparent:true,opacity:.85}));marker.userData.region=region;marker.visible=false;marker.renderOrder=15;marker.position.set(...region.position);this.skinMarkers.set(region.id,marker);this.root.add(marker);}
  this.draco.setDecoderPath('/draco/');this.draco.setWorkerLimit(2);
@@ -156,8 +172,8 @@ export class AnatomyScene{
  setLayers(l:Layers){this.layers=l;for(const m of this.meshes){const v=l[m.userData.layer as Layer];const layer=m.userData.layer as Layer;const cover=l.skin>=100?'skin':l.dermis>=100?'dermis':l.adipose>=100?'adipose':null;const exterior=['skin','dermis','adipose'];m.visible=v>0&&(!cover||(exterior.includes(layer)&&exterior.indexOf(layer)<=exterior.indexOf(cover)));const mat=m.material as THREE.MeshStandardMaterial;mat.opacity=v/100*(m.userData.opacityScale??1);mat.depthWrite=mat.opacity>=(m.userData.organSurface?.5:.95);}}
  setSkinInspection(enabled:boolean){this.skinInspection=enabled;for(const marker of this.skinMarkers.values())marker.visible=enabled;}
  setSensors(selected:Site[]){this.selectedSites=new Set(selected);for(const [key,m]of this.markers)m.visible=this.selectedSites.has(key);}
- setParameters(p:Parameters){this.params=p;for(const [key,m]of this.markers){m.scale.setScalar(key===p.site?1.4:.65);(m.material as THREE.MeshBasicMaterial).color.set(sensorColors[key]);}}
- focus(target:'body'|'chest'|'head'|'sensor'|'front'|'back'|'hands'){if(target==='body'||target==='front'){this.controls.target.set(0,.91,0);this.camera.position.set(target==='front'?0:.7,1.04,3.7);}else if(target==='back'){this.controls.target.set(0,.91,0);this.camera.position.set(0,1.04,-3.7);}else if(target==='hands'){const p=this.rig.bone('hand.r').getWorldPosition(new THREE.Vector3()).add(this.rig.bone('hand.l').getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);this.controls.target.copy(p);this.camera.position.copy(p).add(new THREE.Vector3(.15,.12,1.45));}else{const p=target==='sensor'?this.markers.get(this.params.site)!.position.toArray():target==='head'?[0,1.62,0]:[0,1.28,0];this.controls.target.set(p[0],p[1],p[2]);this.camera.position.set(p[0]+.12,p[1]+.02,p[2]+(target==='sensor'?.5:.85));}this.controls.update();}
+ setParameters(p:Parameters){const previous=this.params.motion;this.params=p;if(previous!==p.motion){if(p.motion==='lie')this.focus('bed');else if(previous==='lie')this.focus('body');}for(const [key,m]of this.markers){m.scale.setScalar(key===p.site?1.4:.65);(m.material as THREE.MeshBasicMaterial).color.set(sensorColors[key]);}}
+ focus(target:'body'|'chest'|'head'|'sensor'|'front'|'back'|'hands'|'bed'){if(target==='body'||target==='front'){this.controls.target.set(0,.91,0);this.camera.position.set(target==='front'?0:.7,1.04,3.7);}else if(target==='back'){this.controls.target.set(0,.91,0);this.camera.position.set(0,1.04,-3.7);}else if(target==='bed'){this.controls.target.set(0,.68,-.9);this.camera.position.set(2.1,1.95,2.45);}else if(target==='hands'){const p=this.rig.bone('hand.r').getWorldPosition(new THREE.Vector3()).add(this.rig.bone('hand.l').getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);this.controls.target.copy(p);this.camera.position.copy(p).add(new THREE.Vector3(.15,.12,1.45));}else{const p=target==='sensor'?this.markers.get(this.params.site)!.position.toArray():target==='head'?[0,1.62,0]:[0,1.28,0];this.controls.target.set(p[0],p[1],p[2]);this.camera.position.set(p[0]+.12,p[1]+.02,p[2]+(target==='sensor'?.5:.85));}this.controls.update();}
  zoom(factor:number){this.camera.position.sub(this.controls.target).multiplyScalar(factor).add(this.controls.target);this.controls.update();}
  pointerStart=(e:PointerEvent)=>{this.pointerDown=[e.clientX,e.clientY]};
  pick=(e:PointerEvent)=>{if(Math.hypot(e.clientX-this.pointerDown[0],e.clientY-this.pointerDown[1])>5)return;const r=this.renderer.domElement.getBoundingClientRect();this.raycaster.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),this.camera);
@@ -191,6 +207,7 @@ export class AnatomyScene{
  this.rig.update(this.running&&!document.hidden?delta:0,this.params.motion,this.params.motionRevision||0);
  this.skinRig.copyPose(this.rig);
  this.chair.visible=this.params.motion==='stand'||this.params.motion==='sitStand';
+ this.bedGroup.visible=this.params.motion==='lie';this.bedLoad.value=this.params.motion==='lie'?this.rig.bedLoad:0;
  this.controls.autoRotate=this.rotate;this.controls.autoRotateSpeed=.5;this.controls.update();
  for(const [key,m] of this.markers){
  const point=new THREE.Vector3(...sites[key].position);

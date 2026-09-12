@@ -43,3 +43,27 @@ grip fraction and effort envelope for reproducible algorithm experiments.
 Regression coverage includes stance/IK length invariants, gaze, cycle seams,
 one-shot completion, digit rigidity, pause/replay transitions, shared skin pose,
 actual native sole clearance, fitted hand edge stretch and CSV/signal timing.
+
+## Bed transfer
+
+`lie` is a one-shot, 21-second authored sequence: 2 s seated preparation,
+1 s seated hold, feet lift before recline (3–7 s), stable supine posture
+(7–17 s), and reverse transfer to sitting (17–21 s). Physiological breathing
+continues during the hold. The existing pause, replay, task stage and CSV clock
+also apply. No sleep stage, orthostatic circulation or blood-pressure response
+is inferred from the animation.
+
+A stationary bed uses the same height field for its rendered mattress and
+support constraints, including a shallow head rest and 2–8 mm illustrative
+load-dependent mattress depressions. Two-link leg IK changes its knee pole
+from forward to upward during transfer. Skin, skeleton and sensors use the
+same final pose. Heel contact is solved separately from torso contact using
+the actual dual-quaternion exterior, so a low heel does not lift the torso.
+Hands rest over the abdomen in the supine pose.
+
+Contact witnesses are generated from the native exterior with
+`node --experimental-strip-types scripts/build-bed-support.mjs`. Full native
+geometry is independently checked throughout the entire transfer, along with
+limb lengths, gaze, continuous movement, stable hold, pause, replay and CSV
+phase. Mattress response is a prescribed geometric approximation, not a
+patient-calibrated pressure distribution or soft-tissue contact FEM.
