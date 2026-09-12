@@ -14,6 +14,7 @@ import {registerSkinGeometry} from './skin-registration.js';
 import {bindCardiacMotion,cardiacShader,isCardiacChamber} from './cardiac';
 import {applyCardiacClearance} from './cardiac-space';
 import {applyOrganSurface} from './organ-surface';
+import {bindVesselClearance,vesselClearanceShader} from './vessel-clearance';
 import {isHepatic,fitHepaticGeometry,hepaticMotion} from './hepatic.js';
 import {sites,sensorColors, type Parameters, type Site} from './physiology';
 export type Layer='skin'|'dermis'|'adipose'|'cardiovascular'|'visceral'|'nervous'|'skeleton'|'muscular';
@@ -53,7 +54,7 @@ export class AnatomyScene{
  async load(onProgress:(n:number)=>void){let done=0;const loader=new GLTFLoader().setDRACOLoader(this.draco);
  // Limit concurrent decodes to keep interaction responsive on integrated GPUs.
  for(const layer of ['skin','visceral','cardiovascular','skeleton','nervous','muscular'] as Layer[]){
- const gltf=await loader.loadAsync(layer==='skin'?'/models/skin-atlas-web.glb?native=2':`/models/${layer}-web.glb${layer==='adipose'||layer==='dermis'?'?tissue=3':layer==='visceral'?'?lungs=4':''}`);if(this.disposed){gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose()});return;}
+ const gltf=await loader.loadAsync(layer==='skin'?'/models/skin-atlas-web.glb?native=2':`/models/${layer}-web.glb${layer==='adipose'||layer==='dermis'?'?tissue=3':layer==='visceral'?'?lungs=4':layer==='cardiovascular'?'?costal=1':''}`);if(this.disposed){gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose()});return;}
  gltf.scene.updateMatrixWorld(true);
  if(layer==='skin'||layer==='dermis'||layer==='adipose'){
  const group=new THREE.Group();
@@ -88,7 +89,7 @@ export class AnatomyScene{
  const key=part;let batch=batches.get(key);if(!batch){batch={geometries:[],ranges:[],count:0};batches.set(key,batch);}
  const geometry=obj.geometry.clone().applyMatrix4(obj.matrixWorld);
  if(part==='hepatic')fitHepaticGeometry(geometry);
- for(const key of Object.keys(geometry.attributes))if(key!=='position'&&key!=='normal'&&key!=='_lung_inhale')geometry.deleteAttribute(key);
+ for(const key of Object.keys(geometry.attributes))if(!['position','normal','_lung_inhale','_rib_guard','_rib_chest'].includes(key))geometry.deleteAttribute(key);
  if(isRespiratoryPart(part)){const inhale=geometry.getAttribute('_lung_inhale') as THREE.BufferAttribute;if(!inhale)throw new Error(`Missing bounded respiratory pose: ${name}`);const v=new THREE.Vector3();for(let i=0;i<inhale.count;i++){v.fromBufferAttribute(inhale,i).applyMatrix4(obj.matrixWorld);inhale.setXYZ(i,v.x,v.y,v.z);}geometry.setAttribute('lungInhale',inhale);geometry.deleteAttribute('_lung_inhale');}
  if(!geometry.getAttribute('normal'))geometry.computeVertexNormals();
  geometry.computeBoundingBox();bindGeometry(geometry,layer==='skeleton'?rigidBone(name,geometry.boundingBox!.getCenter(new THREE.Vector3())):isRespiratoryPart(part)||part==='hepatic'?2:pelvicOrgan(name)?0:undefined);
@@ -99,6 +100,7 @@ export class AnatomyScene{
  if(layer==='nervous')color.set('#d2b278');
  if(part==='artery')bindArterialPulse(geometry,name);
  if(layer==='cardiovascular')bindCardiacMotion(geometry,name);
+ if(layer==='cardiovascular')bindVesselClearance(geometry);
  if(layer==='muscular'){color.set(tissueColors[part as Tissue]);muscleFrame(geometry,name);}
  for(let i=0;i<count;i++)color.toArray(colors,i*3);geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
  batch.count+=(geometry.index?.count||count)/3;batch.ranges.push({end:batch.count,name:name.replace(/\d{3}$/,'').replace(/([a-z])([lr])$/,'$1 ($2)')});batch.geometries.push(geometry);
@@ -117,7 +119,7 @@ export class AnatomyScene{
  applyDeformation(mat:THREE.MeshStandardMaterial,part:string,rigid=false,cardiac=false){
  mat.onBeforeCompile=shader=>{
  Object.assign(shader.uniforms,this.uniforms,this.softBody.uniforms,['skin','dermis','adipose'].includes(part)?this.skinRig.uniforms:this.rig.uniforms);
- shader.vertexShader='uniform float uResp; uniform float uBeat;\n'+(cardiac&&part!=='artery'?'uniform float uCardiacCycles;\n':'')+(isRespiratoryPart(part)?'attribute vec3 lungInhale; uniform float uLungInflation;\n':part==='hepatic'||cardiac?'uniform float uLungInflation;\n':'')+rigShader+(rigid?'':tissueShader)+(part==='artery'?arterialShader:'')+(cardiac?cardiacShader:'')+shader.vertexShader;
+ shader.vertexShader='uniform float uResp; uniform float uBeat;\n'+(cardiac&&part!=='artery'?'uniform float uCardiacCycles;\n':'')+(isRespiratoryPart(part)?'attribute vec3 lungInhale; uniform float uLungInflation;\n':part==='hepatic'||cardiac?'uniform float uLungInflation;\n':'')+rigShader+(rigid?'':tissueShader)+(part==='artery'?arterialShader:'')+(cardiac?cardiacShader+vesselClearanceShader:'')+shader.vertexShader;
  shader.vertexShader=shader.vertexShader.replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
  vec4 rigR;vec4 rigD;rigBlend(rigR,rigD);
  ${rigid?'':'vec3 tissueOffset;mat3 tissueJacobian;tissueField(position,tissueOffset,tissueJacobian);'}
@@ -137,9 +139,10 @@ export class AnatomyScene{
  ${part==='hepatic'?`transformed.y-=uLungInflation*${hepaticMotion.descent.toFixed(6)};`:''}
  ${cardiac?'if(cardiacData.y>.0001)transformed+=cardiacOffset(position,cardiacData,uCardiacCycles);':''}
  ${part==='artery'?'transformed += normal*pulseData.x*uDistension*uPulseGain*arterialWallPulse();':''}
+ ${cardiac?'transformed=constrainVessel(transformed);':''}
  transformed=rigPosition(rigR,rigD,transformed);
  `);
- };mat.customProgramCacheKey=()=>`joint-dq-tissue-v3-${part}-${rigid}-${cardiac}`;
+ };mat.customProgramCacheKey=()=>`joint-dq-tissue-costal-v4-${part}-${rigid}-${cardiac}`;
  }
 
  setLayers(l:Layers){this.layers=l;for(const m of this.meshes){const v=l[m.userData.layer as Layer];const layer=m.userData.layer as Layer;const cover=l.skin>=100?'skin':l.dermis>=100?'dermis':l.adipose>=100?'adipose':null;const exterior=['skin','dermis','adipose'];m.visible=v>0&&(!cover||(exterior.includes(layer)&&exterior.indexOf(layer)<=exterior.indexOf(cover)));const mat=m.material as THREE.MeshStandardMaterial;mat.opacity=v/100*(m.userData.opacityScale??1);mat.depthWrite=mat.opacity>=(m.userData.organSurface?.5:.95);}}

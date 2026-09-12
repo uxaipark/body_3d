@@ -27,6 +27,8 @@ Some upstream referenced/included components have noncommercial restrictions. Do
 
 See upstream full notices: https://github.com/Z-Anatomy/Models-of-human-anatomy#attributions
 
+`cardiovascular-web.glb` modification: local rib/costal-cartilage clearance correction of thoracoabdominal vessel routes, continuous tube displacement, recalculated normals and baked chest-relative contact attributes. The adapted geometry retains its CC BY-SA anatomical source license. This is illustrative contact geometry, not patient-specific reconstruction. See `scripts/VESSEL-CLEARANCE.md` for the build and limitations.
+
 
 ## Male exterior (`skin-web.glb`)
 
