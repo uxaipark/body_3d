@@ -46,18 +46,24 @@ actual native sole clearance, fitted hand edge stretch and CSV/signal timing.
 
 ## Bed transfer
 
-`lie` now starts beside the left long edge at the midpoint of the bed. The body
-faces outward, sits at that edge (0–2 s), gathers both arms close to the ribs,
-then lowers sideways toward the head end with bent knees (3–7.2 s). The legs
-extend along the bed (7–9.5 s), followed by a longitudinal roll onto the back
-(9.5–12 s). Both legs and the upper body settle, and the final supine posture
-lowers the arms beside the body at 12–14 s and holds indefinitely from 14 s while physiological breathing continues. Replay
-restarts the sequence; there is no automatic seated return.
+`lie` keeps the current standing X/Z position and facing direction. A rigid
+bed frame transform places the long edge behind that position; the authored
+trajectory and contact height field remain in bed-local coordinates. Only the
+actual sitting/lowering movement changes the patient's position. Replay retains
+the same bed anchor.
 
-Both elbows stay near the ribs through side lying and the longitudinal roll. The upper-arm adduction compensates for the atlas’s splayed bind pose, and the forearms fold in front of the torso. The arms only unfold and settle beside the body after the roll finishes; there is no lateral support-arm reach. Hip translation,
-lateral trunk lowering, leg lift, leg extension and longitudinal roll have
-separate smooth phases. Full extension adjusts ankle reach to current hip
-height while preserving bone lengths. The hinge frame follows the pelvis through side lying and roll; both leg segments share the same bend plane. Knee flexion is bounded at 2.10 radians. The feet clear the mattress edge before moving inward. Ankles relax after leaving the floor.
+The patient sits with the free arm down (0–2 s) while the near hand reaches the
+mattress beside the hip, then lowers sideways toward the head end (3–7.2 s).
+The supporting hand releases as the trunk lowers; both elbows are tucked by
+side lying and stay close through the roll. Legs extend (7–9.5 s), the body rolls
+supine (9.5–12 s), and both arms settle onto the mattress (12–14 s). The final pose
+holds with breathing, without automatically returning to sitting.
+
+The supporting arm uses a sagittal elbow pole and a bounded downward wrist
+orientation. Free-arm preparation, support release and final arm lowering are
+separate smooth phases. Bone lengths and the knee hinge frame remain invariant;
+full extension adapts to support height. Knee flexion is bounded at 2.10 radians.
+The feet clear the mattress edge before moving inward.
 
 The stationary bed shares a height field between its rendered mattress and
 contact constraints, including a head rest and 2–8 mm illustrative mattress
@@ -68,7 +74,7 @@ of the displayed pose. The same final palette drives skin, skeleton and sensors.
 Regenerate witnesses with
 `node --experimental-strip-types scripts/build-bed-support.mjs`. Independent
 full-native-mesh tests cover mattress/floor clearance over the entire sequence,
-left-edge seating, a true side-lying orientation, head-end travel, final knee
+standing-position anchoring, seated hand support, a true side-lying orientation, head-end travel, final knee
 extension, limb lengths, knee hinge alignment, joint rotation envelopes, angular speed (60 Hz), continuous movement, pause, replay and CSV phase.
 This is an authored kinematic sequence, not captured motion or a calibrated
 force/pressure model. No sleep stage, orthostatic flow or blood-pressure response
@@ -80,3 +86,12 @@ The top-bar circular switch is on by default and independent of sensor parameter
 It hides named genital organ meshes and applies a local rest-space display mask
 while preserving surrounding limbs/abdomen. No replacement cover or genital proxy is rendered. Original assets,
 physiology and exports are unchanged. The mode also remains stable during pause.
+
+## Close-up visibility
+
+All GPU-deformed anatomy batches share a conservative bounding sphere recomputed
+from the current rig each frame. This replaces resting-pose CPU bounds that could
+cull a lying body at close camera distances. The envelope includes tissue offsets
+and is checked against every native skin vertex through the full bed sequence.
+Bed framing tracks the trunk while preserving zoom/orbit distance and pan offset;
+zoom no longer converges on the old empty standing target. Near clipping is 3 mm.

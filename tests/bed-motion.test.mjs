@@ -1,5 +1,6 @@
+import {updateDeformedBounds} from '../lib/rig-view.ts';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import crypto from 'node:crypto';import *as T from 'three';import {NodeIO} from '@gltf-transform/core';import {ALL_EXTENSIONS} from '@gltf-transform/extensions';import draco from 'draco3dgltf';
-import {HumanRig,surfaceFootSupport,BONE_NAMES} from '../lib/rig.ts';import {bed,bedSurface,aboveBed} from '../lib/bed.js';import {bedSourceHash} from '../lib/bed-support.js';import {taskState} from '../lib/clinical-motion.js';import {defaults,csv} from '../lib/physiology.ts';
+import {HumanRig,surfaceFootSupport,BONE_NAMES} from '../lib/rig.ts';import {bed,bedSurface,aboveBed,worldToBed,bedToWorld} from '../lib/bed.js';import {bedSourceHash} from '../lib/bed-support.js';import {taskState} from '../lib/clinical-motion.js';import {defaults,csv} from '../lib/physiology.ts';
 const near=(a,b,tol=1e-5)=>assert.ok(Math.abs(a-b)<tol,`${a} != ${b}`);
 test('bed transfer preserves limb lengths, faces upward at rest, passes through a true side-lying pose, extends legs and holds supine',()=>{
  const rig=new HumanRig();let previous;
@@ -15,8 +16,8 @@ test('bed transfer preserves limb lengths, faces upward at rest, passes through 
  rig.poseBed(24);rig.bones.forEach((b,i)=>b.matrixWorld.elements.forEach((v,j)=>near(v,hold[i].elements[j])));
  assert.equal(taskState('lie',22).complete,true);assert.equal(taskState('lie',22).repetitions,1);
  rig.poseBed(22);assert.ok(new T.Vector3(0,0,1).applyQuaternion(rig.bone('head').getWorldQuaternion(new T.Quaternion())).y>.99);
- rig.poseBed(2.5);assert.ok(rig.bones[0].position.x<-.3);near(rig.bones[0].position.z,-1.2);assert.ok(new T.Vector3(0,0,1).applyQuaternion(rig.bone('head').getWorldQuaternion(new T.Quaternion())).x<-.99);
- rig.poseBed(7.3);const sideFace=new T.Vector3(0,0,1).applyQuaternion(rig.bone('head').getWorldQuaternion(new T.Quaternion()));assert.ok(sideFace.x<-.99);assert.ok(rig.bone('head').getWorldPosition(new T.Vector3()).z<rig.bones[0].position.z-.5);
+ rig.poseBed(2.5);assert.ok(rig.bones[0].position.z<-.3);near(rig.bones[0].position.x,0);assert.ok(new T.Vector3(0,0,1).applyQuaternion(rig.bone('head').getWorldQuaternion(new T.Quaternion())).z>.99);
+ rig.poseBed(7.3);const sideFace=new T.Vector3(0,0,1).applyQuaternion(rig.bone('head').getWorldQuaternion(new T.Quaternion()));assert.ok(sideFace.z>.99);assert.ok(rig.bone('head').getWorldPosition(new T.Vector3()).x<rig.bones[0].position.x-.5);
  rig.poseBed(14);for(const side of ['l','r']){const hip=rig.bone(`thigh.${side}`).getWorldPosition(new T.Vector3()),knee=rig.bone(`shin.${side}`).getWorldPosition(new T.Vector3()),ankle=rig.bone(`foot.${side}`).getWorldPosition(new T.Vector3());assert.ok(knee.clone().sub(hip).angleTo(ankle.clone().sub(knee))<.22,'both legs finish extended');}
 });
 test('full native skin clears the actual mattress and remains supported through the complete transfer',async()=>{
@@ -26,13 +27,17 @@ test('full native skin clears the actual mattress and remains supported through 
  for(let i=0;i<p.count;i++)points.push({point:new T.Vector3().fromBufferAttribute(p,i),w:{indices:[ix.getX(i),ix.getY(i),ix.getZ(i),ix.getW(i)],weights:[w.getX(i),w.getY(i),w.getZ(i),w.getW(i)]}});
  let worst=Infinity;
  for(let i=0;i<=126;i++){
-  const time=i/6,load=taskState('lie',time).recline;rig.poseBed(time);
-  for(const sample of points){const v=rig.transform(sample.point,sample.w);assert.ok(v.y>-.008,'body penetrates floor');if(aboveBed(v.x,v.z)){const gap=v.y-bedSurface(v.x,v.z,load);worst=Math.min(worst,gap);assert.ok(gap>.0005,`mattress penetration at ${time}: ${gap} / ${sample.point.toArray()}`);}}
+  const time=i/6,load=taskState('lie',time).recline;rig.poseBed(time);const bounds=updateDeformedBounds(rig.bones,new T.Sphere());
+  for(const sample of points){const v=rig.transform(sample.point,sample.w);assert.ok(v.distanceTo(bounds.center)<bounds.radius,'posed visibility bounds must enclose the full exterior');assert.ok(v.y>-.008,'body penetrates floor');const [x,z]=worldToBed(v.x,v.z,rig.bedAnchor);if(aboveBed(x,z)){const gap=v.y-bedSurface(x,z,load);worst=Math.min(worst,gap);assert.ok(gap>.0005,`mattress penetration at ${time}: ${gap} / ${sample.point.toArray()}`);}}
  }
  assert.ok(worst<.006,'support constraint must not leave the whole body hovering');
  rig.poseBed(14);const contacts={head:Infinity,back:Infinity,pelvis:Infinity,heels:Infinity,leftHand:Infinity,rightHand:Infinity};
- for(const s of points){const v=rig.transform(s.point,s.w);if(!aboveBed(v.x,v.z))continue;const region=s.point.y>1.5?'head':s.point.y>1.05?'back':s.point.y>.75?'pelvis':s.point.y<.13?'heels':null;if(region)contacts[region]=Math.min(contacts[region],v.y-bedSurface(v.x,v.z,1));if(s.point.y>.66&&s.point.y<.84&&Math.abs(s.point.x)>.24){const side=s.point.x>0?'leftHand':'rightHand';contacts[side]=Math.min(contacts[side],v.y-bedSurface(v.x,v.z,1));}}
+ for(const s of points){const v=rig.transform(s.point,s.w);const [x,z]=worldToBed(v.x,v.z,rig.bedAnchor);if(!aboveBed(x,z))continue;const region=s.point.y>1.5?'head':s.point.y>1.05?'back':s.point.y>.75?'pelvis':s.point.y<.13?'heels':null;if(region)contacts[region]=Math.min(contacts[region],v.y-bedSurface(x,z,1));if(s.point.y>.66&&s.point.y<.84&&Math.abs(s.point.x)>.24){const side=s.point.x>0?'leftHand':'rightHand';contacts[side]=Math.min(contacts[side],v.y-bedSurface(x,z,1));}}
  for(const [region,gap]of Object.entries(contacts))assert.ok(gap<.025,`${region} floats ${gap}m above support`);
+ rig.poseBed(2.5);let handGap=Infinity;
+ for(const s of points){if(s.point.x>-.24||s.point.y>.84||s.point.y<.66)continue;const v=rig.transform(s.point,s.w),[x,z]=worldToBed(v.x,v.z,rig.bedAnchor);if(aboveBed(x,z))handGap=Math.min(handGap,v.y-bedSurface(x,z,rig.bedLoad));}
+ assert.ok(handGap<.025,`supporting hand floats ${handGap}m over the bed while sitting`);
+
 });
 test('bed task pauses and restarts on the shared clock and CSV records its phase',()=>{
  const rig=new HumanRig();for(let i=0;i<500;i++)rig.update(1/60,'lie',1);
@@ -51,7 +56,7 @@ test('bed joints retain hinge alignment and bounded angular speed without wrist 
   for(const side of ['l','r']){
    const shin=rig.bone(`shin.${side}`).quaternion;
    assert.ok(Math.hypot(shin.y,shin.z)<.04,`knee twists away from its hinge: ${side} at ${t}`);
-   for(const [name,limit]of [['thigh',2.0],['shin',2.15],['upperArm',1.1],['forearm',2.2],['hand',.30],['foot',.50]])assert.ok(rig.bone(`${name}.${side}`).quaternion.angleTo(identity)<limit,`${name}.${side} exceeds the authored rotation envelope at ${t}`);
+   for(const [name,limit]of [['thigh',2.0],['shin',2.15],['upperArm',1.1],['forearm',2.2],['hand',1.15],['foot',.50]])assert.ok(rig.bone(`${name}.${side}`).quaternion.angleTo(identity)<limit,`${name}.${side} exceeds the authored rotation envelope at ${t}`);
    const hip=rig.bone(`thigh.${side}`).getWorldPosition(new T.Vector3()),knee=rig.bone(`shin.${side}`).getWorldPosition(new T.Vector3()),ankle=rig.bone(`foot.${side}`).getWorldPosition(new T.Vector3());
    assert.ok(knee.clone().sub(hip).angleTo(ankle.clone().sub(knee))<=2.101,'knee flexion stays below 121 degrees');
   }
@@ -60,8 +65,8 @@ test('bed joints retain hinge alignment and bounded angular speed without wrist 
 
 test('side transfer keeps both elbows tucked and only lowers the arms after the roll',()=>{
  const rig=new HumanRig();
- for(let i=0;i<=102;i++){
-  const time=3.5+i/12;rig.poseBed(time);const chest=rig.bone('chest').matrixWorld.clone().invert();
+ for(let i=0;i<=62;i++){
+  const time=6.85+i/12;rig.poseBed(time);const chest=rig.bone('chest').matrixWorld.clone().invert();
   for(const side of ['l','r']){
    const local=name=>rig.bone(`${name}.${side}`).getWorldPosition(new T.Vector3()).applyMatrix4(chest),shoulder=local('upperArm'),elbow=local('forearm'),wrist=local('hand');
    assert.ok(Math.abs(elbow.x)<=Math.abs(shoulder.x)+.012,'elbow stays beside the ribs during side lying and roll');
@@ -71,4 +76,16 @@ test('side transfer keeps both elbows tucked and only lowers the arms after the 
  }
  assert.equal(taskState('lie',13).complete,false);assert.equal(taskState('lie',14).complete,true);
  rig.poseBed(14);for(const side of ['l','r']){const elbow=rig.bone(`forearm.${side}`).getWorldPosition(new T.Vector3()),wrist=rig.bone(`hand.${side}`).getWorldPosition(new T.Vector3());assert.ok(Math.abs(wrist.y-elbow.y)<.04,'forearm rests approximately level on the mattress');}
+});
+
+test('bed appears behind the current standing position without relocating or turning the patient',()=>{
+ const rig=new HumanRig();rig.poseBed(0);near(rig.bones[0].position.x,0);near(rig.bones[0].position.z,rig.bind[0].z);
+ const forward=new T.Vector3(0,0,1).applyQuaternion(rig.bones[0].quaternion);assert.ok(forward.z>.9999);
+ for(const x of[-bed.width/2,bed.width/2])for(const z of[bed.centerZ-bed.depth/2,bed.centerZ+bed.depth/2])assert.ok(bedToWorld(x,z)[1]<rig.bind[0].z-.2,'all mattress corners stay behind the standing patient');
+ rig.reset();rig.bones[0].position.x=.17;rig.bones[0].position.z=.12;rig.bones[0].updateMatrixWorld(true);rig.update(0,'lie',1);near(rig.bedAnchor.x,.17);near(rig.bedAnchor.z,.135);rig.poseBed(0);near(rig.bones[0].position.x,.17);near(rig.bones[0].position.z,.12);
+ const anchor=rig.bedAnchor.clone();rig.poseBed(14);rig.update(0,'lie',2);assert.deepEqual(rig.bedAnchor.toArray(),anchor.toArray(),'replay keeps the existing bed anchor');
+});
+
+test('sitting keeps the free arm down and uses a downward-facing supporting hand',()=>{
+ const rig=new HumanRig();for(const t of[2,2.5,3]){rig.poseBed(t);const root=rig.bones[0].position,left=rig.bone('hand.l').getWorldPosition(new T.Vector3());assert.ok(left.y<root.y,'free hand stays below the pelvis while sitting');const normal=new T.Vector3(0,0,1).applyQuaternion(rig.bone('hand.r').getWorldQuaternion(new T.Quaternion()));assert.ok(normal.y<-.7,'supporting palm faces toward the mattress');}
 });

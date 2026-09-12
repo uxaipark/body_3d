@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {mocapData} from './mocap-data.js';
-import {bed,aboveBed,bedSurface} from './bed.js';
+import {bed,aboveBed,bedSurface,bedPlacement,bedToWorld,worldToBed} from './bed.js';
 import {bedSupport} from './bed-support.js';
 import {chair,aboveSeat} from './chair.js';
 import {seatSupport} from './seat-support.js';
@@ -206,7 +206,7 @@ export class HumanRig {
  real=specs.map(()=>new THREE.Vector4(0,0,0,1));dual=specs.map(()=>new THREE.Vector4());
  uniforms={uRigReal:{value:this.real},uRigDual:{value:this.dual}};
  amount=0;runMix=0;phase=0;forearmRoll=Math.PI/2;
- motion:Motion='rest';taskTime=0;revision=0;transition=1;bedLoad=0;transitionBedLoad=0;bedExtension=0;bedFootPlant=1;bedHingeAxis=new THREE.Vector3(1,0,0);
+ motion:Motion='rest';taskTime=0;revision=0;transition=1;bedLoad=0;transitionBedLoad=0;bedExtension=0;bedFootPlant=1;bedHingeAxis=new THREE.Vector3(1,0,0);bedAnchor=new THREE.Vector3();
  transitionQuaternions:THREE.Quaternion[]=[];transitionFeet:THREE.Vector3[]=[];transitionRoot=new THREE.Vector3();
  seatSamples:{point:THREE.Vector3;w:Weights}[]=seatSupport.map(s=>({point:new THREE.Vector3(...s.point),w:s.w}));
  bedSamples:{point:THREE.Vector3;w:Weights}[]=bedSupport.map(s=>({point:new THREE.Vector3(...s.point),w:s.w}));
@@ -223,6 +223,7 @@ export class HumanRig {
  update(dt:number,motion:Motion,revision=0){
    const changed=motion!==this.motion||revision!==this.revision;
    if(changed){
+    if(motion==='lie'&&this.motion!=='lie')this.bedAnchor.set(this.bones[0].position.x,0,this.bones[0].position.z-this.bind[0].z);
     this.transitionBedLoad=this.bedLoad;this.transitionQuaternions=this.bones.map(b=>b.quaternion.clone());this.transitionRoot.copy(this.bones[0].position);this.transitionFeet=['l','r'].map(side=>this.bone(`foot.${side}`).getWorldPosition(new THREE.Vector3()));
     this.transition=isClinicalMotion(motion)||isClinicalMotion(this.motion)?0:1;
     this.motion=motion;this.revision=revision;this.taskTime=0;
@@ -253,7 +254,7 @@ export class HumanRig {
   this.bones.forEach((b,i)=>{b.position.copy(source.bones[i].position);b.quaternion.copy(source.bones[i].quaternion)});
   this.bones[0].updateMatrixWorld(true);this.updatePalette();
  }
- reset(){this.bedLoad=0;this.motion='rest';this.taskTime=0;this.revision=0;this.amount=0;this.runMix=0;this.phase=0;this.transition=1;this.pose(0,0,0);}
+ reset(){this.bedAnchor.set(0,0,0);this.bedLoad=0;this.motion='rest';this.taskTime=0;this.revision=0;this.amount=0;this.runMix=0;this.phase=0;this.transition=1;this.pose(0,0,0);}
  setWorldRotation(name:string,world:THREE.Quaternion){const bone=this.bone(name);bone.quaternion.copy(bone.parent?bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(world):world);bone.updateMatrixWorld(true);}
  /** Analytic two-link IK keeps both ankles fixed and limb lengths invariant. */
  solveLeg(side:string,target:THREE.Vector3,poleDirection=new THREE.Vector3(0,0,1),footRotation=new THREE.Quaternion()){
@@ -330,11 +331,16 @@ export class HumanRig {
  /** Enter at the middle of the long edge; lower sideways with bent knees,
   * extend the legs along the mattress, then roll onto the back and settle. */
  poseBed(time:number){
+  this.poseBedLocal(time);
+  const root=this.bones[0],[x,z]=bedToWorld(root.position.x,root.position.z,this.bedAnchor);root.position.x=x;root.position.z=z;
+  root.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),bedPlacement.angle));root.updateMatrixWorld(true);this.updatePalette();
+ }
+ private poseBedLocal(time:number){
   const state=taskState('lie',time),lower=state.sideLower||0,lift=state.legLift,extend=state.extend||0,roll=state.roll||0,p=this.bones[0];this.bedLoad=lower;this.bedExtension=extend;this.bedFootPlant=1-ease(0,.35,lift);
   for(const b of this.bones)b.quaternion.identity();
   const yaw=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-Math.PI/2),supine=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2);
   const body=yaw.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI/2*lower)).slerp(supine,roll);
-  p.position.set(-.79+.38*state.seat+.12*lower+.29*roll,.92-.29*state.seat-.01*lower-.07*roll,-1.2);p.quaternion.copy(body);
+  p.position.set(-.79+.38*state.seat+.12*lower+.29*roll,.92-.35*state.seat-.01*lower-.07*roll,-1.2);p.quaternion.copy(body);
   this.bone('spine').rotation.x=.08*state.seat*(1-lower);this.bone('chest').rotation.x=.04*state.seat*(1-lower);p.updateMatrixWorld(true);
   this.setWorldRotation('neck',body.clone());this.setWorldRotation('head',body.clone());
   this.bedHingeAxis.set(1,0,0).applyQuaternion(body);
@@ -348,21 +354,32 @@ export class HumanRig {
    // splays the upper arms, so a little adduction brings elbows toward the ribs.
    // Keep them gathered through the roll, then lower beside the torso only once
    // the back is on the mattress. All angles remain local to their parent joint.
-   const gather=ease(.5,2.5,time),settle=ease(12,14,time),tuck=gather*(1-settle);
-   this.bone(`upperArm.${side}`).rotation.set(-.34*tuck+.30*settle,0,-sign*(.20*tuck+.025*settle));
-   this.bone(`forearm.${side}`).rotation.set(-1.15*tuck-.08*settle,0,-sign*.12*tuck);
+   const gather=ease(3,6.5,time),settle=ease(12,14,time),tuck=gather*(1-settle),seated=state.seat*(1-gather);
+   this.bone(`upperArm.${side}`).rotation.set(-.22*seated-.34*tuck+.30*settle,0,-sign*(.20*tuck+.025*settle));
+   this.bone(`forearm.${side}`).rotation.set(-1.15*tuck-.08*settle-.07*seated,0,-sign*.12*tuck);
    const forearm=this.bone(`forearm.${side}`),axis=this.bone(`hand.${side}`).position.clone().normalize();
    forearm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,sign*(.40*tuck+.65*settle)));
   }
-  p.updateMatrixWorld(true);this.updatePalette();this.groundTask(false);this.constrainBed(lower);
+  p.updateMatrixWorld(true);
+  // The near hand follows the mattress edge while sitting/lowering; the free
+  // arm stays down until the trunk begins to recline. No lateral elbow pole.
+  const support=ease(.6,2,time)*(1-ease(4.4,6.8,time));
+  if(support>0){
+   const names=['upperArm.r','forearm.r','hand.r'],rest=names.map(n=>this.bone(n).quaternion.clone());
+   const contact=new THREE.Vector3(-.40,.52,-1.46),pole=new THREE.Vector3(0,0,-1).applyQuaternion(body);
+   this.solveBedLimb(names[0],names[1],names[2],contact,pole,2.35,true);
+   this.bone('hand.r').rotation.set(1.10,0,0);
+   names.forEach((name,i)=>{const bone=this.bone(name);bone.quaternion.copy(rest[i].slerp(bone.quaternion.clone(),support));});
+  }
+  p.updateMatrixWorld(true);this.updatePalette();this.groundTask(false);this.constrainBed(lower,true);
  }
- constrainBed(load:number){
+ constrainBed(load:number,localFrame=false){
   if(!this.bedSamples.length)return;
   const targets=['l','r'].map(side=>this.bone(`foot.${side}`).getWorldPosition(new THREE.Vector3())),rotations=['l','r'].map(side=>this.bone(`foot.${side}`).getWorldQuaternion(new THREE.Quaternion()));
   this.bedHingeAxis.set(1,0,0).applyQuaternion(this.bones[0].quaternion);
   for(let iteration=0;iteration<7;iteration++){
    let penetration=0;const feet=[0,0];
-   for(const sample of this.bedSamples){const point=this.transform(sample.point,sample.w);if(!aboveBed(point.x,point.z))continue;const depth=bedSurface(point.x,point.z,load)+bed.clearance-point.y;
+   for(const sample of this.bedSamples){const point=this.transform(sample.point,sample.w);const [x,z]=localFrame?[point.x,point.z]:worldToBed(point.x,point.z,this.bedAnchor);if(!aboveBed(x,z))continue;const depth=bedSurface(x,z,load)+bed.clearance-point.y;
     if(sample.point.y<.18){const side=sample.point.x>0?0:1;feet[side]=Math.max(feet[side],depth);}else penetration=Math.max(penetration,depth);
    }
    if(Math.max(penetration,...feet)<.00005)break;
@@ -371,7 +388,12 @@ export class HumanRig {
    // for contact instead of treating the entire foot as a rigid proxy box.
    for(let i=0;i<2;i++){
     const side=i?'r':'l',target=targets[i];target.y+=feet[i];
-    if(this.bedExtension>0){const hip=this.bone(`thigh.${side}`).getWorldPosition(new THREE.Vector3()),length=this.bone(`shin.${side}`).position.length()+this.bone(`foot.${side}`).position.length()-.001;target.z=THREE.MathUtils.lerp(target.z,hip.z+Math.sqrt(Math.max(.01,length*length-(target.x-hip.x)**2-(target.y-hip.y)**2)),this.bedExtension);}
+    if(this.bedExtension>0){
+     const hip=this.bone(`thigh.${side}`).getWorldPosition(new THREE.Vector3()),length=this.bone(`shin.${side}`).position.length()+this.bone(`foot.${side}`).position.length()-.001;
+     const [hx,hz]=localFrame?[hip.x,hip.z]:worldToBed(hip.x,hip.z,this.bedAnchor),[tx,tz]=localFrame?[target.x,target.z]:worldToBed(target.x,target.z,this.bedAnchor);
+     const reach=THREE.MathUtils.lerp(tz,hz+Math.sqrt(Math.max(.01,length*length-(tx-hx)**2-(target.y-hip.y)**2)),this.bedExtension);
+     const [x,z]=localFrame?[tx,reach]:bedToWorld(tx,reach,this.bedAnchor);target.x=x;target.z=z;
+    }
     this.solveBedLeg(side,target,rotations[i]);
    }
    this.bones[0].updateMatrixWorld(true);this.updatePalette();
