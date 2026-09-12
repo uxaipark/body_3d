@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import {mocapData} from './mocap-data.js';
+import {handLandmarks} from './hand-landmarks.js';
+import {taskState,isClinicalMotion,ease} from './clinical-motion.js';
+import type {Motion} from './physiology';
 
 // All bind landmarks are in the atlas's metre / Y-up frame. No scale is animated.
 const specs: [string, string | null, [number, number, number]][] = [
@@ -16,6 +19,11 @@ for (const [side,s] of [['l',1],['r',-1]] as const) specs.push(
  [`forearm.${side}`,`upperArm.${side}`,[s*.222,1.098,-.035]],
  [`hand.${side}`,`forearm.${side}`,[s*.283,.863,.012]],
 );
+// Append digits so existing atlas weights and captured 21-bone clips stay valid.
+const CAPTURE_BONE_COUNT=specs.length;
+for(const [side,mirror]of [['r',1],['l',-1]]as const)for(let digit=0;digit<5;digit++)for(let joint=0;joint<3;joint++){
+ const point=handLandmarks[digit][joint];specs.push([`finger${digit}.${joint}.${side}`,joint?`finger${digit}.${joint-1}.${side}`:`hand.${side}`,[point[0]*mirror,point[1],point[2]]]);
+}
 export const BONE_NAMES=specs.map(s=>s[0]);
 export const BONE_COUNT=specs.length;
 const ids=Object.fromEntries(BONE_NAMES.map((n,i)=>[n,i]));
@@ -28,7 +36,7 @@ export function surfaceTissueWeight(w:Weights){return w.weights.reduce((sum,v,i)
 export function weightsAt(x:number,y:number,z:number,surface=false):Weights {
  const ax=Math.abs(x), side=x<0?'r':'l';
  // The original avatar's thumb extends medially beside the upper thigh.
- if(y>.65&&y<.84&&ax>.19)return {indices:[ids[`hand.${side}`],0,0,0],weights:[1,0,0,0]};
+ if(y>.65&&y<.84&&ax>.19)return fingerWeightsAt(x,y,z)||{indices:[ids[`hand.${side}`],0,0,0],weights:[1,0,0,0]};
  const w=new Map<number,number>();
  const add=(name:string,v:number)=>{if(v>1e-7)w.set(ids[name],(w.get(ids[name])||0)+v);};
  // The central genital/perineal surface has zero leg influence on both sides.
@@ -60,6 +68,49 @@ export function weightsAt(x:number,y:number,z:number,surface=false):Weights {
  return {indices:entries.map(e=>e[0]).concat([0,0,0,0]).slice(0,4),weights:entries.map(e=>e[1]/sum).concat([0,0,0,0]).slice(0,4)};
 }
 
+/** Closest digit chain in the atlas rest frame; only the distal hand is eligible.
+ * Blend along each joint and across the shared webbing with a smooth distance field. */
+export function fingerWeightsAt(x:number,y:number,z:number):Weights|null{
+ if(y<.65||y>.86||Math.abs(x)<.19||Math.abs(x)>.38)return null;
+ const side=x<0?'r':'l',point=new THREE.Vector3(-Math.abs(x),y,z),hand=ids[`hand.${side}`];
+ const candidates:{distance:number;segment:number;t:number;digit:number}[]=[];
+ for(let digit=0;digit<5;digit++){
+  let distance=Infinity,segment=0,t=0;
+  for(let j=0;j<3;j++){
+   const a=new THREE.Vector3(...handLandmarks[digit][j]),axis=new THREE.Vector3(...handLandmarks[digit][j+1]).sub(a),u=point.clone().sub(a).dot(axis)/axis.lengthSq();
+   const d=a.addScaledVector(axis,clamp(u,0,1)).distanceToSquared(point);
+   if(d<distance){distance=d;segment=j;t=u;}
+  }
+  candidates.push({distance,segment,t,digit});
+ }
+ const minimum=Math.min(...candidates.map(c=>c.distance));if(minimum>.04**2)return null;
+ const merged=new Map<number,number>(),add=(id:number,w:number)=>merged.set(id,(merged.get(id)||0)+w);
+ // A soft distance field keeps thumb webbing continuous instead of switching
+ // suddenly between an unbound palm and a fully rotating neighbouring digit.
+ for(const c of candidates){
+  const strength=Math.exp(-(c.distance-minimum)/.000196),fade=1-smooth(.024,.04,Math.sqrt(c.distance)),{digit,segment,t}=c;
+  const current=ids[`finger${digit}.${segment}.${side}`],parent=segment?ids[`finger${digit}.${segment-1}.${side}`]:hand;
+  add(hand,strength*(1-fade));
+  if(t<.22){const w=smooth(-.18,.22,t);add(current,strength*fade*w);add(parent,strength*fade*(1-w));}
+  else if(segment<2&&t>.78){const w=smooth(.78,1.18,t);add(current,strength*fade*(1-w));add(ids[`finger${digit}.${segment+1}.${side}`],strength*fade*w);}
+  else add(current,strength*fade);
+ }
+ const active=[...merged].sort((a,b)=>b[1]-a[1]).slice(0,4),sum=active.reduce((a,v)=>a+v[1],0);
+ return {indices:Array.from({length:4},(_,i)=>active[i]?.[0]||0),weights:Array.from({length:4},(_,i)=>(active[i]?.[1]||0)/sum)};
+}
+/** Preserve the fitted exterior everywhere except vertices already on the hand. */
+export function bindFingerGeometry(geometry:THREE.BufferGeometry){
+ const p=geometry.getAttribute('position'),indices=geometry.getAttribute('rigIndex'),weights=geometry.getAttribute('rigWeight');
+ for(let i=0;i<p.count;i++){
+  const side=p.getX(i)<0?'r':'l';let handWeight=0;for(let j=0;j<4;j++)if(indices.getComponent(i,j)===ids[`hand.${side}`])handWeight+=weights.getComponent(i,j);
+  if(handWeight<.001)continue;const w=fingerWeightsAt(p.getX(i),p.getY(i),p.getZ(i));if(!w)continue;
+  const mixed=new Map<number,number>();
+  for(let j=0;j<4;j++){const index=indices.getComponent(i,j);if(index!==ids[`hand.${side}`])mixed.set(index,(mixed.get(index)||0)+weights.getComponent(i,j));mixed.set(w.indices[j],(mixed.get(w.indices[j])||0)+w.weights[j]*handWeight);}
+  const active=[...mixed].filter(([,v])=>v>1e-7).sort((a,b)=>b[1]-a[1]).slice(0,4),sum=active.reduce((a,v)=>a+v[1],0);
+  for(let j=0;j<4;j++){indices.setComponent(i,j,active[j]?.[0]||0);weights.setComponent(i,j,(active[j]?.[1]||0)/sum);}
+ }
+}
+
 /** Whole midline organs must never inherit separate left/right limb transforms. */
 export function pelvicOrgan(name:string):boolean {
  return /penis|penile|glans|scrot|testis|epididym|corpus cavernos|corpus spongios/i.test(name);
@@ -68,6 +119,9 @@ export function pelvicOrgan(name:string):boolean {
 /** Assign an entire named bone to a single rigid transform BEFORE geometry batching. */
 export function rigidBone(name:string,center:THREE.Vector3):number {
  const side=center.x<0?'r':'l',n=name.toLowerCase();let bone:string;
+ const digit=['first','second','third','fourth','fifth'].findIndex(v=>n.includes(v));
+ if(digit>=0&&/phalanx.*hand/.test(n)){const joint=digit===0?(n.includes('proximal')?1:2):n.includes('proximal')?0:n.includes('middle')?1:2;return ids[`finger${digit}.${joint}.${side}`];}
+ if(/first metacarpal/.test(n))return ids[`finger0.0.${side}`];
  if(/hip bone|sacrum|coccyx/.test(n))bone='pelvis';
  else if(/femur/.test(n))bone=`thigh.${side}`;
  else if(/patella/.test(n))bone=`patella.${side}`;
@@ -148,6 +202,8 @@ export class HumanRig {
  real=specs.map(()=>new THREE.Vector4(0,0,0,1));dual=specs.map(()=>new THREE.Vector4());
  uniforms={uRigReal:{value:this.real},uRigDual:{value:this.dual}};
  amount=0;runMix=0;phase=0;forearmRoll=Math.PI/2;
+ motion:Motion='rest';taskTime=0;revision=0;transition=1;
+ transitionQuaternions:THREE.Quaternion[]=[];transitionRoot=new THREE.Vector3();
  floorSamples:{point:THREE.Vector3;w:Weights}[]=[];
  constructor(){
    for(let i=0;i<specs.length;i++){
@@ -158,11 +214,75 @@ export class HumanRig {
  }
  bone(name:string){return this.bones[ids[name]];}
  /** Blend captured cycles at their measured durations; bone lengths never change. */
- update(dt:number,motion:'rest'|'walk'|'run'){
-   const k=1-Math.exp(-dt*7);this.amount=THREE.MathUtils.lerp(this.amount,motion==='rest'?0:1,k);
-   this.runMix=THREE.MathUtils.lerp(this.runMix,motion==='run'?1:0,k);
-   this.phase=(this.phase+dt*THREE.MathUtils.lerp(1/mocapData.walk.duration,1/mocapData.run.duration,this.runMix))%1;
-   this.pose(this.phase,this.amount,this.runMix);
+ update(dt:number,motion:Motion,revision=0){
+   const changed=motion!==this.motion||revision!==this.revision;
+   if(changed){
+    this.transitionQuaternions=this.bones.map(b=>b.quaternion.clone());this.transitionRoot.copy(this.bones[0].position);
+    this.transition=isClinicalMotion(motion)||isClinicalMotion(this.motion)?0:1;
+    this.motion=motion;this.revision=revision;this.taskTime=0;
+   }
+   if(dt<=0)return;
+   this.taskTime+=dt;
+   if(isClinicalMotion(motion))this.poseTask(motion,this.taskTime);
+   else{
+    const k=1-Math.exp(-dt*7);this.amount=THREE.MathUtils.lerp(this.amount,motion==='rest'?0:1,k);
+    this.runMix=THREE.MathUtils.lerp(this.runMix,motion==='run'?1:0,k);
+    this.phase=(this.phase+dt*THREE.MathUtils.lerp(1/mocapData.walk.duration,1/mocapData.run.duration,this.runMix))%1;
+    this.pose(this.phase,this.amount,this.runMix);
+   }
+   if(this.transition<1){
+    this.transition=Math.min(1,this.transition+dt/.65);const blend=ease(0,1,this.transition);
+    this.bones[0].position.lerpVectors(this.transitionRoot,this.bones[0].position.clone(),blend);
+    this.bones.forEach((b,i)=>b.quaternion.slerpQuaternions(this.transitionQuaternions[i],b.quaternion.clone(),blend));
+    this.bones[0].updateMatrixWorld(true);this.updatePalette();this.groundTask(false);
+   }
+ }
+ /** One final palette is shared by skeleton, native skin, vessels and markers. */
+ copyPose(source:HumanRig){
+  this.bones.forEach((b,i)=>{b.position.copy(source.bones[i].position);b.quaternion.copy(source.bones[i].quaternion)});
+  this.bones[0].updateMatrixWorld(true);this.updatePalette();
+ }
+ reset(){this.motion='rest';this.taskTime=0;this.revision=0;this.amount=0;this.runMix=0;this.phase=0;this.transition=1;this.pose(0,0,0);}
+ setWorldRotation(name:string,world:THREE.Quaternion){const bone=this.bone(name);bone.quaternion.copy(bone.parent?bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(world):world);bone.updateMatrixWorld(true);}
+ /** Analytic two-link IK keeps both ankles fixed and limb lengths invariant. */
+ solveLeg(side:string,target:THREE.Vector3){
+  const thigh=this.bone(`thigh.${side}`),shin=this.bone(`shin.${side}`),foot=this.bone(`foot.${side}`),hip=thigh.getWorldPosition(new THREE.Vector3());
+  const a=shin.position.length(),b=foot.position.length(),direction=target.clone().sub(hip),distance=clamp(direction.length(),Math.abs(a-b)+1e-6,a+b-1e-7);direction.normalize();
+  const along=(a*a-b*b+distance*distance)/(2*distance),height=Math.sqrt(Math.max(0,a*a-along*along));
+  const pole=new THREE.Vector3(0,0,1).addScaledVector(direction,-direction.z).normalize();
+  const knee=hip.clone().addScaledVector(direction,along).addScaledVector(pole,height);
+  this.setWorldRotation(thigh.name,new THREE.Quaternion().setFromUnitVectors(shin.position.clone().normalize(),knee.clone().sub(hip).normalize()));
+  this.setWorldRotation(shin.name,new THREE.Quaternion().setFromUnitVectors(foot.position.clone().normalize(),target.clone().sub(knee).normalize()));
+  this.setWorldRotation(foot.name,new THREE.Quaternion());
+  this.bone(`patella.${side}`).quaternion.copy(shin.quaternion).slerp(new THREE.Quaternion(),.5);
+ }
+ poseTask(motion:Motion,time:number){
+  const state=taskState(motion,time),p=this.bones[0];for(const bone of this.bones)bone.quaternion.identity();
+  p.position.copy(this.bind[0]);p.position.y-=.39*state.seat;p.position.z-=.36*state.seat;
+  p.rotation.x=state.lean*.12;this.bone('spine').rotation.x=state.lean*.58;this.bone('chest').rotation.x=state.lean*.30;p.updateMatrixWorld(true);
+  this.setWorldRotation('neck',new THREE.Quaternion());this.setWorldRotation('head',new THREE.Quaternion());
+  for(const [side,sign]of [['l',1],['r',-1]]as const){
+   const ankle=this.bind[ids[`foot.${side}`]].clone();this.solveLeg(side,ankle);
+   const arm=state.arm;
+   this.setWorldRotation(`upperArm.${side}`,new THREE.Quaternion().setFromEuler(new THREE.Euler(-.12*arm,0,sign*.08*arm)));
+   this.setWorldRotation(`forearm.${side}`,new THREE.Quaternion().setFromEuler(new THREE.Euler(-(motion==='grip'?1.42:.92)*arm,0,sign*.08*arm)));
+   const forearm=this.bone(`forearm.${side}`),axis=this.bone(`hand.${side}`).position.clone().normalize();
+   forearm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,sign*arm*this.forearmRoll));
+   for(let digit=0;digit<5;digit++)for(let joint=0;joint<3;joint++){
+    const bone=this.bone(`finger${digit}.${joint}.${side}`),curl=state.grip;
+    // Existing atlas fingers already have a little flexion. Added rotations
+    // close around a small virtual grip, leaving room for the finger pads.
+    if(digit===0){bone.rotation.set(-[.22,.45,.55][joint]*curl,0,-sign*[.42,.10,0][joint]*curl);}
+    else bone.rotation.x=-[1.0,1.05,.40][joint]*curl;
+   }
+  }
+  p.updateMatrixWorld(true);this.updatePalette();this.groundTask(true);
+ }
+ groundTask(always:boolean){
+  let floor=0;
+  if(this.floorSamples.length)floor=Math.min(...this.floorSamples.map(s=>this.transform(s.point,s.w).y))-.001;
+  else for(const side of ['l','r']){const foot=this.bone(`foot.${side}`),q=foot.getWorldQuaternion(new THREE.Quaternion()),p=foot.getWorldPosition(new THREE.Vector3());for(const z of [-.055,.145])floor=Math.min(floor,new THREE.Vector3(0,-.073,z).applyQuaternion(q).add(p).y);}
+  if(always||floor<0){this.bones[0].position.y-=floor;this.bones[0].updateMatrixWorld(true);this.updatePalette();}
  }
  /** Retargeted captured poses, sampled at the recorded cadence. All tissues use
   * this same phase; only the exterior's neutral palm convention differs. */
@@ -181,6 +301,7 @@ export class HumanRig {
    p.position.set(amount*position(0),THREE.MathUtils.lerp(this.bind[0].y,position(1),amount),this.bind[0].z+amount*position(2));
    const qa=new THREE.Quaternion(),qb=new THREE.Quaternion(),qc=new THREE.Quaternion();
    for(let i=0;i<this.bones.length;i++){
+     if(i>=CAPTURE_BONE_COUNT){this.bones[i].quaternion.identity();continue;}
      const offset=3+i*4;
      qa.fromArray(walk.a,offset).slerp(qb.fromArray(walk.b,offset),walk.t);
      qc.fromArray(running.a,offset).slerp(qb.fromArray(running.b,offset),running.t);

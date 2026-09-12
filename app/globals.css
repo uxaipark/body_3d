@@ -161,3 +161,11 @@ body {
 .section-render-error{position:absolute;inset:40% 20px auto;text-align:center;color:#e0bbaf;font-size:14px;z-index:2}
 @media(max-width:700px){.section-stage{height:420px}.section-mechanics-controls,.section-optics-controls{grid-template-columns:1fr 1fr}.section-tissue-legend{gap:8px 12px}}
 @media(max-width:700px){.skin-section-dialog{padding:18px!important}.section-canvas{height:390px}.section-controls{grid-template-columns:1fr 1fr;gap:20px}.section-tools{gap:9px}.section-drive{margin-left:0}.section-hud{font-size:12px}.section-controls [data-slot=tabs-trigger]{padding:3px 5px;font-size:11px}}
+
+/* Six motion choices retain usable targets and wrap on smaller screens. */
+.motion-dock{flex-wrap:wrap;min-height:40px;row-gap:6px}
+.motion-dock .motion-tabs{width:auto!important;height:auto!important;min-height:34px;flex-wrap:wrap;gap:2px}
+.motion-dock .motion-tabs [data-slot=tabs-trigger]{flex:none;white-space:nowrap;padding:7px 11px!important}
+.task-status{display:flex;align-items:center;gap:9px;font-size:12px;color:#c4e6d7}.task-status small{color:#7d9f91;font-variant-numeric:tabular-nums;font-size:11px}
+.task-replay{display:flex;align-items:center;gap:4px;font-size:11px;padding:5px 8px;border-radius:5px;border:1px solid #3d554a;background:#1c2c25;color:#b9dacb}.task-replay:hover{background:#2b4236}
+@media(max-width:740px){.motion-dock>div[data-slot=tabs]{flex:1 1 85%}.motion-dock .motion-tabs [data-slot=tabs-trigger]{font-size:12px;padding:7px 8px!important}.task-status{margin-left:0}}

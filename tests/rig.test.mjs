@@ -72,7 +72,7 @@ test('weights are finite, normalized and at most four influences throughout the 
 });
 test('hands hanging beside the groin follow arms, never the legs',()=>{
  for(const x of [-.308,.308]){
-  const w=weightsAt(x,.724,.043);assert.equal(BONE_NAMES[w.indices[0]],x<0?'hand.r':'hand.l');near(w.weights[0],1);
+  const w=weightsAt(x,.724,.043);for(let j=0;j<4;j++)if(w.weights[j]>0)assert.match(BONE_NAMES[w.indices[j]],new RegExp(`^(hand|finger[0-4]\\.[0-2])\\.${x<0?'r':'l'}$`));
  }
 });
 test('DQ palette and sensor transform agree with the actual bone world matrices',()=>{
