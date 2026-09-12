@@ -4,9 +4,9 @@ import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {sites, type Parameters, type Site} from './physiology';
-export type Layer='cardiovascular'|'visceral'|'nervous'|'skeleton'|'muscular';
+export type Layer='skin'|'cardiovascular'|'visceral'|'nervous'|'skeleton'|'muscular';
 export type Layers=Record<Layer,number>;
-export const initialLayers:Layers={cardiovascular:100,visceral:80,nervous:65,skeleton:13,muscular:9};
+export const initialLayers:Layers={skin:100,cardiovascular:100,visceral:80,nervous:65,skeleton:13,muscular:9};
 interface PickRange{end:number;name:string}
 export class AnatomyScene{
  renderer:THREE.WebGLRenderer;scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(31,1,.01,30);controls:OrbitControls;
@@ -35,9 +35,27 @@ export class AnatomyScene{
  resize(){const w=this.container.clientWidth,h=this.container.clientHeight;if(!w||!h)return;this.renderer.setSize(w,h);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();}
  async load(onProgress:(n:number)=>void){let done=0;const loader=new GLTFLoader().setDRACOLoader(this.draco);
  // Limit concurrent decodes to keep interaction responsive on integrated GPUs.
- for(const layer of ['visceral','cardiovascular','skeleton','nervous','muscular'] as Layer[]){
+ for(const layer of ['skin','visceral','cardiovascular','skeleton','nervous','muscular'] as Layer[]){
  const gltf=await loader.loadAsync(`/models/${layer}-web.glb`);if(this.disposed){gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose()});return;}
  gltf.scene.updateMatrixWorld(true);
+ if(layer==='skin'){
+ const group=new THREE.Group();
+ gltf.scene.traverse(obj=>{if(!(obj instanceof THREE.Mesh))return;
+ const geometry=obj.geometry.clone().applyMatrix4(obj.matrixWorld);
+ const source=Array.isArray(obj.material)?obj.material[0]:obj.material;
+ const mat=source.clone() as THREE.MeshStandardMaterial;
+ mat.transparent=true;mat.opacity=this.layers.skin/100;mat.depthWrite=this.layers.skin>=95;
+ mat.metalness=0;mat.side=THREE.FrontSide;mat.roughness=/eye|high.poly/i.test(obj.name)?.3:.62;
+ if(mat.map)mat.map.anisotropy=Math.min(4,this.renderer.capabilities.getMaxAnisotropy());
+ // Alpha-tested hair cards keep their strand silhouettes even when the skin layer fades.
+ if(/short|eyebrow/i.test(obj.name)){mat.alphaTest=.3;mat.side=THREE.DoubleSide;}
+ this.applyDeformation(mat,'skin');
+ const mesh=new THREE.Mesh(geometry,mat);mesh.renderOrder=8;mesh.userData={layer:'skin',ranges:[{end:Infinity,name:/short/i.test(obj.name)?'헤어':/eyebrow/i.test(obj.name)?'눈썹':/high.poly/i.test(obj.name)?'눈':'피부 · 성인 남성 외피'}]};group.add(mesh);this.meshes.push(mesh);
+ obj.geometry.dispose();source.dispose();
+ });
+ this.groups.set('skin',group);this.root.add(group);this.setLayers(this.layers);onProgress(Math.round(++done/6*100));continue;
+ }
+
  const batches=new Map<string,{geometries:THREE.BufferGeometry[];ranges:PickRange[];count:number}>();
  gltf.scene.traverse(obj=>{if(!(obj instanceof THREE.Mesh))return;
  const name=obj.name.replace(/_/g,' ');if(/systemg\d|organsg\d/i.test(name))return;
@@ -58,19 +76,23 @@ export class AnatomyScene{
  const group=new THREE.Group();
  for(const [part,batch]of batches){const geometry=mergeGeometries(batch.geometries);batch.geometries.forEach(g=>g.dispose());if(!geometry)continue;
  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.52,metalness:.07,transparent:true,opacity:this.layers[layer]/100,depthWrite:this.layers[layer]>=95,side:THREE.FrontSide});
+ this.applyDeformation(mat,part);
+ const mesh=new THREE.Mesh(geometry,mat);mesh.userData={layer,ranges:batch.ranges};mesh.renderOrder=layer==='muscular'?4:layer==='skeleton'?3:0;this.meshes.push(mesh);group.add(mesh);}
+ this.groups.set(layer,group);this.root.add(group);this.setLayers(this.layers);gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose());}});onProgress(Math.round(++done/6*100));
+ }
+ }
+ applyDeformation(mat:THREE.MeshStandardMaterial,part:string){
  mat.onBeforeCompile=shader=>{Object.assign(shader.uniforms,this.uniforms);shader.vertexShader='uniform float uTime; uniform float uMotion; uniform float uResp; uniform float uBeat;\n'+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
  float side=sign(transformed.x); float gait=sin(uTime*${'6.28318'}*mix(1.6,2.6,step(0.7,uMotion))+side*1.5708)*uMotion;
  float leg=1.0-smoothstep(0.75,0.98,transformed.y); float arm=smoothstep(0.17,0.25,abs(transformed.x))*(1.0-smoothstep(1.35,1.48,transformed.y));
  transformed.z+=gait*(leg*(0.95-transformed.y)*0.28-arm*(1.45-transformed.y)*0.3);
  transformed.y+=abs(gait)*leg*0.014;
  ${part==='lung'?'transformed.x*=1.0+uResp*0.028; transformed.z+=uResp*0.012;':''}
+ ${part==='skin'?'float chest = smoothstep(1.05,1.2,transformed.y)*(1.0-smoothstep(1.38,1.48,transformed.y))*(1.0-smoothstep(0.13,0.19,abs(transformed.x))); transformed.z += chest*uResp*0.005;':''}
  ${part==='heart'?'transformed += (transformed-vec3(0.035,1.28,0.035))*uBeat*0.035;':''}
  `);};mat.customProgramCacheKey=()=>part;
- const mesh=new THREE.Mesh(geometry,mat);mesh.userData={layer,ranges:batch.ranges};mesh.renderOrder=layer==='muscular'?4:layer==='skeleton'?3:0;this.meshes.push(mesh);group.add(mesh);}
- this.groups.set(layer,group);this.root.add(group);this.setLayers(this.layers);gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose());}});onProgress(++done*20);
  }
- }
- setLayers(l:Layers){this.layers=l;for(const m of this.meshes){const v=l[m.userData.layer as Layer];m.visible=v>0;const mat=m.material as THREE.MeshStandardMaterial;mat.opacity=v/100;mat.depthWrite=v>=95;}}
+ setLayers(l:Layers){this.layers=l;for(const m of this.meshes){const v=l[m.userData.layer as Layer];m.visible=v>0&&(m.userData.layer==='skin'||l.skin<100);const mat=m.material as THREE.MeshStandardMaterial;mat.opacity=v/100;mat.depthWrite=v>=95;}}
  setParameters(p:Parameters){this.params=p;for(const [key,m]of this.markers){m.scale.setScalar(key===p.site?1.4:.65);(m.material as THREE.MeshBasicMaterial).color.set(key===p.site?0xc2ffe4:0x649b8c);}}
  focus(target:'body'|'chest'|'head'|'sensor'|'front'|'back'){if(target==='body'||target==='front'){this.controls.target.set(0,.91,0);this.camera.position.set(target==='front'?0:.7,1.04,3.7);}else if(target==='back'){this.controls.target.set(0,.91,0);this.camera.position.set(0,1.04,-3.7);}else{const p=target==='sensor'?sites[this.params.site].position:target==='head'?[0,1.62,0]:[0,1.28,0];this.controls.target.set(p[0],p[1],p[2]);this.camera.position.set(p[0]+.12,p[1]+.02,p[2]+(target==='sensor'?.5:.85));}this.controls.update();}
  zoom(factor:number){this.camera.position.sub(this.controls.target).multiplyScalar(factor).add(this.controls.target);this.controls.update();}
@@ -86,5 +108,5 @@ export class AnatomyScene{
  if(!document.hidden){this.renderer.render(this.scene,this.camera);this.frameCount++;}if(now-this.lastStats>1000){const fps=Math.round(this.frameCount*1000/(now-this.lastStats));this.slowFrames=fps<38?this.slowFrames+1:0;if(this.slowFrames>=3&&this.renderer.getPixelRatio()>1){this.renderer.setPixelRatio(1);this.resize();this.slowFrames=0;}this.onStats(fps,this.renderer.info.render.triangles);this.onTime(this.time);this.lastStats=now;this.frameCount=0;}
  this.frame=requestAnimationFrame(this.animate);
  };
- dispose(){this.disposed=true;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.controls.dispose();this.draco.dispose();this.renderer.domElement.removeEventListener('pointerdown',this.pointerStart);this.renderer.domElement.removeEventListener('pointerup',this.pick);this.renderer.domElement.removeEventListener('webglcontextlost',this.contextLost);this.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose())}});this.renderer.dispose();this.renderer.domElement.remove();}
+ dispose(){this.disposed=true;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.controls.dispose();this.draco.dispose();this.renderer.domElement.removeEventListener('pointerdown',this.pointerStart);this.renderer.domElement.removeEventListener('pointerup',this.pick);this.renderer.domElement.removeEventListener('webglcontextlost',this.contextLost);this.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{for(const v of Object.values(m)){if(v instanceof THREE.Texture)v.dispose();}m.dispose();})}});this.renderer.dispose();this.renderer.domElement.remove();}
 }

@@ -13,8 +13,9 @@ npm run dev
 
 ## 구현
 
-- Z-Anatomy / BodyParts3D에서 유래한 전신 골격·근육·혈관·신경·장기 메시. 피부, 모든 미세혈관, 개인별 형상은 미포함.
+- Z-Anatomy / BodyParts3D에서 유래한 전신 골격·근육·혈관·신경·장기 메시. 모든 미세혈관, 개인별 형상은 미포함. MakeHuman CC0 기반 남성 외피·얼굴·헤어를 별도 레이어로 제공.
 - Draco 압축과 메시 경량화, 레이어별 배치 렌더링. 기본 DPR 상한 1.5, 지속 저FPS시 1.0. 실제 FPS 및 삼각형 수 표시.
+- 신체 구조 패널 맨 위의 피부 체크박스와 불투명도 조절. 외피는 기본 표시되며 다시 켤 때 마지막 불투명도를 복원. 피부가 100% 불투명하면 가려진 내부 레이어의 렌더링을 생략하고, 낮추면 기존 내부 표시 설정을 복원.
 - 회전/줌/전신·심폐·뇌·센서 초점, 구조 선택, 레이어 불투명도 조절.
 - GPU 기반 심장·폐·보행의 시각적 근사 변형. 검증된 생체역학 해석이 아님.
 - 손목, 손가락, 귓볼, 이마, 흉부, 상완에서 가상 PPG. 고정 가상 ECG/EEG/EMG, 폐용적 및 정전용량 변화.
@@ -38,3 +39,5 @@ npm run dev
 [Z-Anatomy](https://github.com/Z-Anatomy/Models-of-human-anatomy), [GLB distribution](https://github.com/Liyucheng1997/242_lab-human-anatomy).
 모델 및 개별 구성요소의 전체 라이선스는 [ATTRIBUTION.md](public/models/ATTRIBUTION.md) 참조. 일부 원본 참조/포함 자산은 비상업적 조건이 있으므로 일괄 상업 이용 가능 모델로 간주하지 않는다.
 [PAT/PTT background](https://pmc.ncbi.nlm.nih.gov/articles/PMC6912608/).
+
+외피 자산 재생성 및 출처: [SKIN-SOURCE.md](scripts/SKIN-SOURCE.md). 피부는 시각화용이며 개별 조직 두께나 물성을 나타내지 않는다.

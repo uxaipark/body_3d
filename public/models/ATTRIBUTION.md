@@ -26,3 +26,16 @@ SOMA modifications: removed atlas label meshes; simplified geometry for the web;
 Some upstream referenced/included components have noncommercial restrictions. Do not assume that all component assets are cleared for commercial redistribution; review the original project's individual provenance before a commercial release.
 
 See upstream full notices: https://github.com/Z-Anatomy/Models-of-human-anatomy#attributions
+
+
+## Male exterior (`skin-web.glb`)
+
+Base mesh, morph targets, eyes, eyebrows, hair and skin texture: **MakeHuman Community**, CC0 1.0.
+Original contributors / rights holders: Manuel Bastioni, Data Collection AB, Joel Palmius, Jonas Hauquier and the MakeHuman team.
+
+- https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data
+- https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html
+- https://creativecommons.org/publicdomain/zero/1.0/
+
+Used assets: caucasian-male-young, universal-male-young-maxmuscle-averageweight, idealproportions, bilateral eye-height targets, young_caucasian_male skin, high-poly eyes / brown_eye, short04 hair and eyebrow005.
+Modifications: adult male morph blending, anatomical landmark registration, relaxed limb pose, one subdivision level for body and eyes, removal of opaque corneal helper geometry, hair material tint, Draco-compressed GLB export. The resulting exterior is a visualization layer, not a patient-specific skin or tissue model. The skin asset is CC0, separate from the Z-Anatomy assets above.
