@@ -24,11 +24,11 @@ From the official [MakeHuman system assets pack](https://files2.makehumancommuni
 
 - `skins/young_caucasian_male/`
 - `hair/short02/`
-- `eyebrows/eyebrow002/`
+- `eyebrows/eyebrow005/`
 
-The source cache is excluded from version control; the exported model is self-contained and contains all four material textures. All inputs are CC0. See `public/models/ATTRIBUTION.md`.
+The source cache is excluded from version control; the exported model is self-contained and contains the eye and eyebrow textures. All inputs are CC0. See `public/models/ATTRIBUTION.md`.
 
 
 ## Adult portrait revision
 
-The `portrait_targets` list in `build-skin.py` adds face-local adult facial morphs (oval contour, narrower/softer jaw, subtle eye and lip shaping). Download each listed `.target` from the same MakeHuman data source to `.asset-cache/makehuman/targets/`. The original body scale is retained; rigid head displacement from macro targets is removed before export. Body vertices below the face mask are unchanged. The hair uses `short02` and brows use `eyebrow002` from the same CC0 system asset pack.
+The `portrait_targets` list in `build-skin.py` adds face-local adult facial morphs (oval contour, narrower/softer jaw, subtle eye and lip shaping). Download each listed `.target` from the same MakeHuman data source to `.asset-cache/makehuman/targets/`. The original body scale is retained; rigid head displacement from macro targets is removed before export. Body vertices below the face mask are unchanged. The brows use `eyebrow005` from the same CC0 system asset pack. `cinematic-hair.py` builds original volumetric side-part locks and uses the crown only of the CC0 hair helper. The skin has a matte, solid cinematic material; the old photographic hair cards are no longer exported. Hair meshes are merged by material. Knee and ankle landmarks are registered to the anatomical atlas in the rest pose, with the hands and central perineum excluded from leg fitting.

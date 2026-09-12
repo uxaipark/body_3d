@@ -30,14 +30,16 @@ See upstream full notices: https://github.com/Z-Anatomy/Models-of-human-anatomy#
 
 ## Male exterior (`skin-web.glb`)
 
-Base mesh, morph targets, eyes, eyebrows, hair and skin texture: **MakeHuman Community**, CC0 1.0.
+Base mesh, morph targets, eyes, eyebrows and hair helper: **MakeHuman Community**, CC0 1.0.
 Original contributors / rights holders: Manuel Bastioni, Data Collection AB, Joel Palmius, Jonas Hauquier and the MakeHuman team.
 
 - https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data
 - https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html
 - https://creativecommons.org/publicdomain/zero/1.0/
 
-Used assets: caucasian-male-young, universal-male-young-maxmuscle-averageweight, idealproportions, bilateral eye-height targets, young_caucasian_male skin, high-poly eyes / brown_eye, short02 hair and eyebrow002.
+Used assets: caucasian-male-young, universal-male-young-maxmuscle-averageweight, idealproportions, bilateral eye-height targets, young_caucasian_male skin, high-poly eyes / brown_eye, eyebrow005; CC0 crown helper with original procedural hair locks.
 Modifications: adult male morph blending, anatomical landmark registration, relaxed limb pose, one subdivision level for body and eyes, removal of opaque corneal helper geometry, hair material tint, Draco-compressed GLB export. The resulting exterior is a visualization layer, not a patient-specific skin or tissue model. The skin asset is CC0, separate from the Z-Anatomy assets above.
 
 Portrait revision: face-local blend of adult male macro targets, oval contour, chin, eye, mouth and nose targets; rigid head position retained. Source materials and meshes remain CC0.
+
+Cinematic revision: original tapered side-part hair geometry, matte skin material, upper eyelid contours, and knee/ankle registration. The procedural exterior additions are released under CC0 alongside the exterior. Runtime animation uses a bone hierarchy, rigid per-bone skeleton binding and dual-quaternion soft-tissue skinning.

@@ -41,3 +41,12 @@ npm run dev
 [PAT/PTT background](https://pmc.ncbi.nlm.nih.gov/articles/PMC6912608/).
 
 외피 자산 재생성 및 출처: [SKIN-SOURCE.md](scripts/SKIN-SOURCE.md). 피부는 시각화용이며 개별 조직 두께나 물성을 나타내지 않는다.
+
+
+## Joint animation
+
+`lib/rig.ts` owns a 21-bone THREE.Bone / THREE.Skeleton hierarchy with atlas-space bind landmarks. Whole named skeletal objects receive a single rigid bone index before batching. The old side-dependent vertex offsets have been removed. Foot stance/swing trajectories drive two-link leg IK, with fixed segment lengths, knee flexion, ankle clearance, reciprocal arms and blended mode transitions. A protected central perineal envelope stays with the pelvis; hands are excluded from leg envelopes.
+
+Skin, vessels, nerves and muscles share normalized dual-quaternion GPU skinning. Normals are rotated with the same quaternion; sensor markers use the matching CPU transform. DQS avoids linear-blend joint collapse and preserves local rigid cross-sections, but does not solve volumetric tissue mechanics or guarantee the integrated volume of an entire muscle. Physiological signals remain illustrative synthetic outputs rather than computed biomechanical sensor measurements.
+
+`npm test` covers rigid bone lengths, actual bone-matrix / DQ agreement, knee flexion, foot clearance, perineal continuity, hand binding and local cross-section volume. `node --experimental-strip-types scripts/check-rig-assets.mjs` checks real GLB meshes and exports posed inspection assets to `/tmp`. These can be rendered in Blender independently of the web app. Browser FPS is reported by the app, not asserted from offline asset checks.

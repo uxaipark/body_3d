@@ -22,7 +22,7 @@ def read_obj(path):
             groups.append(group)
     return vertices,uv,faces,uvfaces,groups
 base,uv,faces,uvfaces,groups=read_obj(MH/'3dobjs/base.obj')
-for target,weight in [('macrodetails/caucasian-male-young.target',1),('eyes/l-eye-height2-incr.target',.35),('eyes/r-eye-height2-incr.target',.35),('macrodetails/universal-male-young-maxmuscle-averageweight.target',.38),('macrodetails/proportions/male-young-averagemuscle-averageweight-idealproportions.target',.32)]:
+for target,weight in [('macrodetails/caucasian-male-young.target',1),('eyes/l-eye-height2-incr.target',.18),('eyes/r-eye-height2-incr.target',.18),('macrodetails/universal-male-young-maxmuscle-averageweight.target',.38),('macrodetails/proportions/male-young-averagemuscle-averageweight-idealproportions.target',.32)]:
     for line in (MH/'targets'/target).read_text().splitlines():
         t=line.split()
         if len(t)==4 and not t[0].startswith('#'):base[int(t[0])]+=Vector(map(float,t[1:]))*weight
@@ -37,9 +37,16 @@ portrait_reference=[v.copy() for v in base]
 portrait_targets=[
     ('macrodetails/caucasian-male-young.target',-.72),
     ('macrodetails/asian-male-young.target',.72),
-    ('head/head-oval.target',.22),
+    ('head/head-oval.target',.10),
+    ('head/head-invertedtriangular.target',.34),
+    ('head/head-scale-horiz-decr.target',.10),
+    ('cheek/l-cheek-bones-incr.target',.16),
+    ('cheek/r-cheek-bones-incr.target',.16),
+    ('eyes/l-eye-corner2-up.target',.18),
+    ('eyes/r-eye-corner2-up.target',.18),
+    ('eyebrows/eyebrows-angle-down.target',.16),
     ('chin/chin-bones-decr.target',.30),
-    ('chin/chin-width-decr.target',.22),
+    ('chin/chin-width-decr.target',.34),
     ('chin/chin-height-decr.target',.12),
     ('eyes/l-eye-scale-incr.target',.10),
     ('eyes/r-eye-scale-incr.target',.10),
@@ -85,8 +92,8 @@ def conform(v):
     if v.y>.65:
         edge=arm_a.x-.035+max(0,arm_a.y-v.y)*.48
         amount=smooth(edge-.025,edge+.025,v.x)*(1-smooth(arm_a.y,arm_a.y+.045,v.y))
-        upper=bone_map(v,arm_a,arm_b,Vector((.167,1.375,-.019)),Vector((.222,1.09,-.014)))
-        lower=bone_map(v,arm_b,arm_c,Vector((.222,1.09,-.014)),Vector((.283,.863,.012)))
+        upper=bone_map(v,arm_a,arm_b,Vector((.167,1.375,-.019)),Vector((.222,1.098,-.035)))
+        lower=bone_map(v,arm_b,arm_c,Vector((.222,1.098,-.035)),Vector((.283,.863,.012)))
         blend=1-smooth(arm_b.y-.045,arm_b.y+.045,v.y)
         mapped=upper.lerp(lower,blend);v=v.lerp(mapped,amount)
     # Smoothly narrow the A-stance, without the discontinuity of separate leg transforms.
@@ -96,9 +103,28 @@ def conform(v):
         for i in range(len(knots)-1):
             if knots[i]<=y<=knots[i+1]:
                 t=smooth(knots[i],knots[i+1],y);shift=offsets[i]*(1-t)+offsets[i+1]*t;break
-        v.x-=shift*smooth(.015,.085,v.x)
+        v.x-=shift*smooth(.015,.085,v.x)*(1-smooth(.60,.68,v.y)*smooth(.17,.225,v.x))
     v.x*=sign
     return Vector((v.x,-v.z,v.y)) # Blender Z-up; glTF exports Y-up, facing +Z.
+
+# Register exterior knee/hip landmarks to the atlas before skeletal binding.
+# This is a one-time rest-pose fit, never an animated bend of a bone.
+conform_unregistered=conform
+source_leg=[conform_unregistered(joint(n)) for n in ['joint-l-upper-leg','joint-l-knee','joint-l-ankle']]
+target_leg=[Vector((.072,.006,.867)),Vector((.083,.027,.438)),Vector((.078,.035,.073))]
+def conform(v):
+    p=conform_unregistered(v);side=1 if p.x>=0 else -1;p.x=abs(p.x)
+    if p.z<.98:
+        upper=bone_map(p,source_leg[0],source_leg[1],target_leg[0],target_leg[1])
+        lower=bone_map(p,source_leg[1],source_leg[2],target_leg[1],target_leg[2])
+        knee=1-smooth(source_leg[1].z-.035,source_leg[1].z+.035,p.z)
+        mapped=upper.lerp(lower,knee)
+        foot=p+(target_leg[2]-source_leg[2])
+        mapped=mapped.lerp(foot,1-smooth(.05,.10,p.z))
+        groin=1-smooth(.67,.79,p.z)*(1-smooth(.038,.085,p.x))
+        p=p.lerp(mapped,(1-smooth(.84,.98,p.z))*groin*(1-smooth(.60,.68,p.z)*smooth(.17,.225,p.x)))
+    p.x*=side
+    return p
 
 def material(name,texture,rough=.55,alpha=False):
     m=bpy.data.materials.new(name);m.use_nodes=True
@@ -111,9 +137,16 @@ def material(name,texture,rough=.55,alpha=False):
     if name=='Skin':p.inputs['Subsurface Weight'].default_value=.07;p.inputs['Subsurface Radius'].default_value=(1,.4,.2)
     return m
 skinmat=material('Skin',ASSETS/'skins/young_caucasian_male/young_lightskinned_male_diffuse.png')
+# A smooth, warm cinematic skin finish instead of photographic pore detail.
+principled=skinmat.node_tree.nodes.get('Principled BSDF')
+for link in list(skinmat.node_tree.links):
+    if link.to_socket==principled.inputs['Base Color']:skinmat.node_tree.links.remove(link)
+principled.inputs['Base Color'].default_value=(.57,.305,.215,1)
+principled.inputs['Roughness'].default_value=.8
+principled.inputs['Specular IOR Level'].default_value=.22
 hairmat=material('Hair',ASSETS/'hair/short02/short02_diffuse.png',.82,True)
 eyemat=material('Eyes',MH/'eyes/materials/brown_eye.png',.25)
-browmat=material('Eyebrows',ASSETS/'eyebrows/eyebrow002/eyebrow002.png',.7,True)
+browmat=material('Eyebrows',ASSETS/'eyebrows/eyebrow005/eyebrow005.png',.7,True)
 def mesh_obj(name,verts,uvs,fs,ufs,mat,subdiv=0):
     used=sorted({i for f in fs for i in f});remap={v:i for i,v in enumerate(used)}
     mesh=bpy.data.meshes.new(name);mesh.from_pydata([conform(verts[i]) for i in used],[],[[remap[i]for i in f]for f in fs]);mesh.update()
@@ -149,19 +182,30 @@ def fitted_asset(folder,name,mat,subdiv=0):
     assert len(out)==len(verts),(name,len(out),len(verts))
     return mesh_obj(name,out,uvs,fs,ufs,mat,subdiv)
 fitted_asset(MH/'eyes/high-poly','high-poly',eyemat,1)
-fitted_asset(ASSETS/'hair/short02','short02',hairmat)
-fitted_asset(ASSETS/'eyebrows/eyebrow002','eyebrow002',browmat)
-# All four meshes share the atlas coordinates, so the runtime's existing deformation remains aligned.
+# Volumetric, sculpted locks replace the photographic hair cards.
+exec((ROOT/'scripts/cinematic-hair.py').read_text(),globals())
+fitted_asset(ASSETS/'eyebrows/eyebrow005','eyebrow005',browmat)
+# Batch the sculpted hair by material to keep the skin layer inexpensive to draw.
+for mat in [hair_base,hair_light,brow_solid]:
+    obs=[o for o in bpy.context.scene.objects if o.type=='MESH' and len(o.data.materials)==1 and o.data.materials[0]==mat]
+    if len(obs)>1:
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in obs:o.select_set(True)
+        bpy.context.view_layer.objects.active=obs[0];bpy.ops.object.join()
+        obs[0].name=mat.name
+for landmark in ['joint-l-upper-leg','joint-l-knee','joint-l-ankle','joint-mouth']:
+    print('FITTED_LANDMARK',landmark,list(conform(joint(landmark))))
+# Export in the common anatomical coordinate frame.
 bpy.ops.object.select_all(action='SELECT')
 bpy.ops.export_scene.gltf(filepath=str(ROOT/'public/models/skin-web.glb'),export_format='GLB',use_selection=True,export_draco_mesh_compression_enable=True,export_draco_mesh_compression_level=6,export_image_format='AUTO')
 print('SKIN_EXPORT_COMPLETE',sum(len(o.data.polygons) for o in bpy.context.scene.objects if o.type=='MESH'))
 # An offline asset render is for checking the fitted geometry, not a browser screenshot.
 scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.samples=24
-scene.world.color=(.12,.12,.12);scene.render.resolution_x=800;scene.render.resolution_y=1000;scene.render.resolution_percentage=100
+scene.world.color=(.055,.065,.085);scene.render.resolution_x=800;scene.render.resolution_y=1000;scene.render.resolution_percentage=100
 scene.view_settings.view_transform='AgX'
 def aim(obj,point):obj.rotation_euler=(Vector(point)-obj.location).to_track_quat('-Z','Y').to_euler()
 bpy.ops.object.camera_add(location=(.8,-3.7,1.25));camera=bpy.context.object;aim(camera,(0,0,.9));camera.data.type='ORTHO';camera.data.ortho_scale=1.95;scene.camera=camera
-for loc,power,size in [((2,-3,3),450,3),((-2,-1,2),250,2),((0,2,2),350,2)]:
+for loc,power,size in [((2,-3,3),180,3),((-2,-1,2),90,2),((0,2,2),170,2)]:
     bpy.ops.object.light_add(type='AREA',location=loc);light=bpy.context.object;light.data.energy=power;light.data.shape='DISK';light.data.size=size;aim(light,(0,0,1))
 scene.render.filepath='/tmp/soma-skin-full.png';bpy.ops.render.render(write_still=True)
 camera.location=(.13,-1.1,1.64);aim(camera,(0,0,1.61));camera.data.ortho_scale=.40;scene.render.resolution_x=800;scene.render.resolution_y=800;scene.render.filepath='/tmp/soma-skin-face.png';bpy.ops.render.render(write_still=True)
