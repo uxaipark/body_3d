@@ -13,7 +13,7 @@ const original=await io.read(cache),lungs=[];
 for(const node of original.getRoot().listNodes()){
  if(!node.getMesh()||!/lung|bronch/i.test(node.getName()))continue;
  const m=new T.Matrix4().fromArray(node.getWorldMatrix());for(const [i,p]of node.getMesh().listPrimitives().entries()){
-  const a=p.getAttribute('POSITION').getArray(),positions=[];for(let j=0;j<a.length;j+=3)positions.push(new T.Vector3().fromArray(a,j).applyMatrix4(m).toArray());lungs.push({name:node.getName(),primitive:i,positions});
+  const a=p.getAttribute('POSITION').getArray(),positions=[];for(let j=0;j<a.length;j+=3)positions.push(new T.Vector3().fromArray(a,j).applyMatrix4(m).toArray());lungs.push({name:node.getName(),primitive:i,positions,indices:Array.from(p.getIndices()?.getArray()||positions.map((_,i)=>i))});
  }
 }
 fs.writeFileSync('/tmp/soma-lung-input.json',JSON.stringify({verts,faces,planes,lungs}));console.log('rib vertices',verts.length,'hull planes',planes.length,'lung meshes',lungs.length);

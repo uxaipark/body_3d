@@ -130,6 +130,38 @@ test('captured vertical motion moves pelvis, chest and head together',()=>{
  }
 });
 
+test('neck and head stay level through the whole gait and motion blends',()=>{
+ const rig=new HumanRig(),q=new THREE.Quaternion();
+ for(const amount of [0,.25,.5,1])for(const run of [0,.5,1])for(let i=0;i<120;i++){
+  rig.pose(i/120,amount,run);
+  for(const name of ['neck','head']){
+   rig.bone(name).getWorldQuaternion(q);
+   const right=new THREE.Vector3(1,0,0).applyQuaternion(q);
+   near(right.y,0,1e-6);
+  }
+  const neck=rig.bone('neck').getWorldPosition(new THREE.Vector3());
+  const head=rig.bone('head').getWorldPosition(new THREE.Vector3());
+  near(head.distanceTo(neck),rig.bone('head').position.length());
+ }
+});
+
+test('rendered head motion suppresses capture jitter, including the loop seam',async()=>{
+ const {mocapData}=await import('../lib/mocap-data.js');
+ const rig=new HumanRig();
+ for(const mode of ['walk','run']){
+  const clip=mocapData[mode],n=clip.frames.length,dt=clip.duration/n,points=[];
+  for(let i=0;i<n;i++){
+   rig.pose(i/n,1,mode==='run'?1:0);
+   points.push(rig.bone('head').getWorldPosition(new THREE.Vector3()));
+  }
+  const accelerations=points.map((p,i)=>points[(i+1)%n].clone().add(points[(i+n-1)%n]).addScaledVector(p,-2).length()/dt**2);
+  const rms=Math.sqrt(accelerations.reduce((sum,a)=>sum+a*a,0)/n);
+  // Before smoothing: RMS 13.65 / 32.02 m/s², peaks 61.85 / 89.04.
+  assert.ok(rms<(mode==='walk'?5:12),`${mode} head acceleration RMS ${rms}`);
+  assert.ok(Math.max(...accelerations)<26);
+ }
+});
+
 test('captured cycles loop continuously and avoid abrupt foot orientation flips',async()=>{
  const {mocapData}=await import('../lib/mocap-data.js');
  for(const [mode,clip]of Object.entries(mocapData)){

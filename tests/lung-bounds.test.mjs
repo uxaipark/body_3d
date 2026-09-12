@@ -8,7 +8,7 @@ test('maximum inspiration stays inside the rib envelope and exhalation has more 
    for(let i=0;i<a.getCount();i++){
     const rest=new T.Vector3().fromArray(a.getArray(),i*3).applyMatrix4(m),full=new T.Vector3().fromArray(b.getArray(),i*3).applyMatrix4(m);let restGap=Infinity,fullGap=Infinity;
     for(const [x,y,z,d]of ribCagePlanes){restGap=Math.min(restGap,d-x*rest.x-y*rest.y-z*rest.z);fullGap=Math.min(fullGap,d-x*full.x-y*full.y-z*full.z)}
-    assert.ok(fullGap>.0075,`${n.getName()} inspired vertex outside cage: ${fullGap}`);assert.ok(restGap>.0075);restClearance+=restGap;fullClearance+=fullGap;count++;
+    assert.ok(fullGap>.012,`${n.getName()} inspired vertex too close to cage: ${fullGap}`);assert.ok(restGap>.012);restClearance+=restGap;fullClearance+=fullGap;count++;
    }
   }
  }

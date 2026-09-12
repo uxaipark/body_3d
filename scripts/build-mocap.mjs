@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import * as T from 'three';
 import {BVHLoader}from'three/addons/loaders/BVHLoader.js';
 import {HumanRig,BONE_NAMES}from'../lib/rig.ts';
+import {smoothCapture}from'./mocap-filter.mjs';
 const V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),Q=()=>new T.Quaternion();
 const mean=a=>a.reduce((s,v)=>s+v,0)/a.length;
 function frame(up,lateral){
@@ -106,7 +107,11 @@ for(const [mode,id,start,end]of [['walk','07_01',60,192],['run','09_01',8,94]]){
  };
  const duration=period/120,n=Math.round(duration*60),data=[];
  for(let i=0;i<n;i++){const f=sample(i/n);data.push([...f.position,...f.quaternions.flat()].map(v=>+v.toFixed(7)));}
- output[mode]={source:`CMU ${id}`,sha256:crypto.createHash('sha256').update(raw).digest('hex'),sourceFrames:[start,end],duration,frames:data};
+ // Symmetric filtering removes capture/retargeting chatter without delaying
+ // footfalls. Shorter running window preserves the faster impact/flight rhythm.
+ const smoothingSeconds=mode==='walk'?.050:.040;
+ const filtered=smoothCapture(data,duration,smoothingSeconds).map(f=>f.map(v=>+v.toFixed(7)));
+ output[mode]={source:`CMU ${id}`,sha256:crypto.createHash('sha256').update(raw).digest('hex'),sourceFrames:[start,end],duration,smoothingSeconds,frames:filtered};
  console.log(mode,'frames',n,'duration',duration,'height',Math.min(...data.map(f=>f[1])),Math.max(...data.map(f=>f[1])));
  rig.dispose();mixer.stopAllAction();mixer.uncacheRoot(src);
 }

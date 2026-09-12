@@ -142,6 +142,16 @@ export class HumanRig {
      forearm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,sign*amount*this.forearmRoll));
    }
    p.updateMatrixWorld(true);
+   // Stabilize the gaze in world space: cancelling only a local neck roll
+   // would still inherit the captured chest lean. Retain pitch/yaw and bob.
+   const level=new THREE.Euler(0,0,0,'YXZ');
+   const neck=this.bone('neck'),head=this.bone('head');
+   neck.getWorldQuaternion(qa);head.getWorldQuaternion(qc);
+   for(const [bone,world]of [[neck,qa],[head,qc]]as const){
+     level.setFromQuaternion(world,'YXZ');level.z=0;world.setFromEuler(level);
+     bone.quaternion.copy(bone.parent!.getWorldQuaternion(qb).invert()).multiply(world);
+     bone.updateMatrixWorld(true);
+   }
    // Blending different captured poses can put a sole slightly below the floor.
    // Correct the common root, preserving bone lengths and captured flight.
    let floor=0;
