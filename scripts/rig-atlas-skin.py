@@ -1,8 +1,11 @@
 """Rig the cleaned native atlas exterior using Blender bone heat weights."""
 import bpy,json,numpy as np,bmesh
+import sys
 from pathlib import Path
 from mathutils import Vector
 ROOT=Path(__file__).resolve().parent.parent
+sys.path.insert(0,str(ROOT/'scripts'))
+from smooth_atlas_surface import smooth_surface
 ref=json.loads(Path('/tmp/soma-atlas-skin-reference.json').read_text())
 s=json.loads(Path('/tmp/soma-atlas-outer.json').read_text());scale=s['scale'];translation=np.asarray(s['transform'])
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
@@ -11,6 +14,9 @@ obj=bpy.data.objects.new('Atlas Skin',mesh);bpy.context.collection.objects.link(
 mod=obj.modifiers.new('Web exterior budget','DECIMATE');mod.ratio=min(1,110000/len(mesh.polygons));mod.use_collapse_triangulate=True;bpy.ops.object.modifier_apply(modifier=mod.name);mesh=obj.data
 bm=bmesh.new();bm.from_mesh(mesh);bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(mesh);bm.free();mesh.update()
 positions=np.asarray([list(v.co) for v in mesh.vertices]);triangles=[list(p.vertices) for p in mesh.polygons]
+positions,smoothing=smooth_surface(positions,triangles)
+for vertex,position in zip(mesh.vertices,positions):vertex.co=position
+mesh.update()
 print('Clean native exterior:',len(positions),'vertices,',len(triangles),'triangles',flush=True)
 # Native bone-heat weights, solved on the connected exterior rather than X/Y
 # partitioning. Geometry is never changed by the rigging operation.
@@ -49,5 +55,5 @@ for vertex in mesh.vertices:
 print('Bone heat result',len(mesh.vertices),'vertices; unbound',unbound)
 assert unbound==0,unbound
 for p in mesh.polygons:p.use_smooth=True
-Path('/tmp/soma-atlas-skin-rigged.json').write_text(json.dumps({'positions':positions.tolist(),'indices':triangles,'rigIndex':indices,'rigWeight':weights,'transform':translation.tolist(),'scale':float(scale)}))
+Path('/tmp/soma-atlas-skin-rigged.json').write_text(json.dumps({'positions':positions.tolist(),'indices':triangles,'rigIndex':indices,'rigWeight':weights,'transform':translation.tolist(),'scale':float(scale),'smoothing':smoothing}))
 bpy.ops.wm.save_as_mainfile(filepath='/tmp/soma-atlas-skin.blend')

@@ -57,6 +57,6 @@ BodyParts3D, © The Database Center for Life Science, licensed under CC Attribut
 
 Downloaded through Kevin Mattheus Moerman's OBJ-to-STL mirror: https://github.com/kevin-mattheus-moerman/BodyParts3D . That mirror retains the original CC BY-SA 2.1 Japan notice; see its README and the official current license above. The bundled adapted geometry is distributed under CC BY-SA 4.0, with these attribution notices retained.
 
-Modifications: one global uniform scale/translation to the Z-Anatomy frame, removal of nested internal tissue surfaces through a 1.5 mm exterior flood-fill, surface simplification, outward normals, Blender bone-heat joint weights, continuous pelvic anchoring and glTF/Draco packaging. Surface shading is original procedural code, with no MakeHuman skin/face/hair texture applied to this new model. No patient-specific fit is claimed.
+Modifications: one global uniform scale/translation to the Z-Anatomy frame, removal of nested internal tissue surfaces through a 1.5 mm exterior flood-fill, surface simplification, bounded 1 mm Taubin smoothing, outward normals, Blender bone-heat joint weights, continuous pelvic anchoring and glTF/Draco packaging. Surface shading is original procedural code, with no MakeHuman skin/face/hair texture applied to this new model. No patient-specific fit is claimed.
 
 Reference: Mitsuhashi N et al., BodyParts3D: 3D structure database for anatomical concepts. Nucleic Acids Research 37 (2009), D782–D785. https://doi.org/10.1093/nar/gkn613 .
