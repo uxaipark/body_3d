@@ -105,12 +105,17 @@ test('the restored exterior does not double-rotate its already inward-facing pal
   r.pose(i/40,1,run);
   for(const [side,sign] of [['l',1],['r',-1]]){
    const n=new THREE.Vector3(-sign*.98094,-.04005,-.19014).normalize().applyQuaternion(r.bone(`hand.${side}`).getWorldQuaternion(new THREE.Quaternion()));
-   assert.ok(n.x*-sign>.85);
+   // A captured forearm can cross the torso. Test inward-facing orientation
+   // in its transverse plane, rather than requiring a fixed world-X angle.
+   const q=r.bone(`hand.${side}`).getWorldQuaternion(new THREE.Quaternion());
+   const axis=r.bone(`hand.${side}`).position.clone().normalize().applyQuaternion(q);
+   const inward=new THREE.Vector3(-sign,0,0);inward.addScaledVector(axis,-inward.dot(axis)).normalize();
+   assert.ok(n.dot(inward)>.85);
   }
  }
 });
 
-test('pelvis, chest and head rise and fall twice per stride, with larger running excursion',()=>{
+test('captured vertical motion moves pelvis, chest and head together',()=>{
  const rig=new HumanRig();
  for(const run of [0,1]){
   const ys={pelvis:[],chest:[],head:[]};
@@ -120,38 +125,42 @@ test('pelvis, chest and head rise and fall twice per stride, with larger running
   }
   for(const [name,values]of Object.entries(ys)){
    const range=Math.max(...values)-Math.min(...values);
-   assert.ok(range>(run?.058:.035)&&range<.09,`${name} vertical excursion ${range}`);
+   assert.ok(range>(run?.05:.035)&&range<.13,`${name} vertical excursion ${range}`);
   }
-  // Lowest near weight transfer in walking, mid-contact compression in running.
-  rig.pose(run?.15:.06,1,run);const low=rig.bone('pelvis').position.y;
-  rig.pose(run?.40:.31,1,run);assert.ok(rig.bone('pelvis').position.y-low>(run?.058:.035));
  }
 });
 
-test('running flight has gravity acceleration and joins support without vertical velocity jumps',async()=>{
- const {gaitHeight}=await import('../lib/rig.ts');
- const cadence=1.5,dt=.00001,h=t=>gaitHeight(t*cadence,1);
- // 0.30..0.50 stride is flight, repeated after half a stride.
- for(const phase of [.34,.4,.46]){
-  const t=phase/cadence;
-  near((h(t+dt)-2*h(t)+h(t-dt))/(dt*dt),-9.81,.0001);
- }
- for(const phase of [0,.3,.5,.8,1]){
-  const t=phase/cadence;
-  const left=(h(t)-h(t-dt))/dt,right=(h(t+dt)-h(t))/dt;
-  near(left,right,.001);
+test('captured cycles loop continuously and avoid abrupt foot orientation flips',async()=>{
+ const {mocapData}=await import('../lib/mocap-data.js');
+ for(const [mode,clip]of Object.entries(mocapData)){
+  assert.match(clip.source,/CMU (07_01|09_01)/);assert.equal(clip.sha256.length,64);
+  assert.ok(clip.duration>.6&&clip.duration<1.3);
+  for(let i=0;i<clip.frames.length;i++){
+   const a=clip.frames[i],b=clip.frames[(i+1)%clip.frames.length];
+   assert.ok(Math.abs(a[1]-b[1])<.025);
+   for(let k=3;k<a.length;k+=4){const qa=new THREE.Quaternion().fromArray(a,k),qb=new THREE.Quaternion().fromArray(b,k);near(qa.length(),1,1e-5);assert.ok(qa.angleTo(qb)<.32,`${mode} frame ${i} flips`);}
+  }
+  const rig=new HumanRig();rig.pose(1-.00001,1,mode==='run'?1:0);const before=rig.bones.map(b=>b.getWorldPosition(new THREE.Vector3()));rig.pose(.00001,1,mode==='run'?1:0);
+  rig.bones.forEach((b,i)=>assert.ok(b.getWorldPosition(new THREE.Vector3()).distanceTo(before[i])<.001));
  }
 });
-
-test('running has a real flight interval with both soles clear of the floor',()=>{
- const rig=new HumanRig();
- for(const phase of [.33,.4,.47,.83,.9,.97]){
-  rig.pose(phase,1,1);
+test('captured running alternates contact and flight; blended modes never penetrate the floor',()=>{
+ const rig=new HumanRig();let flight=0,contact=0;
+ for(const run of [0,.25,.5,.75,1])for(let frame=0;frame<160;frame++){
+  rig.pose(frame/160,1,run);let low=Infinity;
   for(const side of ['l','r']){
    const foot=rig.bone(`foot.${side}`),ankle=foot.getWorldPosition(new THREE.Vector3()),q=foot.getWorldQuaternion(new THREE.Quaternion());
-   for(const p of [new THREE.Vector3(0,-.073,-.055),new THREE.Vector3(0,-.073,.145)]){
-    assert.ok(p.applyQuaternion(q).add(ankle).y>.0001);
-   }
+   for(const p of [new THREE.Vector3(0,-.073,-.055),new THREE.Vector3(0,-.073,.145)])low=Math.min(low,p.applyQuaternion(q).add(ankle).y);
   }
+  assert.ok(low>=-1e-6);
+  if(run===1){if(low>.003)flight++;if(low<.001)contact++;}
+ }
+ assert.ok(flight>20&&contact>20);
+});
+test('exterior medial elbows follow the arm while adjacent waist vertices stay on the torso',()=>{
+ for(const side of [-1,1]){
+  const elbow=weightsAt(side*.175,1.09,0,true),waist=weightsAt(side*.14,1.0,0,true);
+  assert.ok(elbow.indices.filter((id,i)=>elbow.weights[i]>.01).every(id=>/Arm|forearm/.test(BONE_NAMES[id])));
+  assert.ok(waist.indices.filter((id,i)=>waist.weights[i]>.01).every(id=>/pelvis|spine/.test(BONE_NAMES[id])));
  }
 });

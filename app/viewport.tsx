@@ -1,10 +1,13 @@
 'use client';
 import {useEffect,useRef,useState,type MutableRefObject}from'react';
 import {AnatomyScene,type Layers}from'@/lib/anatomy';
+import type{SkinRegion}from'@/lib/skin-section';
 import type{Parameters,Site}from'@/lib/physiology';
-export default function Viewport({params,layers,sceneRef,onStats,onPick,onTime,onSite}:{params:Parameters;layers:Layers;sceneRef:MutableRefObject<AnatomyScene|null>;onStats:(fps:number,triangles:number)=>void;onPick:(s:string)=>void;onTime:(t:number)=>void;onSite:(s:Site)=>void}){
- const host=useRef<HTMLDivElement>(null);const [progress,setProgress]=useState(0);const[error,setError]=useState('');const callbacks=useRef({stats:onStats,pick:onPick,time:onTime,site:onSite});callbacks.current={stats:onStats,pick:onPick,time:onTime,site:onSite};
- useEffect(()=>{let scene:AnatomyScene;let active=true;try{scene=new AnatomyScene(host.current!,params,layers,{stats:(...a)=>callbacks.current.stats(...a),pick:s=>callbacks.current.pick(s),time:t=>callbacks.current.time(t),site:s=>callbacks.current.site(s)});sceneRef.current=scene;scene.load(n=>{if(active)setProgress(n)}).catch(()=>{if(active)setError('해부학 모델을 불러오지 못했습니다. 연결을 확인하고 새로고침해 주세요.')});}catch{setError('WebGL 2를 사용할 수 없습니다. 브라우저의 하드웨어 가속을 켜 주세요.');}return()=>{active=false;scene?.dispose();sceneRef.current=null;};},[]);
+export default function Viewport({params,layers,selectedSites,skinInspection,onSkin,sceneRef,onStats,onPick,onTime,onSite}:{params:Parameters;layers:Layers;selectedSites:Site[];skinInspection:boolean;onSkin:(region:SkinRegion)=>void;sceneRef:MutableRefObject<AnatomyScene|null>;onStats:(fps:number,triangles:number)=>void;onPick:(s:string)=>void;onTime:(t:number)=>void;onSite:(s:Site)=>void}){
+ const host=useRef<HTMLDivElement>(null);const [progress,setProgress]=useState(0);const[error,setError]=useState('');const callbacks=useRef({stats:onStats,pick:onPick,time:onTime,site:onSite,skin:onSkin});callbacks.current={stats:onStats,pick:onPick,time:onTime,site:onSite,skin:onSkin};
+ useEffect(()=>{let scene:AnatomyScene;let active=true;try{scene=new AnatomyScene(host.current!,params,layers,{stats:(...a)=>callbacks.current.stats(...a),pick:s=>callbacks.current.pick(s),time:t=>callbacks.current.time(t),site:s=>callbacks.current.site(s),skin:r=>callbacks.current.skin(r)});sceneRef.current=scene;scene.setSensors(selectedSites);scene.setSkinInspection(skinInspection);scene.load(n=>{if(active)setProgress(n)}).catch(()=>{if(active)setError('해부학 모델을 불러오지 못했습니다. 연결을 확인하고 새로고침해 주세요.')});}catch{setError('WebGL 2를 사용할 수 없습니다. 브라우저의 하드웨어 가속을 켜 주세요.');}return()=>{active=false;scene?.dispose();sceneRef.current=null;};},[]);
+ useEffect(()=>{sceneRef.current?.setSkinInspection(skinInspection)},[skinInspection]);
+ useEffect(()=>{sceneRef.current?.setSensors(selectedSites)},[selectedSites]);
  useEffect(()=>{sceneRef.current?.setParameters(params)},[params]);useEffect(()=>{sceneRef.current?.setLayers(layers)},[layers]);
  return <><div ref={host} className="anatomy-canvas" aria-label="전신 3D 해부학 모델. 드래그로 회전, 스크롤로 확대, 점을 눌러 센서 선택."/>{(progress<100||error)&&<div className="model-loading" role="status">{error||`해부학 레이어 불러오는 중 · ${progress}%`}{!error&&<div style={{width:`${progress}%`}}/>}</div>}</>;
 }

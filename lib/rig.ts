@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {mocapData} from './mocap-data.js';
 
 // All bind landmarks are in the atlas's metre / Y-up frame. No scale is animated.
 const specs: [string, string | null, [number, number, number]][] = [
@@ -23,7 +24,7 @@ const smooth=(a:number,b:number,x:number)=>{const t=clamp((x-a)/(b-a),0,1);retur
 export interface Weights { indices:number[]; weights:number[] }
 
 /** Anatomical envelopes. The perineum is bound to ONE pelvis, never to a side. */
-export function weightsAt(x:number,y:number,z:number):Weights {
+export function weightsAt(x:number,y:number,z:number,surface=false):Weights {
  const ax=Math.abs(x), side=x<0?'r':'l';
  // The original avatar's thumb extends medially beside the upper thigh.
  if(y>.65&&y<.84&&ax>.19)return {indices:[ids[`hand.${side}`],0,0,0],weights:[1,0,0,0]};
@@ -35,7 +36,10 @@ export function weightsAt(x:number,y:number,z:number):Weights {
  const leg=(1-smooth(.84,.98,y))*groinGuard*(1-smooth(.60,.68,y)*smooth(.17,.225,ax));
  const arm=smooth(.135,.195,ax)*smooth(.12,.19,ax+Math.max(0,1.37-y)*.07)*smooth(.60,.67,y)*(1-smooth(1.36,1.44,y));
  // A chest surface cannot be classified as an arm just because it is lateral.
- const armEnvelope=smooth(.14+Math.max(0,1.37-y)*.04,.18+Math.max(0,1.37-y)*.04,ax)*arm;
+ let armEnvelope=smooth(.14+Math.max(0,1.37-y)*.04,.18+Math.max(0,1.37-y)*.04,ax)*arm;
+ // The restored exterior has a narrower waist and a clear arm/torso gap.
+ // Follow that gap so the medial elbow is not partly pinned to the trunk.
+ if(surface){const edge=.15+Math.max(0,1.12-y)*.30;const lower=smooth(edge-.01,edge+.01,ax)*smooth(.60,.67,y);armEnvelope=THREE.MathUtils.lerp(lower,armEnvelope,smooth(1.15,1.25,y));}
  const a=armEnvelope*(1-leg);
  if(leg>0){
    const knee=1-smooth(.405,.477,y),ankle=1-smooth(.06,.11,y);
@@ -80,32 +84,15 @@ export function rigidBone(name:string,center:THREE.Vector3):number {
  return ids[bone];
 }
 
-export function bindGeometry(geometry:THREE.BufferGeometry,rigidIndex?:number) {
+export function bindGeometry(geometry:THREE.BufferGeometry,rigidIndex?:number,surface=false) {
  const p=geometry.getAttribute('position'),indices=new Uint16Array(p.count*4),weights=new Float32Array(p.count*4);
  for(let i=0;i<p.count;i++){
    if(rigidIndex!==undefined){indices[i*4]=rigidIndex;weights[i*4]=1;}
-   else {const w=weightsAt(p.getX(i),p.getY(i),p.getZ(i));indices.set(w.indices,i*4);weights.set(w.weights,i*4);}
+   else {const w=weightsAt(p.getX(i),p.getY(i),p.getZ(i),surface);indices.set(w.indices,i*4);weights.set(w.weights,i*4);}
  }
  geometry.setAttribute('rigIndex',new THREE.BufferAttribute(indices,4));geometry.setAttribute('rigWeight',new THREE.BufferAttribute(weights,4));
  // Bounds enclose gait swings; the GPU moves vertices outside the rest box.
  geometry.computeBoundingSphere();if(geometry.boundingSphere)geometry.boundingSphere.radius+=.6;
-}
-
-/** Metres, seconds and gravity. Running joins a compliant support phase to a
- * ballistic flight with continuous height and vertical velocity at both contacts.
- * This is a reduced gait model, not a solved full-body ground-reaction simulation.
- */
-export function gaitHeight(phase:number,run:number){
- const step=((phase% .5)+.5)%.5;
- // Walking rises over the supporting leg; double support is the low point.
- const walk=-.021-.019*Math.cos(4*Math.PI*(phase-.06));
- const cadence=1.5,stance=.30/cadence,flight=.20/cadence;
- const t=step/cadence,gravity=9.81,takeoff=gravity*flight/2;
- const compression=takeoff*stance/Math.PI;
- const running=-.043+(t<stance
-   ?-compression*Math.sin(Math.PI*t/stance)
-   :takeoff*(t-stance)-.5*gravity*(t-stance)**2);
- return THREE.MathUtils.lerp(walk,running,run);
 }
 
 export class HumanRig {
@@ -121,65 +108,48 @@ export class HumanRig {
    this.bones[0].updateMatrixWorld(true);this.skeleton=new THREE.Skeleton(this.bones);this.skeleton.calculateInverses();this.updatePalette();
  }
  bone(name:string){return this.bones[ids[name]];}
- /** Foot targets use stance/swing phases and two-link IK; bone lengths never change. */
+ /** Blend captured cycles at their measured durations; bone lengths never change. */
  update(dt:number,motion:'rest'|'walk'|'run'){
    const k=1-Math.exp(-dt*7);this.amount=THREE.MathUtils.lerp(this.amount,motion==='rest'?0:1,k);
    this.runMix=THREE.MathUtils.lerp(this.runMix,motion==='run'?1:0,k);
-   this.phase=(this.phase+dt*THREE.MathUtils.lerp(.92,1.5,this.runMix))%1;
+   this.phase=(this.phase+dt*THREE.MathUtils.lerp(1/mocapData.walk.duration,1/mocapData.run.duration,this.runMix))%1;
    this.pose(this.phase,this.amount,this.runMix);
  }
+ /** Retargeted captured poses, sampled at the recorded cadence. All tissues use
+  * this same phase; only the exterior's neutral palm convention differs. */
  pose(phase:number,amount=1,run=0){
-   for(const b of this.bones)b.quaternion.identity();
-   const p=this.bone('pelvis');p.position.copy(this.bind[0]);
-   if(amount<1e-7){p.updateMatrixWorld(true);this.updatePalette();return;}
-   const wave=phase*Math.PI*2;
-   p.position.y+=amount*gaitHeight(phase,run);
-   p.position.x=amount*.008*Math.sin(wave);
-   p.rotation.set(amount*run*.10,amount*.035*Math.sin(wave),amount*.018*Math.sin(wave));
-   this.bone('spine').rotation.set(amount*run*.055,-amount*.045*Math.sin(wave),-amount*.012*Math.sin(wave));
-   this.bone('chest').rotation.y=-amount*.045*Math.sin(wave);
-   this.bone('neck').rotation.x=-amount*run*.07;
-   p.updateMatrixWorld(true);
-   for(const [side,offset,s] of [['l',0,1],['r',.5,-1]] as const){
-     const u=(phase+offset)%1,duty=THREE.MathUtils.lerp(.62,.30,run),stride=THREE.MathUtils.lerp(.20,.25,run);
-     let z:number,lift=0,pitch=0;
-     if(u<duty){const t=u/duty;z=stride*(1-2*t);
-       pitch=THREE.MathUtils.lerp(-.12,-.08,run)*(1-smooth(0,.16,t))+THREE.MathUtils.lerp(.28,.48,run)*smooth(.76,1,t);
-     }else{const t=(u-duty)/(1-duty),v=-2*stride*(1-duty)/duty;
-       z=-stride*(2*t*t*t-3*t*t+1)+stride*(-2*t*t*t+3*t*t)+v*(2*t*t*t-3*t*t+t);
-       lift=THREE.MathUtils.lerp(.095,.245,run)*Math.sin(Math.PI*t)**2;
-       pitch=THREE.MathUtils.lerp(.28,.48,run)*(1-smooth(0,.5,t))-.12*smooth(.65,1,t);
-     }
-     // Rotate the foot with clearance for its heel/toe rather than driving it through the floor.
-     const clearance=Math.max(0,Math.sin(pitch)*.145,-Math.sin(pitch)*.055);
-     const ankle=this.bind[ids[`foot.${side}`]].clone();ankle.z+=z*amount;ankle.y+=(lift+clearance)*amount;
-     this.solveLeg(side,ankle,pitch*amount);
-     const swing=Math.cos(wave+offset*Math.PI*2);
-     this.bone(`upperArm.${side}`).rotation.set(amount*THREE.MathUtils.lerp(.28,.65,run)*swing,0,s*amount*-.035);
-     this.bone(`forearm.${side}`).rotation.x=-amount*(THREE.MathUtils.lerp(.20,1.35,run)+THREE.MathUtils.lerp(.14,.2,run)*(1-swing));
-     // Anatomical rest palms face forward. During locomotion, roll each forearm
-     // around its elbow-to-wrist axis so the palm faces the torso, with no wrist kink.
-     const forearm=this.bone(`forearm.${side}`),axis=this.bone(`hand.${side}`).position.clone().normalize();
-     forearm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,s*amount*this.forearmRoll));
-     this.bone(`hand.${side}`).rotation.x=-amount*.06;
+   const p=this.bone('pelvis'),identity=new THREE.Quaternion();
+   if(amount<1e-7){
+     for(const b of this.bones)b.quaternion.identity();
+     p.position.copy(this.bind[0]);p.updateMatrixWorld(true);this.updatePalette();return;
    }
-   p.updateMatrixWorld(true);this.updatePalette();
- }
- private solveLeg(side:string,target:THREE.Vector3,pitch:number){
-   const upper=this.bone(`thigh.${side}`),lower=this.bone(`shin.${side}`),foot=this.bone(`foot.${side}`);
-   const hip=upper.getWorldPosition(new THREE.Vector3()),restUpper=lower.position.clone(),restLower=foot.position.clone();
-   const a=restUpper.length(),b=restLower.length(),direction=target.clone().sub(hip),distance=clamp(direction.length(),Math.abs(a-b)+.001,a+b-.0001);direction.normalize();
-   const along=(a*a-b*b+distance*distance)/(2*distance),height=Math.sqrt(Math.max(0,a*a-along*along));
-   const pole=new THREE.Vector3(0,0,1).addScaledVector(direction,-direction.z).normalize();
-   const knee=hip.clone().addScaledVector(direction,along).addScaledVector(pole,height);
-   // Rest axes are oblique; use their full vectors instead of assuming a vertical bone.
-   const desiredUpper=new THREE.Quaternion().setFromUnitVectors(restUpper.normalize(),knee.clone().sub(hip).normalize());
-   const parentQ=upper.parent!.getWorldQuaternion(new THREE.Quaternion());upper.quaternion.copy(parentQ.invert().multiply(desiredUpper));upper.updateMatrixWorld(true);
-   const desiredLower=new THREE.Quaternion().setFromUnitVectors(restLower.normalize(),target.clone().sub(knee).normalize());
-   lower.quaternion.copy(desiredUpper.clone().invert().multiply(desiredLower));lower.updateMatrixWorld(true);
-   foot.quaternion.copy(desiredLower.clone().invert().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),pitch)));
-   // Patella tracks knee flexion without bending its own geometry.
-   this.bone(`patella.${side}`).quaternion.copy(lower.quaternion).slerp(new THREE.Quaternion(),.5);
+   const clip=(mode:'walk'|'run')=>{
+     const frames=mocapData[mode].frames,x=((phase%1)+1)%1*frames.length,i=Math.floor(x);
+     return {a:frames[i],b:frames[(i+1)%frames.length],t:x-i};
+   };
+   const walk=clip('walk'),running=clip('run');
+   const position=(k:number)=>THREE.MathUtils.lerp(THREE.MathUtils.lerp(walk.a[k],walk.b[k],walk.t),THREE.MathUtils.lerp(running.a[k],running.b[k],running.t),run);
+   p.position.set(amount*position(0),THREE.MathUtils.lerp(this.bind[0].y,position(1),amount),this.bind[0].z+amount*position(2));
+   const qa=new THREE.Quaternion(),qb=new THREE.Quaternion(),qc=new THREE.Quaternion();
+   for(let i=0;i<this.bones.length;i++){
+     const offset=3+i*4;
+     qa.fromArray(walk.a,offset).slerp(qb.fromArray(walk.b,offset),walk.t);
+     qc.fromArray(running.a,offset).slerp(qb.fromArray(running.b,offset),running.t);
+     qa.slerp(qc,run);this.bones[i].quaternion.copy(identity).slerp(qa,amount);
+   }
+   for(const [side,sign]of [['l',1],['r',-1]]as const){
+     const forearm=this.bone(`forearm.${side}`),axis=this.bone(`hand.${side}`).position.clone().normalize();
+     forearm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,sign*amount*this.forearmRoll));
+   }
+   p.updateMatrixWorld(true);
+   // Blending different captured poses can put a sole slightly below the floor.
+   // Correct the common root, preserving bone lengths and captured flight.
+   let floor=0;
+   for(const side of ['l','r']){
+     const foot=this.bone(`foot.${side}`),q=foot.getWorldQuaternion(qb),ankle=foot.getWorldPosition(new THREE.Vector3());
+     for(const sole of [new THREE.Vector3(0,-.073,-.055),new THREE.Vector3(0,-.073,.145)])floor=Math.min(floor,sole.applyQuaternion(q).add(ankle).y);
+   }
+   p.position.y-=floor;p.updateMatrixWorld(true);this.updatePalette();
  }
  updatePalette(){
    this.skeleton.update();const matrix=new THREE.Matrix4(),q=new THREE.Quaternion(),t=new THREE.Vector3(),scale=new THREE.Vector3();

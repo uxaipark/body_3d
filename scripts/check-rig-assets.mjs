@@ -34,7 +34,7 @@ for(const [mode,phase,run] of [['walk',.8,0],['run',.75,1]]){
     }
     let firstIn,firstOut;
     for(let i=0;i<a.length;i+=3){
-     const v=new THREE.Vector3().fromArray(a,i).applyMatrix4(world),w=rigidIndex===undefined?weightsAt(v.x,v.y,v.z):{indices:[rigidIndex,0,0,0],weights:[1,0,0,0]};
+     const v=new THREE.Vector3().fromArray(a,i).applyMatrix4(world),w=rigidIndex===undefined?weightsAt(v.x,v.y,v.z,['skin','dermis','adipose'].includes(layer)):{indices:[rigidIndex,0,0,0],weights:[1,0,0,0]};
      const moved=rig.transform(v,w);assert.ok(moved.toArray().every(Number.isFinite));
      if(!firstIn){firstIn=v.clone();firstOut=moved.clone();}
      if(rigidIndex!==undefined)maxError=Math.max(maxError,Math.abs(v.distanceTo(firstIn)-moved.distanceTo(firstOut)));

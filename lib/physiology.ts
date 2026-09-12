@@ -39,3 +39,12 @@ export function csv(p:Parameters,duration=10,rate=250,start=0){
  for(let i=0;i<duration*rate;i++){const t=start+i/rate,s=sample(t,p);lines.push([t,s.ECG,s.PPG,s.EEG,s.EMG,s.RESP,s.RESP*.004,meta.pat,meta.ptt,p.spo2].map(v=>v.toFixed(5)).join(','));}
  return lines.join('\n');
 }
+
+export const sensorColors:Record<Site,string>={wrist:'#e5b886',finger:'#a4e4d0',ear:'#b4a2e0',forehead:'#e5a2a5',chest:'#88b8df',arm:'#d5d985'};
+export function toggleSensorSite(selected:Site[],site:Site):Site[]{return selected.includes(site)?selected.filter(s=>s!==site):[...selected,site]}
+export function csvSites(p:Parameters,selected:Site[],duration=10,rate=250,start=0){
+ if(!selected.length)return '';
+ const lines:string[]=[];
+ for(const site of selected){const [header,...rows]=csv({...p,site},duration,rate,start).split('\n');if(!lines.length)lines.push('sensor_site,'+header);lines.push(...rows.map(row=>site+','+row))}
+ return lines.join('\n');
+}
