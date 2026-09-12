@@ -25,6 +25,8 @@ export interface Weights { indices:number[]; weights:number[] }
 /** Anatomical envelopes. The perineum is bound to ONE pelvis, never to a side. */
 export function weightsAt(x:number,y:number,z:number):Weights {
  const ax=Math.abs(x), side=x<0?'r':'l';
+ // The original avatar's thumb extends medially beside the upper thigh.
+ if(y>.65&&y<.84&&ax>.19)return {indices:[ids[`hand.${side}`],0,0,0],weights:[1,0,0,0]};
  const w=new Map<number,number>();
  const add=(name:string,v:number)=>{if(v>1e-7)w.set(ids[name],(w.get(ids[name])||0)+v);};
  // The central genital/perineal surface has zero leg influence on both sides.
@@ -51,6 +53,11 @@ export function weightsAt(x:number,y:number,z:number):Weights {
  }
  const entries=[...w].sort((a,b)=>b[1]-a[1]).slice(0,4),sum=entries.reduce((s,e)=>s+e[1],0);
  return {indices:entries.map(e=>e[0]).concat([0,0,0,0]).slice(0,4),weights:entries.map(e=>e[1]/sum).concat([0,0,0,0]).slice(0,4)};
+}
+
+/** Whole midline organs must never inherit separate left/right limb transforms. */
+export function pelvicOrgan(name:string):boolean {
+ return /penis|penile|glans|scrot|testis|epididym|corpus cavernos|corpus spongios/i.test(name);
 }
 
 /** Assign an entire named bone to a single rigid transform BEFORE geometry batching. */
@@ -88,7 +95,7 @@ export class HumanRig {
  bones:THREE.Bone[]=[];skeleton:THREE.Skeleton;bind=specs.map(s=>new THREE.Vector3(...s[2]));
  real=specs.map(()=>new THREE.Vector4(0,0,0,1));dual=specs.map(()=>new THREE.Vector4());
  uniforms={uRigReal:{value:this.real},uRigDual:{value:this.dual}};
- amount=0;runMix=0;phase=0;
+ amount=0;runMix=0;phase=0;forearmRoll=Math.PI/2;
  constructor(){
    for(let i=0;i<specs.length;i++){
      const [name,parent]=specs[i],bone=new THREE.Bone();bone.name=name;
@@ -133,6 +140,10 @@ export class HumanRig {
      const swing=Math.cos(wave+offset*Math.PI*2);
      this.bone(`upperArm.${side}`).rotation.set(amount*THREE.MathUtils.lerp(.28,.65,run)*swing,0,s*amount*-.035);
      this.bone(`forearm.${side}`).rotation.x=-amount*(THREE.MathUtils.lerp(.20,1.35,run)+THREE.MathUtils.lerp(.14,.2,run)*(1-swing));
+     // Anatomical rest palms face forward. During locomotion, roll each forearm
+     // around its elbow-to-wrist axis so the palm faces the torso, with no wrist kink.
+     const forearm=this.bone(`forearm.${side}`),axis=this.bone(`hand.${side}`).position.clone().normalize();
+     forearm.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(axis,s*amount*this.forearmRoll));
      this.bone(`hand.${side}`).rotation.x=-amount*.06;
    }
    p.updateMatrixWorld(true);this.updatePalette();

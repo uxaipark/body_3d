@@ -88,3 +88,24 @@ test('ankles and toes never inherit pelvis or arm weights, even at the lateral e
   const w=weightsAt(x,.035,.13);assert.equal(BONE_NAMES[w.indices[0]],x<0?'foot.r':'foot.l');near(w.weights[0],1);
  }
 });
+test('walking and running palms face inward toward the torso',()=>{
+ const r=new HumanRig();for(const run of [0,1])for(let i=0;i<40;i++){
+  r.pose(i/40,1,run);
+  for(const [side,sign] of [['l',1],['r',-1]]){
+   const hand=r.bone(`hand.${side}`),q=hand.getWorldQuaternion(new THREE.Quaternion());
+   const palm=new THREE.Vector3(0,0,1).applyQuaternion(q);
+   assert.ok(palm.x*-sign>.8,`${side} palm faces outward at phase ${i/40}: ${palm.x}`);
+  }
+ }
+});
+test('the restored exterior does not double-rotate its already inward-facing palms',()=>{
+ const r=new HumanRig();r.forearmRoll=0;
+ // Palm-plane normals from the original MakeHuman metacarpal landmarks.
+ for(const run of [0,1])for(let i=0;i<40;i++){
+  r.pose(i/40,1,run);
+  for(const [side,sign] of [['l',1],['r',-1]]){
+   const n=new THREE.Vector3(-sign*.98094,-.04005,-.19014).normalize().applyQuaternion(r.bone(`hand.${side}`).getWorldQuaternion(new THREE.Quaternion()));
+   assert.ok(n.x*-sign>.85);
+  }
+ }
+});

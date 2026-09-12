@@ -50,3 +50,32 @@ npm run dev
 Skin, vessels, nerves and muscles share normalized dual-quaternion GPU skinning. Normals are rotated with the same quaternion; sensor markers use the matching CPU transform. DQS avoids linear-blend joint collapse and preserves local rigid cross-sections, but does not solve volumetric tissue mechanics or guarantee the integrated volume of an entire muscle. Physiological signals remain illustrative synthetic outputs rather than computed biomechanical sensor measurements.
 
 `npm test` covers rigid bone lengths, actual bone-matrix / DQ agreement, knee flexion, foot clearance, perineal continuity, hand binding and local cross-section volume. `node --experimental-strip-types scripts/check-rig-assets.mjs` checks real GLB meshes and exports posed inspection assets to `/tmp`. These can be rendered in Blender independently of the web app. Browser FPS is reported by the app, not asserted from offline asset checks.
+
+
+## Muscle appearance and locomotion corrections
+
+Muscle meshes are grouped into muscle bellies, collagenous tendons/aponeuroses, and translucent fascia/bursae. `lib/muscle.ts` builds a local principal-axis fibre frame before batching, with illustrative trunk-direction overrides. The material adds filtered longitudinal fascicle/fibre colour and normal detail in bind coordinates, so the pattern deforms with the tissue. This is a procedural anatomical illustration, not measured histology or a simulation of individual muscle fibres. No additional triangles are introduced by surface detail. The Muscle view button isolates this layer at full opacity.
+
+Abdominal direction reference: [OpenStax, Anatomy and Physiology 2e, §11.4](https://openstax.org/books/anatomy-and-physiology-2e/pages/11-4-axial-muscles-of-the-abdominal-wall-and-thorax). Orientation overrides approximate the external/internal oblique and transverse arrangements; mesh PCA is a visual fallback for other muscles.
+
+Complete named genital meshes at the actual lower organ extents (roughly 0.727–0.828 m) now bind to the pelvis before batching; this semantic binding is independent of the soft-tissue envelopes. Asset-based regression tests cover all seven genital organ meshes. Locomotion also rolls the forearms around the elbow-to-wrist axis so the palms face inward; rest retains the anatomical pose. The original exterior GLB and build script are restored byte-for-byte from 3141ddb while keeping the current runtime joint rig.
+
+The original MakeHuman exterior already has inward-facing palms in its bind pose, whereas the internal atlas has forward-facing palms. The exterior uses a synchronized palette with its own neutral forearm roll, preventing double rotation of the restored hands. Joint positions and gait phase remain shared.
+
+
+## Shared respiratory soft-body physics and arterial wall motion
+
+`lib/soft-body.ts` is a small XPBD solver: 112 control nodes, 324 tetrahedra, compliant edge/volume/tether constraints, damped velocities and fixed 120 Hz substeps. Prescribed breathing actuation drives a shared thoracoabdominal field. Skin, lungs, abdominal organs, muscles, vessels, nerves and sensor attachments use the same interpolation before joint skinning; the old independent lung and chest scale offsets are removed. Surface normals use the field Jacobian. Rigid skeletal geometry and whole pelvic organs are excluded. Tests check positive tetrahedral volume, layer depth ordering, frame-rate consistency, pause and expiration recovery. This is not patient-calibrated tissue mechanics, separate-organ contact/sliding, a complete collision solver or fluid–structure interaction.
+
+Method reference: [Macklin, Müller & Chentanez, XPBD (2016)](https://mmacklin.com/xpbd.pdf). The implementation and illustrative material parameters are local code.
+
+`lib/arterial.ts` classifies arteries by structure name and adds a small outward wall-normal displacement before tissue and bone deformation. Heart contraction and arterial expansion share a continuous cardiac phase, with an illustrative 25 ms ejection offset plus approximate route distance / model PWV. Resting radii, route lengths and distensibility (0.75–2.5% at 1×) are visual assumptions; stiffness reduces distension. The 8× button magnifies geometry only. Venous vessels are excluded. These motions are not derived from the synthetic CSV pressure/flow solver, and no such solver is claimed.
+
+Concept references: [Mynard et al., arterial pulse wave propagation (2014)](https://pmc.ncbi.nlm.nih.gov/articles/PMC4297358/) and [Photonic sensing of arterial distension (2016)](https://pmc.ncbi.nlm.nih.gov/articles/PMC5030007/).
+
+
+## Integumentary layers
+
+The former top skin control is replaced by an Integumentary system directly below Muscular. It exposes the original outer skin, a closed dermal shell and a closed subcutaneous-fat shell, each with independent opacity. Enabling a deeper tissue clears its covering layers. Muscle mode clears all integumentary layers and shows bilateral muscles at full opacity; muscle, tendons/aponeuroses and fascia have separate anatomical material families.
+
+`build-skin-tissues.py` reads the unchanged original CC0 skin GLB and derives welded, solidified inward shells, with illustrative region-dependent adipose thickness. These are not measured patient tissue layers. Tissue volume geometry is separate from the procedural fine collagen/fat-lobule surface detail. All three layers share the exterior's neutral hand orientation and respiratory deformation field.

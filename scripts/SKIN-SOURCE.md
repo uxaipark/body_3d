@@ -23,12 +23,12 @@ Cache the following source files under `.asset-cache/makehuman/`, preserving pat
 From the official [MakeHuman system assets pack](https://files2.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip), extract these folders beneath `.asset-cache/mh-assets/`:
 
 - `skins/young_caucasian_male/`
-- `hair/short02/`
+- `hair/short04/`
 - `eyebrows/eyebrow005/`
 
-The source cache is excluded from version control; the exported model is self-contained and contains the eye and eyebrow textures. All inputs are CC0. See `public/models/ATTRIBUTION.md`.
+The source cache is excluded from version control; the exported model is self-contained and contains the skin, hair, eye and eyebrow textures. All inputs are CC0. See `public/models/ATTRIBUTION.md`.
 
 
-## Adult portrait revision
+## Restored initial portrait
 
-The `portrait_targets` list in `build-skin.py` adds face-local adult facial morphs (oval contour, narrower/softer jaw, subtle eye and lip shaping). Download each listed `.target` from the same MakeHuman data source to `.asset-cache/makehuman/targets/`. The original body scale is retained; rigid head displacement from macro targets is removed before export. Body vertices below the face mask are unchanged. The brows use `eyebrow005` from the same CC0 system asset pack. `cinematic-hair.py` builds original volumetric side-part locks and uses the crown only of the CC0 hair helper. The skin has a matte, solid cinematic material; the old photographic hair cards are no longer exported. Hair meshes are merged by material. Knee and ankle landmarks are registered to the anatomical atlas in the rest pose, with the hands and central perineum excluded from leg fitting.
+The exterior uses the initial Western adult male morph, photographic skin texture, `short04` hair and `eyebrow005` brows. Later face-local morphs, sculpted cinematic hair and solid skin materials are no longer applied. The GLB and its build script are restored byte-for-byte from the first exterior revision (3141ddb). Current runtime joint animation and organ binding remain separate from this restored asset. All source inputs above are CC0.

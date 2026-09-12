@@ -30,16 +30,18 @@ See upstream full notices: https://github.com/Z-Anatomy/Models-of-human-anatomy#
 
 ## Male exterior (`skin-web.glb`)
 
-Base mesh, morph targets, eyes, eyebrows and hair helper: **MakeHuman Community**, CC0 1.0.
+Base mesh, morph targets, skin texture, eyes, eyebrows and hair: **MakeHuman Community**, CC0 1.0.
 Original contributors / rights holders: Manuel Bastioni, Data Collection AB, Joel Palmius, Jonas Hauquier and the MakeHuman team.
 
 - https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data
 - https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html
 - https://creativecommons.org/publicdomain/zero/1.0/
 
-Used assets: caucasian-male-young, universal-male-young-maxmuscle-averageweight, idealproportions, bilateral eye-height targets, young_caucasian_male skin, high-poly eyes / brown_eye, eyebrow005; CC0 crown helper with original procedural hair locks.
-Modifications: adult male morph blending, anatomical landmark registration, relaxed limb pose, one subdivision level for body and eyes, removal of opaque corneal helper geometry, hair material tint, Draco-compressed GLB export. The resulting exterior is a visualization layer, not a patient-specific skin or tissue model. The skin asset is CC0, separate from the Z-Anatomy assets above.
+Used assets: caucasian-male-young, universal-male-young-maxmuscle-averageweight, idealproportions, bilateral eye-height targets, young_caucasian_male skin, high-poly eyes / brown_eye, short04 hair and eyebrow005.
+Modifications: adult male morph blending, anatomical landmark registration, relaxed limb pose, one subdivision level for body and eyes, removal of the opaque corneal patch, and Draco compression. The initial Western adult portrait, textured skin and short hair have been restored. The exterior remains CC0.
 
-Portrait revision: face-local blend of adult male macro targets, oval contour, chin, eye, mouth and nose targets; rigid head position retained. Source materials and meshes remain CC0.
+Runtime animation retains the bone hierarchy, rigid per-bone skeleton binding and dual-quaternion soft-tissue skinning. The exterior asset itself is restored from the initial skin revision; current runtime joint animation and whole-organ pelvic binding remain separate.
 
-Cinematic revision: original tapered side-part hair geometry, matte skin material, upper eyelid contours, and knee/ankle registration. The procedural exterior additions are released under CC0 alongside the exterior. Runtime animation uses a bone hierarchy, rigid per-bone skeleton binding and dual-quaternion soft-tissue skinning.
+Muscular appearance revision: original procedural fibre shading and per-structure material classification distinguish muscle, tendon/aponeurosis and translucent fascia. The underlying CC BY-SA anatomical meshes remain unchanged. Fibre directions are illustrative, not histological measurements.
+
+`dermis-web.glb` and `adipose-web.glb` are CC0 derivatives of the original MakeHuman exterior, generated as closed inset tissue shells with illustrative thicknesses. Their procedural surface detail is original code.
