@@ -45,3 +45,7 @@ Runtime animation retains the bone hierarchy, rigid per-bone skeleton binding an
 Muscular appearance revision: original procedural fibre shading and per-structure material classification distinguish muscle, tendon/aponeurosis and translucent fascia. The underlying CC BY-SA anatomical meshes remain unchanged. Fibre directions are illustrative, not histological measurements.
 
 `dermis-web.glb` and `adipose-web.glb` are CC0 derivatives of the original MakeHuman exterior, generated as closed inset tissue shells with illustrative thicknesses. Their procedural surface detail is original code.
+
+## Fitted exterior (`skin-fitted-web.glb`)
+
+Derived from the CC0 MakeHuman exterior above and fitted to the Z-Anatomy/BodyParts3D skeletal and muscular surfaces. The fitted geometry is distributed under CC BY-SA 4.0 with the anatomical source notices above retained; the original MakeHuman skin, eye, hair and eyebrow textures remain CC0. Modifications include anatomical registration, regional tissue-envelope fitting, surface relaxation, neutral-palm normalization and baked topology-aware joint weights. Face, UVs and original mesh topology are retained.

@@ -22,6 +22,7 @@ const ids=Object.fromEntries(BONE_NAMES.map((n,i)=>[n,i]));
 const clamp=THREE.MathUtils.clamp;
 const smooth=(a:number,b:number,x:number)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
 export interface Weights { indices:number[]; weights:number[] }
+export function surfaceTissueWeight(w:Weights){return w.weights.reduce((sum,v,i)=>sum+(w.indices[i]<=2?v:0),0);}
 
 /** Anatomical envelopes. The perineum is bound to ONE pelvis, never to a side. */
 export function weightsAt(x:number,y:number,z:number,surface=false):Weights {
@@ -86,13 +87,50 @@ export function rigidBone(name:string,center:THREE.Vector3):number {
 
 export function bindGeometry(geometry:THREE.BufferGeometry,rigidIndex?:number,surface=false) {
  const p=geometry.getAttribute('position'),indices=new Uint16Array(p.count*4),weights=new Float32Array(p.count*4);
+ const skinArms=surface?geometry.getAttribute('skinArmSide'):undefined;
  for(let i=0;i<p.count;i++){
    if(rigidIndex!==undefined){indices[i*4]=rigidIndex;weights[i*4]=1;}
+   else if(skinArms?.getX(i)){
+     // Membership comes from the connected original arm, not a shifted/widened
+     // wrist's X coordinate. Distal arm skin can never inherit trunk/leg bones.
+     const side=skinArms.getX(i)<0?'r':'l',y=p.getY(i),elbow=1-smooth(1.055,1.125,y),wrist=1-smooth(.843,.888,y);
+     indices.set([ids[`upperArm.${side}`],ids[`forearm.${side}`],ids[`hand.${side}`],0],i*4);
+     weights.set([1-elbow,elbow*(1-wrist),elbow*wrist,0],i*4);
+   }
    else {const w=weightsAt(p.getX(i),p.getY(i),p.getZ(i),surface);indices.set(w.indices,i*4);weights.set(w.weights,i*4);}
  }
  geometry.setAttribute('rigIndex',new THREE.BufferAttribute(indices,4));geometry.setAttribute('rigWeight',new THREE.BufferAttribute(weights,4));
  // Bounds enclose gait swings; the GPU moves vertices outside the rest box.
  geometry.computeBoundingSphere();if(geometry.boundingSphere)geometry.boundingSphere.radius+=.6;
+}
+
+/** Offline topology-based relaxation of shoulder/neck weights. Distal limbs
+ * and pelvis stay anchored; nearby surfaces never connect merely by proximity. */
+export function relaxSurfaceBinding(geometry:THREE.BufferGeometry){
+ const p=geometry.getAttribute('position'),ix=geometry.index,indices=geometry.getAttribute('rigIndex'),weights=geometry.getAttribute('rigWeight');
+ const groups=new Map<string,number>(),mapping:number[]=[],members:number[][]=[],neighbors:Set<number>[]=[],values:number[][]=[];
+ for(let i=0;i<p.count;i++){
+  const key=`${geometry.getAttribute('skinArmSide')?.getX(i)||0}:`+[p.getX(i),p.getY(i),p.getZ(i)].map(v=>Math.round(v*1e6)).join(',');let id=groups.get(key);
+  if(id===undefined){id=members.length;groups.set(key,id);members.push([]);neighbors.push(new Set());values.push(Array(BONE_COUNT).fill(0));}
+  mapping.push(id);members[id].push(i);
+  for(let j=0;j<4;j++)values[id][indices.getComponent(i,j)]+=weights.getComponent(i,j);
+ }
+ values.forEach((v,i)=>v.forEach((_,j)=>v[j]/=members[i].length));
+ const count=ix?.count||p.count;
+ for(let i=0;i+2<count;i+=3){const a=mapping[ix?ix.getX(i):i],b=mapping[ix?ix.getX(i+1):i+1],c=mapping[ix?ix.getX(i+2):i+2];for(const[u,v]of[[a,b],[b,c],[c,a]])if(u!==v){neighbors[u].add(v);neighbors[v].add(u);}}
+ let field=values;
+ for(let step=0;step<10;step++){
+  const next=field.map(v=>v.slice());
+  for(let i=0;i<members.length;i++){
+   const y=p.getY(members[i][0]);if(y<1.16||y>1.54||!neighbors[i].size)continue;
+   for(let j=0;j<BONE_COUNT;j++){let mean=0;for(const neighbor of neighbors[i])mean+=field[neighbor][j];next[i][j]=field[i][j]*.55+mean/neighbors[i].size*.45;}
+  }
+  field=next;
+ }
+ for(let i=0;i<members.length;i++){
+  const active=field[i].map((w,id)=>({w,id})).sort((a,b)=>b.w-a.w).slice(0,4),sum=active.reduce((a,v)=>a+v.w,0);
+  for(const vertex of members[i])for(let j=0;j<4;j++){indices.setComponent(vertex,j,active[j].id);weights.setComponent(vertex,j,active[j].w/sum);}
+ }
 }
 
 export class HumanRig {
@@ -189,6 +227,7 @@ attribute vec4 rigIndex;
 attribute vec4 rigWeight;
 uniform vec4 uRigReal[${BONE_COUNT}];
 uniform vec4 uRigDual[${BONE_COUNT}];
+float rigTorsoInfluence(){float w=0.0;for(int i=0;i<4;i++){if(rigIndex[i]<=2.0)w+=rigWeight[i];}return w;}
 vec3 rigRotate(vec4 q,vec3 p){return p+2.0*cross(q.xyz,cross(q.xyz,p)+q.w*p);}
 void rigBlend(out vec4 r,out vec4 d){
  vec4 reference=uRigReal[int(rigIndex.x)];r=vec4(0.0);d=vec4(0.0);

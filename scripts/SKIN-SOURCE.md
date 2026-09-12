@@ -33,6 +33,20 @@ The source cache is excluded from version control; the exported model is self-co
 
 The exterior uses the initial Western adult male morph, photographic skin texture, `short04` hair and `eyebrow005` brows. Later face-local morphs, sculpted cinematic hair and solid skin materials are no longer applied. The GLB and its build script are restored byte-for-byte from the first exterior revision (3141ddb). Current runtime joint animation and organ binding remain separate from this restored asset. All source inputs above are CC0.
 
-## Skeletal registration
+## Fitted, articulated exterior
 
-The restored source GLB stays unchanged. `lib/skin-registration.js` registers all exterior meshes at load time, before rig weights are assigned: cranial centre and eye level, both limb axes, and paired-bone wrist/ankle envelopes. Source landmarks are measured after the original MakeHuman repose; target centres come from the visible atlas bone cross-sections. Eyes, eyebrows, hair and the body share the same smooth field. The central perineum keeps a single pelvis anchor. This is template registration, not subject-specific tissue reconstruction.
+The viewer now loads `skin-fitted-web.glb`. The original `skin-web.glb` remains a reproducible CC0 source, rather than being warped again at runtime.
+
+Rebuild from the web directory:
+
+```sh
+node --experimental-strip-types scripts/prepare-skin-envelope.mjs
+/Applications/Blender.app/Contents/MacOS/Blender --background --python-exit-code 1 --python scripts/fit-skin-envelope.py
+node --experimental-strip-types scripts/export-skin-envelope.mjs
+```
+
+Initial landmark registration aligns the cranial centre and limb axes. The source mesh's connected distal arms are classified before registration, including UV seam welding; anatomical labels are retained in the artifact. Neutral palms are rotated into the atlas convention, so skin and skeleton share the same runtime forearm rotation.
+
+The offline fit samples regional skeleton/muscle envelopes and relaxes the surface while retaining tissue clearance, original topology, UVs, face/finger/sole details and the single pelvic anchor. Shoulder and neck weights are diffused over mesh edges. The exported `_RIG_INDEX` and `_RIG_WEIGHT` attributes are used directly in the viewer's dual-quaternion skinning. Torso breathing deformation is masked off on the hands and distal limbs.
+
+This is an illustrative anatomical template fit and elastic surface relaxation, not patient-specific tissue reconstruction or a dynamic whole-body tissue contact solver. See the asset attribution for the fitted geometry and source textures.

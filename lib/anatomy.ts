@@ -8,9 +8,10 @@ import {applySkinTissue} from './skin-tissue';
 import {SoftBody,tissueShader} from './soft-body';
 import {isArtery,bindArterialPulse,arterialShader,systolicPulse,distensionFraction} from './arterial';
 import {muscleTissue,muscleFrame,applyMuscleSurface,tissueColors,type Tissue} from './muscle';
-import {HumanRig,bindGeometry,rigidBone,pelvicOrgan,rigShader} from './rig';
+import {HumanRig,bindGeometry,rigidBone,pelvicOrgan,rigShader,weightsAt,surfaceTissueWeight} from './rig';
 import {respiratoryPart,isRespiratoryPart} from './respiratory.js';
 import {registerSkinGeometry} from './skin-registration.js';
+import {bindCardiacMotion,cardiacShader} from './cardiac';
 import {sites,sensorColors, type Parameters, type Site} from './physiology';
 export type Layer='skin'|'dermis'|'adipose'|'cardiovascular'|'visceral'|'nervous'|'skeleton'|'muscular';
 export type Layers=Record<Layer,number>;
@@ -27,7 +28,7 @@ export class AnatomyScene{
  uniforms={uResp:{value:0},uLungInflation:{value:0},uBeat:{value:0},uCardiacCycles:{value:0},uHeartRate:{value:72},uPWV:{value:6.8},uDistension:{value:.019},uPulseGain:{value:1}};
  onStats:(fps:number,triangles:number)=>void;onPick:(name:string)=>void;onTime:(time:number)=>void;onSite:(site:Site)=>void;onSkin:(region:SkinRegion)=>void;
  constructor(public container:HTMLDivElement,p:Parameters,l:Layers,callbacks:{stats:AnatomyScene['onStats'];pick:AnatomyScene['onPick'];time:AnatomyScene['onTime'];site:AnatomyScene['onSite'];skin:AnatomyScene['onSkin']}){
- this.skinRig.forearmRoll=0;
+ this.skinRig.forearmRoll=this.rig.forearmRoll;
  this.params=p;this.layers=l;this.onStats=callbacks.stats;this.onPick=callbacks.pick;this.onTime=callbacks.time;this.onSite=callbacks.site;this.onSkin=callbacks.skin;
  this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
  this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));this.renderer.setClearColor(0x0c1013,0);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.4;
@@ -49,13 +50,13 @@ export class AnatomyScene{
  async load(onProgress:(n:number)=>void){let done=0;const loader=new GLTFLoader().setDRACOLoader(this.draco);
  // Limit concurrent decodes to keep interaction responsive on integrated GPUs.
  for(const layer of ['skin','visceral','cardiovascular','skeleton','nervous','muscular'] as Layer[]){
- const gltf=await loader.loadAsync(layer==='skin'?'/models/skin-web.glb?portrait=original-3141ddb':`/models/${layer}-web.glb${layer==='adipose'||layer==='dermis'?'?tissue=3':layer==='visceral'?'?lungs=4':''}`);if(this.disposed){gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose()});return;}
+ const gltf=await loader.loadAsync(layer==='skin'?'/models/skin-fitted-web.glb?envelope=1':`/models/${layer}-web.glb${layer==='adipose'||layer==='dermis'?'?tissue=3':layer==='visceral'?'?lungs=4':''}`);if(this.disposed){gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose()});return;}
  gltf.scene.updateMatrixWorld(true);
  if(layer==='skin'||layer==='dermis'||layer==='adipose'){
  const group=new THREE.Group();
  gltf.scene.traverse(obj=>{if(!(obj instanceof THREE.Mesh))return;
  const geometry=obj.geometry.clone().applyMatrix4(obj.matrixWorld);
- const pelvicAnchors=registerSkinGeometry(geometry);
+ const pelvicAnchors=layer==='skin'?[]:registerSkinGeometry(geometry);
  const source=Array.isArray(obj.material)?obj.material[0]:obj.material;
  const mat=source.clone() as THREE.MeshStandardMaterial;
  mat.transparent=true;mat.opacity=this.layers[layer]/100;mat.depthWrite=this.layers[layer]>=95;
@@ -63,7 +64,11 @@ export class AnatomyScene{
  if(mat.map)mat.map.anisotropy=Math.min(4,this.renderer.capabilities.getMaxAnisotropy());
  // Alpha-tested hair cards keep their strand silhouettes even when the skin layer fades.
  if(/short|eyebrow/i.test(obj.name)){mat.alphaTest=.3;mat.side=THREE.DoubleSide;}
- bindGeometry(geometry,undefined,true);for(const i of pelvicAnchors){geometry.getAttribute('rigIndex').setXYZW(i,0,0,0,0);geometry.getAttribute('rigWeight').setXYZW(i,1,0,0,0);}this.applyDeformation(mat,layer);if(layer!=='skin')applySkinTissue(mat,layer);
+ if(layer==='skin'){
+  for(const [source,target]of [['_rig_index','rigIndex'],['_rig_weight','rigWeight']]){const attribute=geometry.getAttribute(source);if(!attribute)throw new Error('Missing fitted skin binding');geometry.setAttribute(target,attribute);geometry.deleteAttribute(source);}
+  geometry.computeBoundingSphere();if(geometry.boundingSphere)geometry.boundingSphere.radius+=.6;
+ }else{bindGeometry(geometry,undefined,true);for(const i of pelvicAnchors){geometry.getAttribute('rigIndex').setXYZW(i,0,0,0,0);geometry.getAttribute('rigWeight').setXYZW(i,1,0,0,0);}}
+ this.applyDeformation(mat,layer);if(layer!=='skin')applySkinTissue(mat,layer);
  const mesh=new THREE.Mesh(geometry,mat);mesh.renderOrder=layer==='skin'?8:layer==='dermis'?7:6;mesh.userData={layer,ranges:[{end:Infinity,name:layer==='adipose'?'피하지방':layer==='dermis'?'진피':/short|hair/i.test(obj.name)?'헤어':/eyebrow/i.test(obj.name)?'눈썹':/high.poly/i.test(obj.name)?'눈':'피부 · 성인 남성 외피'}]};group.add(mesh);this.meshes.push(mesh);
  obj.geometry.dispose();source.dispose();
  });
@@ -86,6 +91,7 @@ export class AnatomyScene{
  if(layer==='cardiovascular'){if(color.b>color.r)color.set('#4988c9');else color.set('#d55559');}
  if(layer==='nervous')color.set('#d2b278');
  if(part==='artery')bindArterialPulse(geometry,name);
+ if(layer==='cardiovascular')bindCardiacMotion(geometry,name);
  if(layer==='muscular'){color.set(tissueColors[part as Tissue]);muscleFrame(geometry,name);}
  for(let i=0;i<count;i++)color.toArray(colors,i*3);geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
  batch.count+=(geometry.index?.count||count)/3;batch.ranges.push({end:batch.count,name:name.replace(/\d{3}$/,'').replace(/([a-z])([lr])$/,'$1 ($2)')});batch.geometries.push(geometry);
@@ -93,19 +99,22 @@ export class AnatomyScene{
  const group=new THREE.Group();
  for(const [part,batch]of batches){const geometry=mergeGeometries(batch.geometries);batch.geometries.forEach(g=>g.dispose());if(!geometry)continue;
  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.52,metalness:.07,transparent:true,opacity:this.layers[layer]/100,depthWrite:this.layers[layer]>=95,side:THREE.FrontSide});
- this.applyDeformation(mat,part,layer==='skeleton'||part==='pelvic'||isRespiratoryPart(part));
+ this.applyDeformation(mat,part,layer==='skeleton'||part==='pelvic'||isRespiratoryPart(part),layer==='cardiovascular');
  if(layer==='muscular'){mat.metalness=0;mat.roughness=part==='tendon'?.4:.57;applyMuscleSurface(mat,part as Tissue);}
  const mesh=new THREE.Mesh(geometry,mat);mesh.userData={layer,ranges:batch.ranges,opacityScale:part==='fascia'?.13:part==='pleura'?.18:1};mesh.renderOrder=part==='fascia'?6:layer==='muscular'?4:layer==='skeleton'?3:part==='pleura'?1:0;this.meshes.push(mesh);group.add(mesh);}
  this.groups.set(layer,group);this.root.add(group);this.setLayers(this.layers);gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose());}});onProgress(Math.round(++done/6*100));
  }
  }
- applyDeformation(mat:THREE.MeshStandardMaterial,part:string,rigid=false){
+ applyDeformation(mat:THREE.MeshStandardMaterial,part:string,rigid=false,cardiac=false){
  mat.onBeforeCompile=shader=>{
  Object.assign(shader.uniforms,this.uniforms,this.softBody.uniforms,['skin','dermis','adipose'].includes(part)?this.skinRig.uniforms:this.rig.uniforms);
- shader.vertexShader='uniform float uResp; uniform float uBeat;\n'+(isRespiratoryPart(part)?'attribute vec3 lungInhale; uniform float uLungInflation;\n':'')+rigShader+(rigid?'':tissueShader)+(part==='artery'?arterialShader:'')+shader.vertexShader;
+ shader.vertexShader='uniform float uResp; uniform float uBeat;\n'+(cardiac&&part!=='artery'?'uniform float uCardiacCycles;\n':'')+(isRespiratoryPart(part)?'attribute vec3 lungInhale; uniform float uLungInflation;\n':'')+rigShader+(rigid?'':tissueShader)+(part==='artery'?arterialShader:'')+(cardiac?cardiacShader:'')+shader.vertexShader;
  shader.vertexShader=shader.vertexShader.replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
  vec4 rigR;vec4 rigD;rigBlend(rigR,rigD);
- ${rigid?'':'vec3 tissueOffset;mat3 tissueJacobian;tissueField(position,tissueOffset,tissueJacobian);objectNormal=transpose(inverse(tissueJacobian))*objectNormal;'}
+ ${rigid?'':'vec3 tissueOffset;mat3 tissueJacobian;tissueField(position,tissueOffset,tissueJacobian);'}
+ ${['skin','dermis','adipose'].includes(part)?'tissueOffset*=rigTorsoInfluence();tissueJacobian=mat3(1.0)+(tissueJacobian-mat3(1.0))*rigTorsoInfluence();':''}
+ ${rigid?'':'objectNormal=transpose(inverse(tissueJacobian))*objectNormal;'}
+ ${cardiac?'objectNormal=cardiacNormal(position,objectNormal,uCardiacCycles);':''}
  objectNormal=rigRotate(rigR,objectNormal);
  #ifdef USE_TANGENT
  objectTangent=rigRotate(rigR,objectTangent);
@@ -115,11 +124,11 @@ export class AnatomyScene{
  ${rigid?'':'transformed+=tissueOffset;'}
 
  ${isRespiratoryPart(part)?'transformed=mix(position,lungInhale,uLungInflation);':''}
- ${part==='heart'?'transformed -= (transformed-vec3(0.035,1.28,0.035))*uBeat*0.035;':''}
+ ${cardiac?'if(cardiacData.y>.0001)transformed+=cardiacOffset(position,cardiacData,uCardiacCycles);':''}
  ${part==='artery'?'transformed += normal*pulseData.x*uDistension*uPulseGain*arterialWallPulse();':''}
  transformed=rigPosition(rigR,rigD,transformed);
  `);
- };mat.customProgramCacheKey=()=>`joint-dq-tissue-v2-${part}-${rigid}`;
+ };mat.customProgramCacheKey=()=>`joint-dq-tissue-v3-${part}-${rigid}-${cardiac}`;
  }
 
  setLayers(l:Layers){this.layers=l;for(const m of this.meshes){const v=l[m.userData.layer as Layer];const layer=m.userData.layer as Layer;const cover=l.skin>=100?'skin':l.dermis>=100?'dermis':l.adipose>=100?'adipose':null;const exterior=['skin','dermis','adipose'];m.visible=v>0&&(!cover||(exterior.includes(layer)&&exterior.indexOf(layer)<=exterior.indexOf(cover)));const mat=m.material as THREE.MeshStandardMaterial;mat.opacity=v/100*(m.userData.opacityScale??1);mat.depthWrite=mat.opacity>=.95;}}
@@ -143,8 +152,8 @@ export class AnatomyScene{
   const source=this.meshes.find(m=>m.userData.layer==='skin'&&m.geometry.getAttribute('position').count>10000);if(!source)return null;
   const geometry=source.geometry.clone(),position=geometry.getAttribute('position') as THREE.BufferAttribute,original=source.geometry.getAttribute('position'),indices=source.geometry.getAttribute('rigIndex'),weights=source.geometry.getAttribute('rigWeight');
   for(let i=0;i<position.count;i++){
-   const point=new THREE.Vector3().fromBufferAttribute(original,i);point.add(this.softBody.sample(point));
-   const moved=this.skinRig.transform(point,{indices:[indices.getX(i),indices.getY(i),indices.getZ(i),indices.getW(i)],weights:[weights.getX(i),weights.getY(i),weights.getZ(i),weights.getW(i)]});position.setXYZ(i,moved.x,moved.y,moved.z);
+   const point=new THREE.Vector3().fromBufferAttribute(original,i),w={indices:[indices.getX(i),indices.getY(i),indices.getZ(i),indices.getW(i)],weights:[weights.getX(i),weights.getY(i),weights.getZ(i),weights.getW(i)]};point.addScaledVector(this.softBody.sample(point),surfaceTissueWeight(w));
+   const moved=this.skinRig.transform(point,w);position.setXYZ(i,moved.x,moved.y,moved.z);
   }
   geometry.computeBoundingSphere();geometry.computeBoundingBox();
   const material=new THREE.MeshBasicMaterial({side:THREE.DoubleSide}),mesh=new THREE.Mesh(geometry,material);mesh.matrixWorld.copy(source.matrixWorld);
@@ -162,11 +171,11 @@ export class AnatomyScene{
  this.controls.autoRotate=this.rotate;this.controls.autoRotateSpeed=.5;this.controls.update();
  for(const [key,m] of this.markers){
  const point=new THREE.Vector3(...sites[key].position);
- point.add(this.softBody.sample(point));
+ point.addScaledVector(this.softBody.sample(point),this.layers.skin>0?surfaceTissueWeight(weightsAt(point.x,point.y,point.z)):1);
  m.position.copy((this.layers.skin>0||this.layers.dermis>0||this.layers.adipose>0?this.skinRig:this.rig).transform(point));
  const halo=m.getObjectByName('halo');if(halo)halo.quaternion.copy(this.camera.quaternion);
  }
- if(this.skinInspection)for(const [key,marker]of this.skinMarkers){const region=skinRegions.find(r=>r.id===key)!,point=new THREE.Vector3(...region.position);point.add(this.softBody.sample(point));marker.position.copy(this.skinRig.transform(point));marker.scale.setScalar(1+.10*Math.sin(this.time*3));}
+ if(this.skinInspection)for(const [key,marker]of this.skinMarkers){const region=skinRegions.find(r=>r.id===key)!,point=new THREE.Vector3(...region.position);point.addScaledVector(this.softBody.sample(point),surfaceTissueWeight(weightsAt(point.x,point.y,point.z)));marker.position.copy(this.skinRig.transform(point));marker.scale.setScalar(1+.10*Math.sin(this.time*3));}
  if(!document.hidden){this.renderer.render(this.scene,this.camera);this.frameCount++;}if(now-this.lastStats>1000){const fps=Math.round(this.frameCount*1000/(now-this.lastStats));this.slowFrames=fps<38?this.slowFrames+1:0;if(this.slowFrames>=3&&this.renderer.getPixelRatio()>1){this.renderer.setPixelRatio(1);this.resize();this.slowFrames=0;}this.onStats(fps,this.renderer.info.render.triangles);this.onTime(this.time);this.lastStats=now;this.frameCount=0;}
  this.frame=requestAnimationFrame(this.animate);
  };
