@@ -44,7 +44,7 @@ export class AnatomyScene{
  async load(onProgress:(n:number)=>void){let done=0;const loader=new GLTFLoader().setDRACOLoader(this.draco);
  // Limit concurrent decodes to keep interaction responsive on integrated GPUs.
  for(const layer of ['skin','dermis','adipose','visceral','cardiovascular','skeleton','nervous','muscular'] as Layer[]){
- const gltf=await loader.loadAsync(layer==='skin'?'/models/skin-web.glb?portrait=original-3141ddb':`/models/${layer}-web.glb${layer==='adipose'||layer==='dermis'?'?tissue=2':''}`);if(this.disposed){gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose()});return;}
+ const gltf=await loader.loadAsync(layer==='skin'?'/models/skin-web.glb?portrait=original-3141ddb':`/models/${layer}-web.glb${layer==='adipose'||layer==='dermis'?'?tissue=3':''}`);if(this.disposed){gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose()});return;}
  gltf.scene.updateMatrixWorld(true);
  if(layer==='skin'||layer==='dermis'||layer==='adipose'){
  const group=new THREE.Group();

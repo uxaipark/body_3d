@@ -91,6 +91,23 @@ export function bindGeometry(geometry:THREE.BufferGeometry,rigidIndex?:number) {
  geometry.computeBoundingSphere();if(geometry.boundingSphere)geometry.boundingSphere.radius+=.6;
 }
 
+/** Metres, seconds and gravity. Running joins a compliant support phase to a
+ * ballistic flight with continuous height and vertical velocity at both contacts.
+ * This is a reduced gait model, not a solved full-body ground-reaction simulation.
+ */
+export function gaitHeight(phase:number,run:number){
+ const step=((phase% .5)+.5)%.5;
+ // Walking rises over the supporting leg; double support is the low point.
+ const walk=-.021-.019*Math.cos(4*Math.PI*(phase-.06));
+ const cadence=1.5,stance=.30/cadence,flight=.20/cadence;
+ const t=step/cadence,gravity=9.81,takeoff=gravity*flight/2;
+ const compression=takeoff*stance/Math.PI;
+ const running=-.043+(t<stance
+   ?-compression*Math.sin(Math.PI*t/stance)
+   :takeoff*(t-stance)-.5*gravity*(t-stance)**2);
+ return THREE.MathUtils.lerp(walk,running,run);
+}
+
 export class HumanRig {
  bones:THREE.Bone[]=[];skeleton:THREE.Skeleton;bind=specs.map(s=>new THREE.Vector3(...s[2]));
  real=specs.map(()=>new THREE.Vector4(0,0,0,1));dual=specs.map(()=>new THREE.Vector4());
@@ -116,7 +133,7 @@ export class HumanRig {
    const p=this.bone('pelvis');p.position.copy(this.bind[0]);
    if(amount<1e-7){p.updateMatrixWorld(true);this.updatePalette();return;}
    const wave=phase*Math.PI*2;
-   p.position.y+=amount*(-THREE.MathUtils.lerp(.024,.055,run)+THREE.MathUtils.lerp(.008,.025,run)*Math.cos(2*wave));
+   p.position.y+=amount*gaitHeight(phase,run);
    p.position.x=amount*.008*Math.sin(wave);
    p.rotation.set(amount*run*.10,amount*.035*Math.sin(wave),amount*.018*Math.sin(wave));
    this.bone('spine').rotation.set(amount*run*.055,-amount*.045*Math.sin(wave),-amount*.012*Math.sin(wave));
@@ -124,7 +141,7 @@ export class HumanRig {
    this.bone('neck').rotation.x=-amount*run*.07;
    p.updateMatrixWorld(true);
    for(const [side,offset,s] of [['l',0,1],['r',.5,-1]] as const){
-     const u=(phase+offset)%1,duty=THREE.MathUtils.lerp(.62,.4,run),stride=THREE.MathUtils.lerp(.20,.29,run);
+     const u=(phase+offset)%1,duty=THREE.MathUtils.lerp(.62,.30,run),stride=THREE.MathUtils.lerp(.20,.25,run);
      let z:number,lift=0,pitch=0;
      if(u<duty){const t=u/duty;z=stride*(1-2*t);
        pitch=THREE.MathUtils.lerp(-.12,-.08,run)*(1-smooth(0,.16,t))+THREE.MathUtils.lerp(.28,.48,run)*smooth(.76,1,t);

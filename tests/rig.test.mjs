@@ -33,7 +33,7 @@ test('knees flex in swing; feet clear the floor and reach stance targets',()=>{
    r.pose(i/100,1,run);const a=r.bone('thigh.l').getWorldPosition(new THREE.Vector3()),b=r.bone('shin.l').getWorldPosition(new THREE.Vector3()),c=r.bone('foot.l').getWorldPosition(new THREE.Vector3());
    const flex=a.clone().sub(b).negate().angleTo(c.clone().sub(b));maxFlex=Math.max(maxFlex,flex);maxLift=Math.max(maxLift,c.y-.073);
    assert.ok(c.y>=.073-1e-5,`ankle penetrates floor ${c.y}`);
-   if(i/100<.62*(1-run)+.4*run){
+   if(i/100<.62*(1-run)+.30*run){
     const angle=r.bone('foot.l').getWorldQuaternion(new THREE.Quaternion());
     const sole=[new THREE.Vector3(0,-.073,-.055),new THREE.Vector3(0,-.073,.145)].map(p=>p.applyQuaternion(angle).add(c));
     assert.ok(Math.min(...sole.map(p=>p.y))>=-1e-4);
@@ -106,6 +106,52 @@ test('the restored exterior does not double-rotate its already inward-facing pal
   for(const [side,sign] of [['l',1],['r',-1]]){
    const n=new THREE.Vector3(-sign*.98094,-.04005,-.19014).normalize().applyQuaternion(r.bone(`hand.${side}`).getWorldQuaternion(new THREE.Quaternion()));
    assert.ok(n.x*-sign>.85);
+  }
+ }
+});
+
+test('pelvis, chest and head rise and fall twice per stride, with larger running excursion',()=>{
+ const rig=new HumanRig();
+ for(const run of [0,1]){
+  const ys={pelvis:[],chest:[],head:[]};
+  for(let i=0;i<200;i++){
+   rig.pose(i/200,1,run);
+   for(const name of Object.keys(ys))ys[name].push(rig.bone(name).getWorldPosition(new THREE.Vector3()).y);
+  }
+  for(const [name,values]of Object.entries(ys)){
+   const range=Math.max(...values)-Math.min(...values);
+   assert.ok(range>(run?.058:.035)&&range<.09,`${name} vertical excursion ${range}`);
+  }
+  // Lowest near weight transfer in walking, mid-contact compression in running.
+  rig.pose(run?.15:.06,1,run);const low=rig.bone('pelvis').position.y;
+  rig.pose(run?.40:.31,1,run);assert.ok(rig.bone('pelvis').position.y-low>(run?.058:.035));
+ }
+});
+
+test('running flight has gravity acceleration and joins support without vertical velocity jumps',async()=>{
+ const {gaitHeight}=await import('../lib/rig.ts');
+ const cadence=1.5,dt=.00001,h=t=>gaitHeight(t*cadence,1);
+ // 0.30..0.50 stride is flight, repeated after half a stride.
+ for(const phase of [.34,.4,.46]){
+  const t=phase/cadence;
+  near((h(t+dt)-2*h(t)+h(t-dt))/(dt*dt),-9.81,.0001);
+ }
+ for(const phase of [0,.3,.5,.8,1]){
+  const t=phase/cadence;
+  const left=(h(t)-h(t-dt))/dt,right=(h(t+dt)-h(t))/dt;
+  near(left,right,.001);
+ }
+});
+
+test('running has a real flight interval with both soles clear of the floor',()=>{
+ const rig=new HumanRig();
+ for(const phase of [.33,.4,.47,.83,.9,.97]){
+  rig.pose(phase,1,1);
+  for(const side of ['l','r']){
+   const foot=rig.bone(`foot.${side}`),ankle=foot.getWorldPosition(new THREE.Vector3()),q=foot.getWorldQuaternion(new THREE.Quaternion());
+   for(const p of [new THREE.Vector3(0,-.073,-.055),new THREE.Vector3(0,-.073,.145)]){
+    assert.ok(p.applyQuaternion(q).add(ankle).y>.0001);
+   }
   }
  }
 });
