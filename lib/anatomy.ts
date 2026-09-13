@@ -21,9 +21,9 @@ import {applyOrganSurface} from './organ-surface';
 import {bindVesselClearance,vesselClearanceShader} from './vessel-clearance';
 import {isHepatic,fitHepaticGeometry,hepaticMotion} from './hepatic.js';
 import {sites,sensorColors, type Parameters, type Site} from './physiology';
-export type Layer='skin'|'dermis'|'adipose'|'cardiovascular'|'visceral'|'nervous'|'skeleton'|'muscular';
-export type Layers=Record<Layer,number>;
-export const initialLayers:Layers={skin:0,dermis:0,adipose:0,cardiovascular:100,visceral:80,nervous:65,skeleton:13,muscular:9};
+import type {Layer,Layers} from './anatomy-layers';
+export {initialLayers} from './anatomy-layers';
+export type {Layer,Layers} from './anatomy-layers';
 interface PickRange{end:number;name:string}
 export class AnatomyScene{
  renderer:THREE.WebGLRenderer;scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(31,1,.003,30);controls:OrbitControls;
