@@ -63581,7 +63581,7 @@ function Cm(e, t, n) {
 	return Math.abs(e - n.left - n.width / 2) < n.width * .18 && Math.abs(t - n.top - n.height / 2) < n.height * .18;
 }
 function wm(e, t, n, r) {
-	e.theta += t * .006, r === "orbit" && n !== 0 && (e.phi = Math.max(.15, Math.min(Math.PI - .15, e.phi - n * .006)));
+	e.position.sub(t).applyAxisAngle(n, r).add(t), e.up.applyAxisAngle(n, r).normalize(), e.lookAt(t);
 }
 //#endregion
 //#region lib/skin-section-scene.ts
@@ -63620,23 +63620,38 @@ var Tm = [
 			height: "100%",
 			pointerEvents: "none"
 		}), this.renderer.domElement.setAttribute("aria-label", `회전과 확대가 가능한 3D 피부 절단면 · ${n.arteryLabel}는 붉은 표식과 연결선으로 표시`), this.controls = new Ef(this.camera, this.renderer.domElement), this.controls.enableDamping = !0, this.controls.dampingFactor = .12, this.controls.minZoom = .5, this.controls.maxZoom = 5, this.controls.maxPolarAngle = Math.PI * .86, n.coupledWrist) {
+			this.controls.disconnect(), this.controls.enabled = !1;
 			let e = this.renderer.domElement, t = {
 				capture: !0,
 				signal: this.pointerAbort.signal
 			}, n = null, r = 0, i = 0, a = "orbit";
 			e.addEventListener("pointerdown", (t) => {
-				t.button === 0 && (n = t.pointerId, r = t.clientX, i = t.clientY, a = Cm(t.clientX, t.clientY, e.getBoundingClientRect()) ? "yaw" : "orbit", this.controls.enabled = !1, e.setPointerCapture(n), t.stopImmediatePropagation());
-			}, t), e.addEventListener("pointermove", (e) => {
-				if (e.pointerId !== n) return;
-				let t = e.clientX - r, o = e.clientY - i;
-				r = e.clientX, i = e.clientY;
-				let s = new Es().setFromVector3(this.camera.position.clone().sub(this.controls.target));
-				wm(s, t, o, a), this.camera.position.copy(this.controls.target).add(new W().setFromSpherical(s)), this.camera.up.set(0, 1, 0), this.camera.lookAt(this.controls.target), e.stopImmediatePropagation();
+				t.button !== 0 && t.button !== 2 || (n = t.pointerId, r = t.clientX, i = t.clientY, a = t.button === 2 ? "pan" : t.altKey || Cm(t.clientX, t.clientY, e.getBoundingClientRect()) ? "axial" : "orbit", e.setPointerCapture(n), t.preventDefault());
+			}, t), e.addEventListener("pointermove", (t) => {
+				if (t.pointerId !== n) return;
+				let o = t.clientX - r, s = t.clientY - i;
+				r = t.clientX, i = t.clientY;
+				let c = this.camera, l = this.controls.target;
+				if (a === "axial") wm(c, l, {
+					x: 0,
+					y: 0,
+					z: 1
+				}, -o * .008);
+				else if (a === "pan") {
+					c.updateMatrixWorld();
+					let t = new W().setFromMatrixColumn(c.matrixWorld, 0), n = new W().setFromMatrixColumn(c.matrixWorld, 1), r = (c.top - c.bottom) / c.zoom / Math.max(1, e.clientHeight), i = t.multiplyScalar(-o * r).addScaledVector(n, s * r);
+					c.position.add(i), l.add(i);
+				} else wm(c, l, c.up.clone(), o * .006), c.updateMatrixWorld(), wm(c, l, new W().setFromMatrixColumn(c.matrixWorld, 0), -s * .006);
 			}, t);
 			let o = (e) => {
-				e.pointerId === n && (n = null, this.controls.enabled = !0, e.stopImmediatePropagation());
+				e.pointerId === n && (n = null);
 			};
-			e.addEventListener("pointerup", o, t), e.addEventListener("pointercancel", o, t);
+			e.addEventListener("pointerup", o, t), e.addEventListener("pointercancel", o, t), e.addEventListener("wheel", (e) => {
+				e.preventDefault(), this.camera.zoom = Math.max(.5, Math.min(5, this.camera.zoom * Math.exp(-e.deltaY * .0015))), this.camera.updateProjectionMatrix();
+			}, {
+				passive: !1,
+				signal: this.pointerAbort.signal
+			}), e.addEventListener("contextmenu", (e) => e.preventDefault(), t), e.addEventListener("dblclick", () => this.focus(this.view), t);
 		}
 		this.scene.add(new Lo(16774116, 7430508, 2.2));
 		let r = new ns(16774379, 2.1);
@@ -63854,7 +63869,7 @@ var Tm = [
 	focus(e) {
 		this.view = e, this.uniforms.uSectionContours.value = +(e === "top");
 		let t = this.profile, n = e === "dermis" ? -t.dermis * .53 : e === "vessel" ? -t.arteryDepth : -t.total * .48, r = e === "top";
-		this.camera.up.set(0, 1, 0), this.controls.target.set(e === "vessel" ? t.arteryX : 0, r ? 0 : n, r ? -t.thickness / 2 : -t.thickness * .22), this.camera.position.set(r ? 0 : e === "full" ? 12 : 2, r ? 45 : n + (e === "full" ? 13 : 3), r ? -t.thickness / 2 + .001 : 32), this.camera.zoom = 1, this.resize(), this.controls.update();
+		this.camera.up.set(0, 1, 0), this.controls.target.set(e === "vessel" ? t.arteryX : 0, r ? 0 : n, r ? -t.thickness / 2 : -t.thickness * .22), this.camera.position.set(r ? 0 : e === "full" ? 12 : 2, r ? 45 : n + (e === "full" ? 13 : 3), r ? -t.thickness / 2 + .001 : 32), this.camera.zoom = 1, this.resize(), t.coupledWrist ? this.camera.lookAt(this.controls.target) : this.controls.update();
 	}
 	resize() {
 		let e = this.host.clientWidth, t = this.host.clientHeight;
@@ -63896,7 +63911,7 @@ var Tm = [
 			}
 			e.needsUpdate = !0, this.heads.frustumCulled = !1;
 		}
-		return this.controls.update(), this.renderer.render(this.scene, this.camera), this.labels(), this.energy;
+		return s.coupledWrist || this.controls.update(), this.renderer.render(this.scene, this.camera), this.labels(), this.energy;
 	}
 	labels() {
 		let e = this.overlay.getContext("2d"), t = this.host.clientWidth, n = this.host.clientHeight, r = Math.min(devicePixelRatio, 2);

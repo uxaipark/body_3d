@@ -896,3 +896,6 @@ td:nth-child(n+2) { font-family: ui-monospace, Menlo, monospace; }
 .tissue-controls #tissueGain,.tissue-controls #tissueFat{flex:1 1 0;width:0;min-width:0;margin:0}
 .tissue-controls output{flex:0 0 auto;font-variant-numeric:tabular-nums}
 .tissue-notes{gap:2px}
+
+.wrist-card-heading{display:flex;align-items:center;gap:8px}
+#resetWrist{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:25px;height:24px;padding:3px;cursor:pointer}

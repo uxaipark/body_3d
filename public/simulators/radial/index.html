@@ -83,7 +83,7 @@
       <p class="hint">아바타: 드래그로 회전, 휠로 줌.</p>
     </div>
     <div class="panel controls wrist-card">
-      <h2>손목 단면 (3D)</h2>
+      <h2 class="wrist-card-heading"><span>손목 단면 (3D)</span><button id="resetWrist" type="button" aria-label="손목 단면 설정 초기화" title="손목 단면 설정 초기화"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10a9 9 0 1 1 2.6 8.4M3 4v6h6"/></svg></button></h2>
     <div id="wrist" class="wrist">
       <div id="wrist3d" class="wrist-3d"></div>
       <div class="wrist-foot">
@@ -106,7 +106,7 @@
         <div class="wf-row">
           <span class="wf-title">범례</span>
           <span class="wf-legend"><i class="sw art"></i>요골동맥 <i class="sw ten"></i>건 <i class="sw bone"></i>요골 <i class="sw sheet"></i>전극 시트</span>
-          <span class="wf-help" tabindex="0" title="패치 클릭-드래그: 패치 이동 · 중앙 빈 곳 좌우 드래그: Y축 회전 · 옆면 보기 · 주변 빈 곳 드래그: 3D 회전 · 우클릭-드래그: 화면 이동(팬) · 더블클릭: 중앙 복귀 · Shift-드래그: 패치 이동 · , / . 키: 패치 −2.5° / +2.5° 회전 · 방향키 ↑손가락쪽 ↓몸통쪽 →엄지쪽 ←새끼쪽 (Shift: 2 mm) · 휠: 줌 · along 0 = 손목 주름, − = 몸통쪽">?</span>
+          <span class="wf-help" tabindex="0" title="패치 클릭-드래그: 패치 이동 · 중앙 빈 곳 / Option(Alt)+좌우 드래그: 혈관 길이축 회전 · 손목 측면 들어올리기 · 주변 빈 곳 드래그: 3D 회전 · 우클릭-드래그: 화면 이동(팬) · 더블클릭: 중앙 복귀 · Shift-드래그: 패치 이동 · , / . 키: 패치 −2.5° / +2.5° 회전 · 방향키 ↑손가락쪽 ↓몸통쪽 →엄지쪽 ←새끼쪽 (Shift: 2 mm) · 휠: 줌 · along 0 = 손목 주름, − = 몸통쪽">?</span>
         </div>
         <div class="wf-row">
           <span class="wf-kv" title="시트 중심의 가로 위치 (0 = 정중선, + 엄지쪽)"><span>시트 lateral</span><b id="w-lat">0.0</b><em>mm</em></span>
@@ -115,7 +115,7 @@
           <span class="wf-kv"><span>MRC</span><b id="w-mrc">–</b><em>dB</em></span>
         </div>
         <div class="wf-row wf-ctl">
-          <span><b>패치 드래그</b> 이동</span><span><b>빈 곳 드래그</b> 회전</span><span><b>우클릭 드래그</b> 팬</span><span><b>더블클릭</b> 중앙</span><span><b>Shift 드래그</b> 패치</span><span><b>방향키</b> 0.5 mm</span><span><b>휠</b> 줌</span>
+          <span><b>패치 드래그</b> 이동</span><span><b>중앙 / Alt 드래그</b> 혈관축 회전</span><span><b>주변 드래그</b> 회전</span><span><b>우클릭 드래그</b> 팬</span><span><b>더블클릭</b> 중앙</span><span><b>Shift 드래그</b> 패치</span><span><b>방향키</b> 0.5 mm</span><span><b>휠</b> 줌</span>
         </div>
         <!-- E안(실사 GLB 손) 자산의 저작자 표시 — CC BY-NC 4.0 이 요구하는 것이고, E 가 켜져 있을 때만 보인다. -->
         <div class="wf-row" id="handCreditRow" hidden>

@@ -13,7 +13,7 @@ import * as simPresets from './simPresets.js';
 import { Avatar } from './avatar.js';
 import { WristView } from './wristView.js';
 import { AnalysisClient } from './analysis/client.js';
-import { WRIST_ANATOMY } from './capacitiveArray.js';
+import { WRIST_ANATOMY, defaultSheetAlong_mm } from './capacitiveArray.js';
 import { deriveWristCrossSection, BODY_PRESETS, WRIST_ASPECT, WRIST_WIDTH_REF_MM } from './anthropometry.js';
 import { enhanceAllSelects } from './dropdown.js';
 import { initScrollbars } from './scrollbars.js';
@@ -1434,3 +1434,14 @@ engine.start();
 requestAnimationFrame(loop);
 
 document.getElementById('tissueFat')?.addEventListener('input',e=>{engine.set('capArray.tissueFat_mm',Number(e.target.value));document.getElementById('tissueFatOut').textContent=e.target.value+' mm';});
+
+$('resetWrist').addEventListener('click',e=>{
+ e.stopPropagation();
+ for(const id of ['tissueGain','tissueFat','arteryLateral','arteryDepth']){
+  const input=$(id);input.value=input.defaultValue;input.dispatchEvent(new Event('input',{bubbles:true}));
+ }
+ applySheetAngle(0);
+ applySheet(WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM,defaultSheetAlong_mm(engine.capArray.rows,engine.capArray.spacingMm),false);
+ wristView?.resetCamera();
+ const model=$('handModel');model.value='A';model.dispatchEvent(new Event('change',{bubbles:true}));
+});

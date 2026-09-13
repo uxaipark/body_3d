@@ -3,7 +3,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {makeSectionTexture} from './skin-section-texture';
 import {deformSection,tissueBoundary,sectionDeformationGLSL,type SectionProfile,type TissueDrive} from './skin-section-model';
 import {photonPaths,opticalAbsorption} from './skin-section';
-import {isCenterDrag,dragWristOrbit} from '../public/simulators/radial/js/viewInteraction.js';
+import {isCenterDrag,rotateCameraAroundAxis} from '../public/simulators/radial/js/viewInteraction.js';
 
 export type SectionView='full'|'top'|'dermis'|'vessel';
 const layerColors=['#e6c3a7','#ba827d','#d59b9a','#b9767b','#c7a361','#856c73'];
@@ -24,11 +24,28 @@ export class SkinSectionScene{
   this.renderer.domElement.setAttribute('aria-label',`회전과 확대가 가능한 3D 피부 절단면 · ${p.arteryLabel}는 붉은 표식과 연결선으로 표시`);
   this.controls=new OrbitControls(this.camera,this.renderer.domElement);this.controls.enableDamping=true;this.controls.dampingFactor=.12;this.controls.minZoom=.5;this.controls.maxZoom=5;this.controls.maxPolarAngle=Math.PI*.86;
   if(p.coupledWrist){
+   // OrbitControls assumes a fixed world-up and clamps polar angles. That would
+   // undo an axial roll. This view owns pointer/zoom gestures while retaining target.
+   this.controls.disconnect();this.controls.enabled=false;
    const el=this.renderer.domElement,options={capture:true,signal:this.pointerAbort.signal};let pointer:number|null=null,lastX=0,lastY=0,mode='orbit';
-   el.addEventListener('pointerdown',e=>{if(e.button!==0)return;pointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;mode=isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect())?'yaw':'orbit';this.controls.enabled=false;el.setPointerCapture(pointer);e.stopImmediatePropagation();},options);
-   el.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;const s=new T.Spherical().setFromVector3(this.camera.position.clone().sub(this.controls.target));dragWristOrbit(s,dx,dy,mode);this.camera.position.copy(this.controls.target).add(new T.Vector3().setFromSpherical(s));this.camera.up.set(0,1,0);this.camera.lookAt(this.controls.target);e.stopImmediatePropagation();},options);
-   const end=(e:PointerEvent)=>{if(e.pointerId!==pointer)return;pointer=null;this.controls.enabled=true;e.stopImmediatePropagation();};
+   el.addEventListener('pointerdown',e=>{if(e.button!==0&&e.button!==2)return;pointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;mode=e.button===2?'pan':e.altKey||isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect())?'axial':'orbit';el.setPointerCapture(pointer);e.preventDefault();},options);
+   el.addEventListener('pointermove',e=>{
+    if(e.pointerId!==pointer)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;
+    const camera=this.camera,target=this.controls.target;
+    if(mode==='axial')rotateCameraAroundAxis(camera,target,{x:0,y:0,z:1},-dx*.008);
+    else if(mode==='pan'){
+     camera.updateMatrixWorld();const right=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,0),up=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,1),scale=(camera.top-camera.bottom)/camera.zoom/Math.max(1,el.clientHeight);
+     const move=right.multiplyScalar(-dx*scale).addScaledVector(up,dy*scale);camera.position.add(move);target.add(move);
+    }else{
+     rotateCameraAroundAxis(camera,target,camera.up.clone(),dx*.006);camera.updateMatrixWorld();
+     const right=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,0);rotateCameraAroundAxis(camera,target,right,-dy*.006);
+    }
+   },options);
+   const end=(e:PointerEvent)=>{if(e.pointerId===pointer)pointer=null;};
    el.addEventListener('pointerup',end,options);el.addEventListener('pointercancel',end,options);
+   el.addEventListener('wheel',e=>{e.preventDefault();this.camera.zoom=Math.max(.5,Math.min(5,this.camera.zoom*Math.exp(-e.deltaY*.0015)));this.camera.updateProjectionMatrix();},{passive:false,signal:this.pointerAbort.signal});
+   el.addEventListener('contextmenu',e=>e.preventDefault(),options);
+   el.addEventListener('dblclick',()=>this.focus(this.view),options);
   }
   this.scene.add(new T.HemisphereLight(0xfff3e4,0x71616c,2.2));const light=new T.DirectionalLight(0xfff4eb,2.1);light.position.set(-6,10,18);this.scene.add(light);const rim=new T.DirectionalLight(0xa6cede,1.3);rim.position.set(12,-2,-9);this.scene.add(rim);
   const source=makeSectionTexture(p);this.texture=new T.CanvasTexture(source.canvas);this.texture.colorSpace=T.SRGBColorSpace;this.texture.anisotropy=Math.min(4,this.renderer.capabilities.getMaxAnisotropy());
@@ -124,7 +141,7 @@ export class SkinSectionScene{
  focus(view:SectionView){
   this.view=view;this.uniforms.uSectionContours.value=view==='top'?1:0;const p=this.profile,targetY=view==='dermis'?-p.dermis*.53:view==='vessel'?-p.arteryDepth:-p.total*.48;
   const top=view==='top';this.camera.up.set(0,1,0);this.controls.target.set(view==='vessel'?p.arteryX:0,top?0:targetY,top?-p.thickness/2:-p.thickness*.22);
-  this.camera.position.set(top?0:view==='full'?12:2,top?45:targetY+(view==='full'?13:3),top?-p.thickness/2+.001:32);this.camera.zoom=1;this.resize();this.controls.update();
+  this.camera.position.set(top?0:view==='full'?12:2,top?45:targetY+(view==='full'?13:3),top?-p.thickness/2+.001:32);this.camera.zoom=1;this.resize();if(p.coupledWrist)this.camera.lookAt(this.controls.target);else this.controls.update();
  }
  resize(){const w=this.host.clientWidth,h=this.host.clientHeight;if(!w||!h)return;this.renderer.setSize(w,h,false);const p=this.profile,extent=this.view==='top'?Math.max(p.thickness+5,(p.width+5)*h/w):this.view==='dermis'?4.3:this.view==='vessel'?Math.max(8,p.radius*7):Math.max(p.total+10,(p.width+14)*h/w);this.camera.left=-extent*w/h/2;this.camera.right=extent*w/h/2;this.camera.top=extent/2;this.camera.bottom=-extent/2;this.camera.near=.01;this.camera.far=180;this.camera.updateProjectionMatrix();}
  update(state:TissueDrive,gain:number,time:number,wavelength:number,spo2:number,light:boolean,mode:string){
@@ -139,7 +156,7 @@ export class SkinSectionScene{
    const positionAttribute=this.lightLines.geometry.getAttribute('position'),colorAttribute=this.lightLines.geometry.getAttribute('color');(positionAttribute.array as Float32Array).set(positions);(colorAttribute.array as Float32Array).set(colors);positionAttribute.needsUpdate=true;colorAttribute.needsUpdate=true;this.lightLines.geometry.setDrawRange(0,positions.length/3);this.lightLines.frustumCulled=false;(this.heads.material as T.PointsMaterial).color.copy(color);this.energy={reflection:reflected/this.paths.length,transmission:transmitted/this.paths.length};
   }
   if(light){const position=this.heads.geometry.getAttribute('position');for(let k=0;k<this.paths.length;k++){const path=this.paths[k],j=Math.floor(((time*.45+k/this.paths.length)%1)*path.points.length),q=path.points[j];position.setXYZ(k,q[0],-q[1],-p.thickness/2+Math.sin(k+(j+1)*.17)*.9);}position.needsUpdate=true;this.heads.frustumCulled=false;}
-  this.controls.update();this.renderer.render(this.scene,this.camera);this.labels();return this.energy;
+  if(!p.coupledWrist)this.controls.update();this.renderer.render(this.scene,this.camera);this.labels();return this.energy;
  }
  private labels(){
   const c=this.overlay.getContext('2d')!,w=this.host.clientWidth,h=this.host.clientHeight,dpr=Math.min(devicePixelRatio,2);if(this.overlay.width!==Math.round(w*dpr)||this.overlay.height!==Math.round(h*dpr)){this.overlay.width=Math.round(w*dpr);this.overlay.height=Math.round(h*dpr);}c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);c.font='12px sans-serif';

@@ -6,7 +6,7 @@ import {buildSkinWrap,rotatePatchPoint,patchAlongHalf,clipPatchPath} from '../pu
 import {wristSurface} from '../public/simulators/radial/js/wristSurface.js';
 import {WristView} from '../public/simulators/radial/js/wristView.js';
 import {CapacitiveArrayModel} from '../public/simulators/radial/js/capacitiveArray.js';
-import {isCenterDrag,dragWristOrbit} from '../public/simulators/radial/js/viewInteraction.js';
+import {isCenterDrag,dragWristOrbit,rotateCameraAroundAxis} from '../public/simulators/radial/js/viewInteraction.js';
 
 test('skin arc continues over the wrist side to the dorsal surface without protruding or stretching',()=>{
  const geo=new T.CylinderGeometry(.02,.02,.13,192,1).rotateZ(Math.PI/2),wrap=buildSkinWrap(geo.attributes.position.array,geo.index.array);
@@ -37,16 +37,17 @@ test('snapshot artery path crosses the same patch centre at 0/90/180 degrees and
  const clipped=clipPatchPath([{lateral_mm:-30,along_mm:0},{lateral_mm:30,along_mm:0}],5,10);assert.deepEqual(clipped,[{lateral_mm:-5,along_mm:0},{lateral_mm:5,along_mm:0}]);
 });
 
-test('comma and period rotate the patch in 2.5 degree steps; central drag selects Y yaw',()=>{
+test('comma and period rotate the patch in 2.5 degree steps; central drag rolls along the vessel axis',()=>{
  const listeners={},el={style:{},addEventListener(k,fn){(listeners[k]??=[]).push(fn);},getBoundingClientRect(){return {left:0,top:0,width:800,height:800};},setPointerCapture(){},focus(){}};
  const view=Object.create(WristView.prototype);Object.assign(view,{renderer:{domElement:el},sheet:{angle:0},orbit:{},_layoutSheet(){},_hitSheet(){return false;}});view._bindPointer();
  const key=k=>listeners.keydown[0]({key:k,preventDefault(){}});key('.');assert.equal(view.sheet.angle,2.5);key(',');assert.equal(view.sheet.angle,0);key(',');assert.equal(view.sheet.angle,-2.5);
  assert.equal(isCenterDrag(400,400,el.getBoundingClientRect()),true);assert.equal(isCenterDrag(50,400,el.getBoundingClientRect()),false);
- listeners.pointerdown[0]({button:0,clientX:400,clientY:400,pointerId:1});assert.equal(view.orbit.mode,'yaw');
- view.orbit.theta=0;view.orbit.phi=1;listeners.pointermove[1]({clientX:430,clientY:420});assert.ok(view.orbit.theta>0);assert.equal(view.orbit.phi,1);
+ listeners.pointerdown[0]({button:0,clientX:400,clientY:400,pointerId:1});assert.equal(view.orbit.mode,'axial');
+ view.orbit.theta=0;view.orbit.phi=1;listeners.pointermove[1]({clientX:430,clientY:420});assert.ok(view.orbit.roll>0);assert.equal(view.orbit.theta,0);assert.equal(view.orbit.phi,1);
  listeners.pointerup[0]();listeners.pointerdown[0]({button:0,clientX:400,clientY:50,pointerId:1});assert.equal(view.orbit.mode,'orbit');const previous=view.orbit.theta;listeners.pointermove[1]({clientX:430,clientY:50});assert.ok(view.orbit.theta>previous);
- const orbit={theta:.5,phi:1};dragWristOrbit(orbit,10,0,'yaw');dragWristOrbit(orbit,-10,0,'yaw');assert.ok(Math.abs(orbit.theta-.5)<1e-12);assert.equal(orbit.phi,1);
+ const orbit={theta:.5,phi:1};dragWristOrbit(orbit,10,0,'axial');dragWristOrbit(orbit,-10,0,'axial');assert.ok(Math.abs(orbit.theta-.5)<1e-12);assert.equal(orbit.phi,1);
  view._hitSheet=()=>true;listeners.pointerdown[0]({button:0,clientX:400,clientY:400,pointerId:1});assert.equal(view.orbit.mode,'sheet');
+ listeners.pointerdown[0]({button:0,altKey:true,clientX:400,clientY:400,pointerId:1});assert.equal(view.orbit.mode,'axial');
 });
 
 test('native atlas preserves radial–palmar connection, bends between anchors and pulses without drift',async()=>{
@@ -80,4 +81,17 @@ test('native atlas preserves radial–palmar connection, bends between anchors a
  assert.ok(Math.abs(Math.hypot(mapped.base[0]*1000,mapped.base[1]*1000-p.y,mapped.base[2]*1000-p.z)-.25)<1e-8);
  view.setSheetAngle(90);view._pulsePatch(.05);for(const pad of view.pads)assert.ok([...pad.geometry.attributes.position.array].every(Number.isFinite));
  m.dispose();
+});
+
+test('axial roll preserves longitudinal view and lifts the side; reset restores the camera',()=>{
+ const view=Object.create(WristView.prototype);Object.assign(view,{camera:new T.PerspectiveCamera(),target:new T.Vector3(),orbit:{}});view.resetCamera();
+ const eye=view.camera.position.clone(),up=view.camera.up.clone(),x=eye.x,range=eye.distanceTo(view.target);
+ view.orbit.roll=Math.PI/2;view._positionCamera();
+ assert.equal(view.camera.position.x,x);assert.ok(Math.abs(view.camera.position.distanceTo(view.target)-range)<1e-10);
+ assert.ok(view.camera.up.distanceTo(new T.Vector3(0,0,1))<1e-10);
+ const rolled=view.camera.position.clone();view._positionCamera();assert.ok(view.camera.position.distanceTo(rolled)<1e-12,'rendering does not accumulate roll');
+ view.orbit.radius=.07;view.target.set(.5,.2,.1);view.resetCamera();assert.ok(view.camera.position.distanceTo(eye)<1e-12);assert.ok(view.camera.up.distanceTo(up)<1e-12);
+ const camera=new T.OrthographicCamera(),target=new T.Vector3(0,-5,-10);camera.position.set(12,13,32);const before=camera.position.clone();
+ rotateCameraAroundAxis(camera,target,{x:0,y:0,z:1},-Math.PI/2);assert.equal(camera.position.z,before.z);assert.ok(camera.up.distanceTo(new T.Vector3(1,0,0))<1e-10);
+ rotateCameraAroundAxis(camera,target,{x:0,y:0,z:1},Math.PI/2);assert.ok(camera.position.distanceTo(before)<1e-10);
 });
