@@ -87,14 +87,15 @@
     <div id="wrist" class="wrist">
       <div id="wrist3d" class="wrist-3d"></div>
       <div class="wrist-foot">
-        <div class="wf-row">
-          <span class="wf-title">손 모델</span>
-          <select id="handModel" data-no-preset title="전신 SOMA와 같은 해부학 메시 · 단면은 대표 조직 모델">
+        <div class="wf-row tissue-controls">
+          <select id="handModel" aria-label="손 모델" data-no-preset title="전신 SOMA와 같은 해부학 메시 · 단면은 대표 조직 모델">
             <option value="A">해부학 레이어</option><option value="0">피부 외형</option><option value="S">3D 조직 단면</option><option value="T">표면 등고선</option>
           </select>
-          <span class="hint wf-credit" id="handNote"></span>
           <label>표시 변위 <input id="tissueGain" type="range" min="1" max="8" value="1" step="1" data-no-preset></label>
           <label>피하지방 <input id="tissueFat" type="range" min=".5" max="6" step=".1" value="2.2"><output id="tissueFatOut">2.2 mm</output></label>
+        </div>
+        <div class="wf-row tissue-notes">
+          <span class="hint wf-credit" id="handNote"></span>
           <span id="tissueReadout" class="hint"></span>
         </div>
         <div class="wf-row artery-controls">
