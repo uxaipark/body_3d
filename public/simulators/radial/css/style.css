@@ -197,9 +197,9 @@ main { display: grid; grid-template-columns: 552px minmax(0, 1fr); gap: 10px; pa
 .panel.avatar-card, .panel.wrist-card { padding: 6px 8px 8px; }
 .panel.avatar-card h2, .panel.wrist-card h2 { margin-bottom: 6px; }
 .panel.avatar-card.collapsed .avatar, .panel.wrist-card.collapsed .wrist { display: none; }
-.panel.wrist-card .wrist { height: 430px; }
+.panel.wrist-card .wrist { height: 860px; }
 .avatar canvas { display: block; width: 100% !important; height: 100% !important; }
-.wrist { position: relative; flex: 0 0 430px; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--plot); }
+.wrist { position: relative; flex: 0 0 860px; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--plot); }
 .wrist-3d { position: relative; flex: 1 1 auto; min-height: 0; }
 .wrist-3d canvas { display: block; width: 100% !important; height: 100% !important; }
 /* Compact footer below the 3D canvas (nothing drawn over the 3D image): legend · sheet position · SNR · help */
@@ -524,7 +524,7 @@ td:nth-child(n+2) { font-family: ui-monospace, Menlo, monospace; }
   .wrist-foot { white-space: normal; }
   .wf-row { flex-wrap: wrap; gap: 4px 10px; }
   .avatar { flex: 0 0 260px; height: 260px; }
-  .panel.wrist-card .wrist, .wrist { flex-basis: 320px; height: 320px; }
+  .panel.wrist-card .wrist, .wrist { flex-basis: 640px; height: 640px; }
   .modal-box.wide { width: 100%; }
   /* Patch designer: a desktop tool, but it must stay READABLE and scrollable on a phone —
      one column, nothing allowed to shrink to zero, header controls wrap instead of squeezing. */

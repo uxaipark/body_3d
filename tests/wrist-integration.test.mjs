@@ -5,6 +5,20 @@ import {atlasProfile,atlasArteryAt} from '../public/simulators/radial/js/atlasPr
 import * as T from 'three';
 import {HumanRig,BONE_NAMES} from '../lib/rig.ts';
 import {Avatar} from '../public/simulators/radial/bridge/soma-bridge.js';
+import {mocapData} from '../lib/mocap-data.js';
+import {GAIT,PostureController} from '../public/simulators/radial/js/kinematics.js';
+
+test('wrist acquisition clock uses the whole-body captured stride duration',()=>{
+ assert.equal(GAIT.stride_Hz,1/mocapData.walk.duration);
+ assert.equal(GAIT.cadence_Hz,2/mocapData.walk.duration);
+ const posture=new PostureController();posture.setBodyPosture('walking');
+ for(let i=0;i<120;i++){
+  posture.update(mocapData.walk.duration/120);
+  const expected=(posture.t/mocapData.walk.duration)%1;
+  const difference=Math.abs(posture.torso.gaitPhase-expected);
+  assert.ok(Math.min(difference,1-difference)<1e-10);
+ }
+});
 
 test('walking wrist avatar preserves both captured arms and palm orientation across the complete stride',()=>{
  const rig=new HumanRig(),skinRig=new HumanRig(),reference=new HumanRig(),view={rig,skinRig,focus(){},

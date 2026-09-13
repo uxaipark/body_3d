@@ -44,4 +44,4 @@ export class Avatar {
  resize(){this.view.resize();}
  dispose(){this.view.dispose();}
 }
-export function makeWristSection(host:HTMLDivElement,fat=2.2,depth=3.3){const region={...skinRegions.find(r=>r.id==='wrist')!,arteryDepth:depth};const p=sectionProfile(region,fat);p.arteryDepth=depth;p.total=Math.max(p.total,depth+9);p.coupledWrist=true;const bone=p.structures.find(s=>s.kind==='bone');if(bone)bone.depth=Math.max(bone.depth,depth+4.5);return new SkinSectionScene(host,p);}
+export function makeWristSection(host:HTMLDivElement,fat=2.2,depth=3.3,lateral=0){const region={...skinRegions.find(r=>r.id==='wrist')!,arteryDepth:depth};const p=sectionProfile(region,fat);p.arteryDepth=depth;p.arteryX=lateral;p.total=Math.max(p.total,depth+9);p.coupledWrist=true;const bone=p.structures.find(s=>s.kind==='bone');if(bone)bone.depth=Math.max(bone.depth,depth+4.5);return new SkinSectionScene(host,p);}

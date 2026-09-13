@@ -1,3 +1,5 @@
+import {wristSurface} from './wristSurface.js';
+import {rotatePatchPoint,patchAlongHalf,normalizePatchAngle} from './patchGeometry.js';
 import {atlasArteryAt} from './atlasProfile.js';
 import {WRIST_MECHANICS,radiusPerPressure,surfaceTransfer,WristRelaxation} from './wristMechanics.js';
 // Capacitive electrode array on a flexible sheet over the volar wrist (radial artery).
@@ -361,6 +363,7 @@ export class CapacitiveArrayModel {
     this.ageStiffness = 1.0;
     this.pwvGain = 1.0; // pressure dependence of PWV (set by engine from MAP)
     this.capPerMmHg = 0.9 / 42; // pF per mmHg at unit distensibility & best coupling — CALIBRATION KNOB (ΔC/C ≈ 18 % at PP 42; model assumption, audit B-7)
+    this.sheetAngle_deg=0;this.arteryLateralAdjust_mm=0;this.arteryDepthAdjust_mm=0;
     this.sheetLateral_mm = WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM; // sheet centre (absolute wrist lateral); default = over the artery
     this.sheetAlong_mm = defaultSheetAlong_mm(this.rows, this.spacingMm); // 0 = wrist crease, − = proximal
     this.noiseLevel = 1.0;
@@ -447,7 +450,7 @@ export class CapacitiveArrayModel {
   // Along range: the sheet may not extend past the wrist crease (distal edge ≤ 0) nor beyond the
   // modelled forearm segment (proximal edge ≥ SHEET_ALONG_MIN_MM).
   alongRange_mm() {
-    const half = this.sheetSize_mm().h / 2;
+    const size=this.sheetSize_mm(),half=patchAlongHalf(size.w,size.h,this.sheetAngle_deg);
     return { min: WRIST_ANATOMY.SHEET_ALONG_MIN_MM + half, max: WRIST_ANATOMY.SHEET_ALONG_MAX_MM - half - 1 };
   }
 
@@ -457,24 +460,38 @@ export class CapacitiveArrayModel {
     if (along_mm != null) this.sheetAlong_mm = Math.max(min, Math.min(max, along_mm));
   }
 
+  setSheetAngle(degrees){this.sheetAngle_deg=normalizePatchAngle(degrees);this.setSheetOffset(null,this.sheetAlong_mm);}
+
   channelCount() { return this.layout ? this.layout.electrodes.length : this.rows * this.cols; }
 
   // Electrode positions in wrist coordinates (sheet offsets included). Regular grid: k = r*cols + c.
   // Custom layout: k = row-major order of the designed pads (r = along-cluster, c = ulnar→thumb).
   electrodePositions_mm() {
+    const key=`${this.sheetLateral_mm}:${this.sheetAlong_mm}:${this.sheetAngle_deg}:${this.rows}:${this.cols}:${this.spacingMm}:${this.anatomicalMechanics}`;
+    if(this._positionsKey===key&&this._positionsLayout===this.layout)return this._positionsCache;
+    const finish=positions=>{this._positionsKey=key;this._positionsLayout=this.layout;this._positionsCache=this.anatomicalMechanics?positions.map(p=>{const q=wristSurface.sample(this.sheetLateral_mm,p.along_mm,p.lateral_mm-this.sheetLateral_mm);return {...p,lateral_mm:q.z,surfaceY_mm:q.y};}):positions;return this._positionsCache;};
     const positions = [];
     if (this.layout) {
-      for (const e of this.layout.electrodes) positions.push({ k: e.k, r: e.r, c: e.c, along_mm: this.sheetAlong_mm + e.y, lateral_mm: this.sheetLateral_mm + e.x, w_mm: e.w, h_mm: e.h, shape: e.shape });
-      return positions;
+      for (const e of this.layout.electrodes){const q=rotatePatchPoint(e.x,e.y,this.sheetAngle_deg);positions.push({ k: e.k, r: e.r, c: e.c, along_mm: this.sheetAlong_mm + q.along, lateral_mm: this.sheetLateral_mm + q.lateral, w_mm: e.w, h_mm: e.h, shape: e.shape });}
+      return finish(positions);
     }
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
-        const along_mm = this.sheetAlong_mm + (r - (this.rows - 1) / 2) * this.spacingMm;
-        const lateral_mm = this.sheetLateral_mm + (c - (this.cols - 1) / 2) * this.spacingMm;
+        const q=rotatePatchPoint((c-(this.cols-1)/2)*this.spacingMm,(r-(this.rows-1)/2)*this.spacingMm,this.sheetAngle_deg);
+        const along_mm=this.sheetAlong_mm+q.along,lateral_mm=this.sheetLateral_mm+q.lateral;
         positions.push({ k: r * this.cols + c, r, c, along_mm, lateral_mm });
       }
     }
-    return positions;
+    return finish(positions);
+  }
+
+  arteryPathOnPatch(arteryOffset){
+    const points=[];
+    for(let along=-110;along<=8;along+=1){const a=this.arteryAt(along,arteryOffset);
+      const lateral=this.anatomicalMechanics?wristSurface.arcBetween(this.sheetLateral_mm,a.lateral,along):a.lateral-this.sheetLateral_mm;
+      const q=rotatePatchPoint(lateral,along-this.sheetAlong_mm,-this.sheetAngle_deg);
+      points.push({lateral_mm:q.lateral,along_mm:q.along});
+    }return points;
   }
 
   _localPWV() {
@@ -484,6 +501,7 @@ export class CapacitiveArrayModel {
 
   // Artery centre for a given along position: lateral from anatomy + pronation shift; depth deepens proximally.
   arteryAt(along_mm, arteryOffset) {
+    arteryOffset={lateral_mm:arteryOffset.lateral_mm+(this.arteryLateralAdjust_mm||0),depth_mm:arteryOffset.depth_mm+(this.arteryDepthAdjust_mm||0)};
     if(this.anatomicalMechanics){const a=atlasArteryAt(along_mm);return {lateral:a.lateral_mm+arteryOffset.lateral_mm,depth:Math.max(1.3,a.depth_mm+(this.arteryDepthOffset_mm||0)+(arteryOffset.depth_mm-1))};}
     const lateral = WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM + arteryOffset.lateral_mm;
     const depth = WRIST_ANATOMY.ARTERY_BASE_DEPTH_MM + (this.arteryDepthOffset_mm || 0) + (arteryOffset.depth_mm - 1.0)
@@ -546,6 +564,10 @@ export class CapacitiveArrayModel {
   // value (the incompressible-tissue depression annulus). Consumers that rank channels must use |coupling|.
   electrodeGeometry(p, arteryOffset) {
     const art = this.arteryAt(p.along_mm, arteryOffset);
+    if(this.anatomicalMechanics&&Number.isFinite(p.surfaceY_mm)){
+      const centreY=atlasArteryAt(p.along_mm).surfaceY_mm-art.depth;
+      art.depth=Math.max(1.3,Math.abs(p.surfaceY_mm-centreY));
+    }
     const dLat = p.lateral_mm - art.lateral;
     const dist = Math.sqrt(dLat * dLat + art.depth * art.depth * 1.5);
     const sigma = this.couplingSigmaPerDepth > 0 ? Math.max(2.5, this.couplingSigmaPerDepth * art.depth) : this.couplingRadiusMm;

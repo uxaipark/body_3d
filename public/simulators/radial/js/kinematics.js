@@ -10,6 +10,8 @@
 //   2. bodyIdle — whole-torso postural sway (AP/ML), breathing lift, small tilt
 // The wrist IMU sees the vector combination of both (see imu.js).
 
+import {WALK_STRIDE_SECONDS} from './gaitTiming.js';
+
 function noise2(seed, t) {
   // Smooth deterministic pseudo-noise via summed incommensurate sines (cheap Perlin-ish).
   return (
@@ -56,8 +58,8 @@ export const SEGMENT_INERTIA = {
 // (커프 혈압의 대표적 자세 오차원). 이전 값은 팔이 공중에 떠 있던 상태의 수치였다.
 export const ARM_GEOMETRY = { upperArm_m: 0.30, forearmToWrist_m: 0.26, shoulderAboveHeart_m: 0.11 };
 
-// Normal walking pace: ~1.85 steps/s (≈110 steps/min) → one full stride (both legs) at 0.925 Hz.
-export const GAIT = { cadence_Hz: 1.85, stride_Hz: 0.925, armSwing_deg: 22, hipSwing_deg: 25, kneeFlex_deg: 40 };
+// The acquisition and avatar clocks use the whole-body twin's captured stride.
+export const GAIT = { cadence_Hz: 2 / WALK_STRIDE_SECONDS, stride_Hz: 1 / WALK_STRIDE_SECONDS, armSwing_deg: 22, hipSwing_deg: 25, kneeFlex_deg: 40 };
 
 // Torso sway components: amplitude (m or deg) at full intensity, frequency (Hz), phase.
 // Standing quiet-stance sway is typically a few mm at 0.2–1 Hz; breathing ~0.25 Hz.

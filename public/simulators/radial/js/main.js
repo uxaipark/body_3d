@@ -48,6 +48,10 @@ const engine = new EngineClient({ useWorker: !_qp.has('inline') });
 // 링버퍼에서 그려지므로(재생/라이브 프레임은 `ingestFrame` 으로 그 버퍼에 써 넣는다) 프레임 스트림도 항상
 // 여기 한 곳에서 나온다 — 소스가 바뀌어도 분석 코어는 자기가 무엇을 먹는지 알지 못한다.
 const twinSource = new TwinSource(engine);
+// Pause only offscreen 3D work. The acquisition worker keeps its sample clock.
+const viewVisible={avatar:true,wrist3d:true};
+const viewObserver=new IntersectionObserver(entries=>{for(const e of entries)viewVisible[e.target.id]=e.isIntersecting;});
+viewObserver.observe($('avatar'));viewObserver.observe($('wrist3d'));
 let avatar = null;
 try {
   avatar = new Avatar($('avatar'));
@@ -612,6 +616,16 @@ function applySheet(lat, along, fromView) {
   $('w-lat').textContent = L.toFixed(1); $('w-along').textContent = A.toFixed(1);
   if (!fromView && wristView) wristView.setSheetOffset(L, A, true);
 }
+function applySheetAngle(degrees){
+  engine.call('capArray.setSheetAngle',degrees);
+  const angle=engine.capArray.sheetAngle_deg;
+  $('sheetAngle').value=angle;$('sheetAngleOut').textContent=angle.toFixed(1)+'°';
+  wristView?.setSheetAngle(angle,true);applySheet(engine.capArray.sheetLateral_mm,engine.capArray.sheetAlong_mm,false);
+}
+$('sheetAngle').addEventListener('input',e=>applySheetAngle(Number(e.target.value)));
+wristView?.onSheetAngle(applySheetAngle);
+bindRange('arteryLateral','arteryLateralOut',v=>v.toFixed(2)+' mm',v=>engine.set('capArray.arteryLateralAdjust_mm',v));
+bindRange('arteryDepth','arteryDepthOut',v=>v.toFixed(2)+' mm',v=>engine.set('capArray.arteryDepthAdjust_mm',v));
 $('sheetLat').addEventListener('input', (e) => applySheet(parseFloat(e.target.value), engine.capArray.sheetAlong_mm, false));
 $('sheetAlong').addEventListener('input', (e) => applySheet(engine.capArray.sheetLateral_mm, parseFloat(e.target.value), false));
 wristView?.onSheetMove((lat, along) => applySheet(lat, along, true));
@@ -845,7 +859,7 @@ let liveSource = null, liveHold = 1, liveUrl = '';
 const noTruth = () => replayMeasured || !!liveSource;
 function recordingHeader() {
   const ca = engine.capArray;
-  return { masterFs: SAMPLE_RATE, nCh: ca.channelCount(), capFs: ca.sampleRate_Hz, rows: ca.rows, cols: ca.cols, spacingMm: ca.spacingMm, sheetLateral_mm: ca.sheetLateral_mm, sheetAlong_mm: ca.sheetAlong_mm,
+  return { masterFs: SAMPLE_RATE, nCh: ca.channelCount(), capFs: ca.sampleRate_Hz, rows: ca.rows, cols: ca.cols, spacingMm: ca.spacingMm, sheetLateral_mm: ca.sheetLateral_mm, sheetAlong_mm: ca.sheetAlong_mm, sheetAngle_deg:ca.sheetAngle_deg, arteryLateralAdjust_mm:ca.arteryLateralAdjust_mm, arteryDepthAdjust_mm:ca.arteryDepthAdjust_mm,
     layout: ca.layout ? { name: ca.layout.name, sheetW: ca.layout.sheetW, sheetH: ca.layout.sheetH, electrodes: ca.layout.electrodes.map(({ x, y, w, h, shape, label }) => ({ x, y, w, h, shape, label })) } : null, imuFs: 1000,
     scenario: { sbp: engine.cardiac.sbp, dbp: engine.cardiac.dbp, hr: engine.cardiac.hr, rhythm: $('rhythm').value, posture: $('bodyPosture').value, arm: $('armPos').value, tone: engine.arteryToneScalar, stiff: engine.ageStiffness, contact: ca.contactPressure }, notes: '' };
 }
@@ -867,6 +881,7 @@ function startReplay(rec, name) {
   if (liveSource) stopLive('기록 재생 시작');
   if (recorder.active) recorder.active = false;
   const h = rec.header;
+  applySheetAngle(h.sheetAngle_deg||0);setRangeFromScenario('arteryLateral',h.arteryLateralAdjust_mm||0);setRangeFromScenario('arteryDepth',h.arteryDepthAdjust_mm||0);
   // Put the model/analysis into the recording's geometry so every view matches the recorded array
   if (h.layout) applyLayout(h.layout, h.layout.name || 'recording'); else { engine.call('capArray.setLayout', null); engine.call('capArray.configure', { rows: h.rows, cols: h.cols, spacingMm: h.spacingMm }); applyLayout(null); }
   engine.call('capArray.setSampleRate', h.capFs); engine.call('capArray.setSheetOffset', h.sheetLateral_mm, h.sheetAlong_mm); syncSheetUi();
@@ -1042,7 +1057,7 @@ function exportMeta() {
   return {
     app: { title: document.title, url: location.href, masterFs_Hz: SAMPLE_RATE, engine: lastEngine || 'unknown', analysisMode: analysis.mode, signalEngineMode: engine.mode },
     array: { rows: ca.rows, cols: ca.cols, spacingMm: ca.spacingMm, capFs_Hz: ca.sampleRate_Hz, channels: ca.channelCount(),
-      sheetLateral_mm: ca.sheetLateral_mm, sheetAlong_mm: ca.sheetAlong_mm, layout: ca.layout ? { name: activeLayoutName, sheetW: ca.layout.sheetW, sheetH: ca.layout.sheetH, electrodes: ca.layout.electrodes.map(({ x, y, w, h: hh, shape, label }) => ({ x, y, w, h: hh, shape, label })) } : null,
+      sheetLateral_mm: ca.sheetLateral_mm, sheetAlong_mm: ca.sheetAlong_mm, sheetAngle_deg:ca.sheetAngle_deg, arteryLateralAdjust_mm:ca.arteryLateralAdjust_mm, arteryDepthAdjust_mm:ca.arteryDepthAdjust_mm, layout: ca.layout ? { name: activeLayoutName, sheetW: ca.layout.sheetW, sheetH: ca.layout.sheetH, electrodes: ca.layout.electrodes.map(({ x, y, w, h: hh, shape, label }) => ({ x, y, w, h: hh, shape, label })) } : null,
       contactPressure: ca.contactPressure, nonlinZeta_perMmHg: ca.nonlinZeta_perMmHg, curvatureConformity: ca.curvatureConformity, noiseModel: ca.noiseModel, artifacts: { ...ca.artifacts } },
     body: engine.body ? { ...engine.body } : { height_cm: parseFloat($('height').value), weight_kg: parseFloat($('weight').value) },
     cardiac: { rhythm: $('rhythm').value, drive: c.drive, sbp: c.sbp, dbp: c.dbp, hr: c.hr, sv_mL: h.sv_mL, tpr: h.tpr, co_L_min: h.co_L_min, compliance_mL_mmHg: h.compliance_mL_mmHg,
@@ -1130,7 +1145,7 @@ function loopBody(ts) {
     radial: pulseAtDelay((L.radialPulseDelay_ms || 0) / 1000),
     finger: pulseAtDelay((L.fingerPulseDelay_ms || 0) / 1000),
   };
-  if (avatar) {
+  if (avatar && viewVisible.avatar && $('avatar').clientHeight>0) {
     avatar.setElectrodeLayout(engine.capArray.rows, engine.capArray.cols, engine.capArray.spacingMm, engine.capArray.sheetLateral_mm - WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM, 0);
     avatar.update(L.angles, sitePulse, gridNorm, L.torso, L);
   }
@@ -1181,7 +1196,7 @@ function loopBody(ts) {
       });
     }
   }
-  if (wristView) {
+  if (wristView && viewVisible.wrist3d && $('wrist3d').clientHeight>0) {
     wristView.setLayout(engine.capArray.rows, engine.capArray.cols, engine.capArray.spacingMm, engine.capArray.layout);
     let chNorm = null;
     if (L.capLast && L.capLast.length) {
@@ -1207,20 +1222,15 @@ function loopBody(ts) {
     // Artery position relative to the sheet centre (absolute artery lateral − sheet lateral)
     const dg = displayGrid();
     const cv = customViz();
-    if (dg) arrayViz.draw(dg, { ...snapshotScale(dg), arteryLateral_mm: WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM + L.arteryOffset.lateral_mm - engine.capArray.sheetLateral_mm, spacingMm: cv ? cv.cellMm : engine.capArray.spacingMm, estLateral_mm: lastBeamSearch ? lastBeamSearch.xHat : null, custom: cv });
+    if (dg) arrayViz.draw(dg, { ...snapshotScale(dg), arteryPath:engine.capArray.arteryPathOnPatch(L.arteryOffset), arteryLateral_mm: engine.capArray.arteryAt(engine.capArray.sheetAlong_mm,L.arteryOffset).lateral-engine.capArray.sheetLateral_mm, spacingMm: cv ? cv.cellMm : engine.capArray.spacingMm, estLateral_mm: lastBeamSearch ? lastBeamSearch.xHat : null, custom: cv });
     // Timing map: per-electrode arrival delay vs the proximal row (measured) and the model truth
     {
       const pwv = engine.capArray._localPWV();
-      let rows, cols, model;
-      if (cv) {
-        const yMin = Math.min(...cv.electrodes.map((e) => e.y));
-        model = cv.electrodes.map((e) => ((e.y - yMin) / 1000) / pwv * 1000); rows = engine.capArray.rowCount(); cols = engine.capArray.layout.cols;
-      } else {
-        rows = engine.capArray.rows; cols = engine.capArray.cols; model = new Array(rows * cols);
-        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) model[r * cols + c] = (r * engine.capArray.spacingMm / 1000) / pwv * 1000;
-      }
+      const rows=engine.capArray.rowCount(),cols=engine.capArray.layout?.cols||engine.capArray.cols;
+      const positions=engine.capArray.electrodePositions_mm(),origin=Math.min(...positions.map(p=>p.along_mm));
+      const model=positions.map(p=>(p.along_mm-origin)/pwv);
       timingGrid.draw({ rows, cols, measured: lastFeat ? lastFeat.chanDelays_ms : null, model, pwv, spacingMm: engine.capArray.spacingMm, capFs: L.capSampleRate_Hz,
-        arteryLateral_mm: WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM + L.arteryOffset.lateral_mm - engine.capArray.sheetLateral_mm, estLateral_mm: lastBeamSearch ? lastBeamSearch.xHat : null, custom: cv });
+        arteryPath:engine.capArray.arteryPathOnPatch(L.arteryOffset), arteryLateral_mm: engine.capArray.arteryAt(engine.capArray.sheetAlong_mm,L.arteryOffset).lateral-engine.capArray.sheetLateral_mm, estLateral_mm: lastBeamSearch ? lastBeamSearch.xHat : null, custom: cv });
     }
   }
 
@@ -1333,7 +1343,7 @@ function loopBody(ts) {
     updatePpgOptics(); // PPG 광학/관류 유도값(PI는 마지막 샘플에서 갱신) — 모델 가정 표시
     updateCapPhysics(); // 접촉압(압평/폐색/정맥 울혈)·곡률 이격·비선형 탄성 유도값 — 모델 가정 표시 (§6.15)
     $('m-motion').textContent = (L.motionLevel * 100).toFixed(0);
-    $('m-art').textContent = `${L.arteryOffset.lateral_mm.toFixed(1)} / ${L.arteryOffset.depth_mm.toFixed(1)}`;
+    const arteryHere=engine.capArray.arteryAt(engine.capArray.sheetAlong_mm,L.arteryOffset);$('m-art').textContent=`${arteryHere.lateral.toFixed(1)} / ${arteryHere.depth.toFixed(1)}`;
     $('m-ang').textContent = `${L.angles.shoulderAbd.toFixed(0)}° / ${L.angles.elbowFlex.toFixed(0)}° / ${L.angles.wristPron.toFixed(0)}°`;
     $('m-fs').textContent = SAMPLE_RATE.toLocaleString();
     $('m-capfs').textContent = Math.round(L.capSampleRate_Hz).toLocaleString();

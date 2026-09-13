@@ -1,3 +1,8 @@
+function drawArteryPath(ctx,path,X,Y,bounds,dpr){
+  ctx.save();ctx.beginPath();ctx.rect(...bounds);ctx.clip();ctx.strokeStyle='rgba(255,255,255,0.95)';ctx.setLineDash([]);ctx.lineWidth=2*dpr;ctx.beginPath();
+  path.forEach((p,i)=>{const x=X(p.lateral_mm),y=Y(p.along_mm);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.stroke();ctx.restore();
+}
+
 // Lightweight canvas oscilloscope + heatmap renderers (no external deps).
 
 export class Scope {
@@ -294,7 +299,7 @@ export class MultiChannelScope {
 // pulse relative to the most proximal row, with the model truth underneath; colour = measured delay.
 export class TimingGrid {
   constructor(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); }
-  draw({ rows, cols, measured, model, pwv, spacingMm, capFs, arteryLateral_mm = 0, estLateral_mm = null, custom = null }) {
+  draw({ rows, cols, measured, model, pwv, spacingMm, capFs, arteryLateral_mm = 0, arteryPath = null, estLateral_mm = null, custom = null }) {
     const dpr = window.devicePixelRatio || 1;
     const rect = this.canvas.getBoundingClientRect();
     const w = Math.max(1, Math.floor(rect.width * dpr)), h = Math.max(1, Math.floor(rect.height * dpr));
@@ -304,7 +309,7 @@ export class TimingGrid {
     const top = 16 * dpr, bottom = 16 * dpr;
     ctx.fillStyle = 'rgba(226,232,240,0.8)'; ctx.font = font(10);
     ctx.fillText(`셀: 추정 Δt(위) / m=모델 진값 Δt(아래) · 색 = 지연`, 4 * dpr, 11 * dpr);
-    if (custom) return this._drawCustom(ctx, w, h, dpr, top, bottom, font, { measured, model, pwv, capFs, arteryLateral_mm, estLateral_mm, custom });
+    if (custom) return this._drawCustom(ctx, w, h, dpr, top, bottom, font, { measured, model, pwv, capFs, arteryLateral_mm, arteryPath, estLateral_mm, custom });
     if (!rows || !cols) return;
     // Same physical layout as the heatmap: square cells at the electrode pitch, centred
     const cell = Math.min(w / cols, (h - top - bottom) / rows);
@@ -338,7 +343,8 @@ export class TimingGrid {
     // Same overlays as the heatmap so the two panels read as one physical layout
     const centerCol = (cols - 1) / 2 + arteryLateral_mm / spacingMm;
     const ax = gx + (centerCol + 0.5) * cell;
-    if (ax >= gx - cell && ax <= gx + cell * (cols + 1)) {
+    if(arteryPath)drawArteryPath(ctx,arteryPath,x=>gx+cell*cols/2+x/spacingMm*cell,y=>gy+cell*rows/2-y/spacingMm*cell,[gx,gy,cell*cols,cell*rows],dpr);
+    else if (ax >= gx - cell && ax <= gx + cell * (cols + 1)) {
       ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.setLineDash([6 * dpr, 4 * dpr]); ctx.lineWidth = 1.5 * dpr;
       ctx.beginPath(); ctx.moveTo(ax, gy - 3 * dpr); ctx.lineTo(ax, gy + cell * rows + 3 * dpr); ctx.stroke(); ctx.setLineDash([]);
     }
@@ -355,7 +361,7 @@ export class TimingGrid {
   }
 
   // Custom (designed) layout: pads drawn at their true positions on the sheet, distal at the top.
-  _drawCustom(ctx, w, h, dpr, top, bottom, font, { measured, model, pwv, capFs, arteryLateral_mm, estLateral_mm, custom }) {
+  _drawCustom(ctx, w, h, dpr, top, bottom, font, { measured, model, pwv, capFs, arteryLateral_mm, arteryPath, estLateral_mm, custom }) {
     const { sheetW, sheetH, electrodes } = custom;
     const s = Math.min(w / sheetW, (h - top - bottom) / sheetH); // px per mm
     const gx = (w - sheetW * s) / 2, gy = top + ((h - top - bottom) - sheetH * s) / 2;
@@ -381,7 +387,8 @@ export class TimingGrid {
       ctx.textAlign = 'left';
     });
     const ax = X(arteryLateral_mm);
-    if (ax >= gx - 10 * dpr && ax <= gx + sheetW * s + 10 * dpr) { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.setLineDash([6 * dpr, 4 * dpr]); ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.moveTo(ax, gy - 3 * dpr); ctx.lineTo(ax, gy + sheetH * s + 3 * dpr); ctx.stroke(); ctx.setLineDash([]); }
+    if(arteryPath)drawArteryPath(ctx,arteryPath,X,Y,[gx,gy,sheetW*s,sheetH*s],dpr);
+    else if (ax >= gx - 10 * dpr && ax <= gx + sheetW * s + 10 * dpr) { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.setLineDash([6 * dpr, 4 * dpr]); ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.moveTo(ax, gy - 3 * dpr); ctx.lineTo(ax, gy + sheetH * s + 3 * dpr); ctx.stroke(); ctx.setLineDash([]); }
     if (estLateral_mm != null) { const ex = X(estLateral_mm); ctx.strokeStyle = 'rgba(251,191,36,0.95)'; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(ex, gy - 3 * dpr); ctx.lineTo(ex, gy + sheetH * s + 3 * dpr); ctx.stroke(); }
     ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = font(9.5);
     ctx.fillText('distal', 4 * dpr, gy + 9 * dpr);
@@ -405,7 +412,7 @@ export class ContourMap {
     return `rgb(${Math.round(a[0] + (b[0] - a[0]) * f)},${Math.round(a[1] + (b[1] - a[1]) * f)},${Math.round(a[2] + (b[2] - a[2]) * f)})`;
   }
 
-  draw(grid, { arteryLateral_mm = 0, spacingMm = 6, estLateral_mm = null, levels = 9, vMin = null, vMax = null, custom = null } = {}) {
+  draw(grid, { arteryLateral_mm = 0, arteryPath = null, spacingMm = 6, estLateral_mm = null, levels = 9, vMin = null, vMax = null, custom = null } = {}) {
     const dpr = window.devicePixelRatio || 1;
     const rect = this.canvas.getBoundingClientRect();
     const w = Math.max(1, Math.floor(rect.width * dpr)), h = Math.max(1, Math.floor(rect.height * dpr));
@@ -481,7 +488,8 @@ export class ContourMap {
       ctx.fillText(`#${r * cols + c + 1}`, cx + 4 * dpr, cy - 4 * dpr);
     }
     const centerCol = (cols - 1) / 2 + arteryLateral_mm / spacingMm, ax = gx + (centerCol + 0.5) * cell;
-    if (ax >= gx - cell && ax <= gx + cell * (cols + 1)) { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.setLineDash([6 * dpr, 4 * dpr]); ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.moveTo(ax, gy - 4 * dpr); ctx.lineTo(ax, gy + cell * rows + 4 * dpr); ctx.stroke(); ctx.setLineDash([]); }
+    if(arteryPath)drawArteryPath(ctx,arteryPath,x=>gx+cell*cols/2+x/spacingMm*cell,y=>gy+cell*rows/2-y/spacingMm*cell,[gx,gy,cell*cols,cell*rows],dpr);
+    else if (ax >= gx - cell && ax <= gx + cell * (cols + 1)) { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.setLineDash([6 * dpr, 4 * dpr]); ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.moveTo(ax, gy - 4 * dpr); ctx.lineTo(ax, gy + cell * rows + 4 * dpr); ctx.stroke(); ctx.setLineDash([]); }
     if (estLateral_mm != null) { const ex = gx + ((cols - 1) / 2 + estLateral_mm / spacingMm + 0.5) * cell; ctx.strokeStyle = 'rgba(251,191,36,0.95)'; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(ex, gy - 4 * dpr); ctx.lineTo(ex, gy + cell * rows + 4 * dpr); ctx.stroke(); }
     ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = font(10);
     ctx.fillText('distal (손가락)', 4 * dpr, 11 * dpr);
@@ -520,7 +528,7 @@ export class Heatmap {
   }
 
   // grid: number[rows][cols]; arteryLateralMm + spacing for overlay of estimated artery line.
-  draw(grid, { arteryLateral_mm = 0, spacingMm = 6, vMin, vMax, estLateral_mm = null, custom = null } = {}) {
+  draw(grid, { arteryLateral_mm = 0, arteryPath = null, spacingMm = 6, vMin, vMax, estLateral_mm = null, custom = null } = {}) {
     const dpr = window.devicePixelRatio || 1;
     const rect = this.canvas.getBoundingClientRect();
     const w = Math.max(1, Math.floor(rect.width * dpr));
@@ -562,7 +570,8 @@ export class Heatmap {
     // Estimated artery center overlay
     const centerCol = (cols - 1) / 2 + arteryLateral_mm / spacingMm;
     const x = gx + (centerCol + 0.5) * cell;
-    if (x >= gx - cell && x <= gx + cell * (cols + 1)) {
+    if(arteryPath)drawArteryPath(ctx,arteryPath,x=>gx+cell*cols/2+x/spacingMm*cell,y=>gy+cell*rows/2-y/spacingMm*cell,[gx,gy,cell*cols,cell*rows],dpr);
+    else if (x >= gx - cell && x <= gx + cell * (cols + 1)) {
       ctx.strokeStyle = 'rgba(255,255,255,0.85)';
       ctx.setLineDash([6 * dpr, 4 * dpr]);
       ctx.lineWidth = 1.5 * dpr;

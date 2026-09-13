@@ -217,7 +217,7 @@ export class TwinEngine {
 
     this.latest = {
       t: this.t, angles, angVel, torso, wristDeltaH, arteryOffset, motionLevel,
-      tissue: {radiusDelta_mm:this.capArray.tissueRadius_mm[bestK]||0,displacement_mm:this.capArray.tissueDisplacement_mm.slice(),fat_mm:this.capArray.tissueFat_mm,model:"SOMA causal ROM v1"},
+      tissue: {arteryLateralAdjust_mm:this.capArray.arteryLateralAdjust_mm||0,arteryDepthAdjust_mm:this.capArray.arteryDepthAdjust_mm||0,arteryLateralShift_mm:arteryOffset.lateral_mm+(this.capArray.arteryLateralAdjust_mm||0),arteryDepthShift_mm:arteryOffset.depth_mm-1+(this.capArray.arteryDepthOffset_mm||0)+(this.capArray.arteryDepthAdjust_mm||0),radiusDelta_mm:this.capArray.tissueRadius_mm[bestK]||0,displacement_mm:this.capArray.tissueDisplacement_mm.slice(),fat_mm:this.capArray.tissueFat_mm,model:"SOMA causal ROM v1"},
       capSampleRate_Hz: SAMPLE_RATE / capDecim,
       nCh, bestK,
       oracleGains: this.capArray.oracleCouplings(arteryOffset),

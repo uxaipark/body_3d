@@ -1,4 +1,6 @@
 import {atlasArteryAt} from './atlasProfile.js';
+import {rotatePatchPoint,patchAlongHalf,normalizePatchAngle} from './patchGeometry.js';
+import {isCenterDrag} from './viewInteraction.js';
 import {makeWristSection} from '../bridge/soma-bridge.js';
 // 3D wrist close-up: forearm/wrist segment, radial artery (pulsating), FCR & palmaris
 // tendons, radius bone, and the flexible electrode sheet with its pads. The sheet can be
@@ -51,7 +53,7 @@ export class WristView {
     // screen-x of +X = cos θ < 0 and screen-up of +X = −sin θ·cos φ > 0 → θ ≈ π + atan(1/cos φ).
     this.orbit = { theta: Math.PI + Math.atan(1 / Math.cos(0.75)), phi: 0.75, radius: 0.165, mode: null, lastX: 0, lastY: 0 };
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
     this.renderer.shadowMap.enabled = true;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     container.appendChild(this.renderer.domElement);
@@ -60,7 +62,7 @@ export class WristView {
     this.wristRx = WRIST_RX; this.wristRz = WRIST_RZ;
     this.geomScale = { widthScale: 1, depthScale: 1 };
 
-    this.sheet = { lateral: WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM, along: 0 };
+    this.sheet = { lateral: WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM, along: 0, angle: 0 };
     this.layout = { rows: 0, cols: 0, spacing: 6 };
     this.pads = [];
     this._onSheetMove = null;
@@ -229,7 +231,7 @@ export class WristView {
     const key = custom ? `custom:${custom.id}:${custom.electrodes.length}:${custom.sheetW}x${custom.sheetH}:${custom.electrodes.map((e) => `${e.x},${e.y},${e.w},${e.h},${e.shape}`).join(';')}` : `grid:${rows}x${cols}@${spacingMm}`;
     if (this.layout.key === key) return;
     this.layout = { rows, cols, spacing: spacingMm, key, custom };
-    while (this.sheetGroup.children.length) this.sheetGroup.remove(this.sheetGroup.children[0]);
+    while(this.sheetGroup.children.length){const child=this.sheetGroup.children[0];child.geometry?.dispose();child.material?.map?.dispose();child.material?.dispose();this.sheetGroup.remove(child);}
     this.pads = [];
     // Pad definitions (sheet-relative mm): regular grid or the designed pads
     const padSizeMm = Math.min(4.2, spacingMm * 0.65);
@@ -237,8 +239,8 @@ export class WristView {
     if (!custom) for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) this.padDefs.push({ x: (c - (cols - 1) / 2) * spacingMm, y: (r - (rows - 1) / 2) * spacingMm, w: padSizeMm, h: padSizeMm, shape: 'rect' });
     // Flexible sheet: curved strip following the skin; width = cols*spacing + margin, length = rows*spacing + margin
     const widthMm = custom ? custom.sheetW : cols * spacingMm + 4, lengthMm = custom ? custom.sheetH : rows * spacingMm + 4;
-    const segs = 24;
-    const geo = new THREE.PlaneGeometry(lengthMm * MM, widthMm * MM, 1, segs); // x = along, y → mapped to lateral
+    const segs = Math.min(128,Math.max(24,Math.ceil(widthMm/1.5)));
+    const geo = new THREE.PlaneGeometry(lengthMm * MM, widthMm * MM, Math.min(64,Math.max(2,Math.ceil(lengthMm/2))), segs); // x = along, y → mapped to lateral
     const pos = geo.attributes.position;
     // Keep the undeformed local coordinates (along_m, lateralLocal_mm) so re-draping is not cumulative.
     const local = new Float32Array(pos.count * 2);
@@ -257,10 +259,10 @@ export class WristView {
     this.padDefs.forEach((d, k) => {
       // Pad geometry: box (w along-x? no: x = lateral → local z, y = along → local x) or a flat cylinder for circles
       const geo = d.shape === 'circle'
-        ? new THREE.CylinderGeometry(Math.min(d.w, d.h) / 2 * MM, Math.min(d.w, d.h) / 2 * MM, 0.6 * MM, 24)
-        : new THREE.BoxGeometry(d.h * MM, 0.6 * MM, d.w * MM); // local x = along (h), local z = lateral (w)
+        ? new THREE.CylinderGeometry(Math.min(d.w, d.h) / 2 * MM, Math.min(d.w, d.h) / 2 * MM, 0.6 * MM, 32, 1)
+        : new THREE.BoxGeometry(d.h * MM, 0.6 * MM, d.w * MM,Math.max(2,Math.ceil(d.h)),1,Math.max(2,Math.ceil(d.w))); // local x = along (h), local z = lateral (w)
       const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0x553300, emissiveIntensity: 0.3, metalness: 0.7, roughness: 0.3 }));
-      m.userData = { k };
+      m.userData = { k };geo.userData.rest=geo.attributes.position.array.slice();
       this.sheetGroup.add(m); this.pads.push(m);
       // Translucent electrode number (1-based) floating just above the pad
       const label = this._makeLabelSprite(String(k + 1));
@@ -293,33 +295,39 @@ export class WristView {
     if (!silent && this._onSheetMove) this._onSheetMove(lateral_mm, along_mm);
   }
 
-  // Drape sheet vertices and pads onto the skin surface (+0.8 mm standoff) at current offsets.
+  onSheetAngle(cb){this._onSheetAngle=cb;}
+  setSheetAngle(degrees,silent=true){this.sheet.angle=normalizePatchAngle(degrees);this._layoutSheet();if(!silent)this._onSheetAngle?.(this.sheet.angle);}
+  _patchPoint(along,lateral,height){
+    const q=rotatePatchPoint(lateral,along,this.sheet.angle),a=this.sheet.along+q.along;
+    let p=this._models.get('0')?.surfacePoint(this.sheet.lateral,a,q.lateral);
+    if(!p){const theta=this.sheet.lateral/this.wristRz+q.lateral/this.wristRz;p={y:this.wristRx*Math.cos(theta),z:this.wristRz*Math.sin(theta),nx:0,ny:Math.cos(theta),nz:Math.sin(theta),dy:0,dz:0};}
+    return {base:[(q.along+p.nx*height)*MM,(p.y+p.ny*height)*MM,(p.z+p.nz*height)*MM],field:[0,p.dy*MM,p.dz*MM]};
+  }
+  // Rest coordinates and unit-pressure displacement are cached on placement
+  // changes. A heartbeat only adds a scalar displacement, with no raycasts.
   _layoutSheet() {
-    if (!this.sheetMesh) return;
-    const geo = this.sheetMesh.geometry, pos = geo.attributes.position, local = geo.userData.local;
-    for (let i = 0; i < pos.count; i++) {
-      const along = local[i * 2]; // undeformed local x (m), centred on the sheet
-      const latLocal = local[i * 2 + 1]; // undeformed local lateral (mm)
-      const lat = this.sheet.lateral + latLocal;
-      const n = this._surfaceNormal(lat);
-      const sy = this._surfaceY(lat,this.sheet.along+along*1000);
-      pos.setXYZ(i, along, sy + n.y * 0.8 * MM, lat * MM + n.z * 0.8 * MM);
-    }
-    // The x (along) positions in the geometry are centred at 0; shift the group to the model position.
-    pos.needsUpdate = true; geo.computeVertexNormals(); geo.computeBoundingSphere();
-    this.sheetGroup.position.x = alongToX(this.sheet.along);
-
-    (this.padDefs || []).forEach((d, k) => {
-      const pad = this.pads[k]; if (!pad) return;
-      const alongMm = d.y; // group already shifted by sheet.along
-      const lat = this.sheet.lateral + d.x;
-      const n = this._surfaceNormal(lat), sy = this._surfaceY(lat,this.sheet.along+alongMm);
-      pad.position.set(alongMm * MM, sy + n.y * 1.2 * MM, lat * MM + n.z * 1.2 * MM);
-      // Tilt pad tangent to the surface: Rx(α) maps local +Y (0,1,0) → (0, cos α, sin α) = (0, n.y, n.z)
-      pad.rotation.x = Math.atan2(n.z, n.y);
-      const lbl = this.padLabels && this.padLabels[k];
-      if (lbl) lbl.position.set(alongMm * MM, sy + n.y * 2.6 * MM, lat * MM + n.z * 2.6 * MM);
+    if(!this.sheetMesh)return;
+    const map=(geo,point)=>{const p=geo.attributes.position,base=new Float32Array(p.count*3),field=new Float32Array(p.count*3);
+      for(let i=0;i<p.count;i++){const q=point(i);base.set(q.base,i*3);field.set(q.field,i*3);p.setXYZ(i,...q.base);}
+      geo.userData.wrap={base,field};p.needsUpdate=true;geo.computeVertexNormals();geo.computeBoundingSphere();
+    };
+    const geo=this.sheetMesh.geometry,local=geo.userData.local;
+    map(geo,i=>this._patchPoint(local[i*2]*1000,local[i*2+1],.25));
+    this.sheetGroup.position.x=alongToX(this.sheet.along);
+    (this.padDefs||[]).forEach((d,k)=>{const pad=this.pads[k];if(!pad)return;
+      const g=pad.geometry,r=g.userData.rest;
+      map(g,i=>this._patchPoint(d.y+r[i*3]*1000,d.x+r[i*3+2]*1000,.85+r[i*3+1]*1000));
+      pad.position.set(0,0,0);pad.rotation.set(0,0,0);
+      const label=this.padLabels?.[k];if(label){label.userData.wrap=this._patchPoint(d.y,d.x,1.9);label.position.set(...label.userData.wrap.base);}
     });
+    this._pulsePatch(this.patchDrive||0);
+  }
+  _pulsePatch(drive){
+    this.patchDrive=drive;
+    for(const mesh of [this.sheetMesh,...this.pads]){const g=mesh?.geometry,w=g?.userData.wrap;if(!w)continue;const a=g.attributes.position.array;
+      for(let i=0;i<a.length;i++)a[i]=w.base[i]+w.field[i]*drive;g.attributes.position.needsUpdate=true;mesh.frustumCulled=false;
+    }
+    for(const label of this.padLabels||[]){const w=label.userData.wrap;if(w)label.position.set(...w.base.map((v,i)=>v+w.field[i]*drive));}
   }
 
   _bindPointer() {
@@ -331,7 +339,7 @@ export class WristView {
       // Left-click ON the sheet/pads → drag the sheet; left-click elsewhere → orbit.
       // Right button → pan the whole view (camera target); Shift-drag → move the sheet.
       const onSheet = this._hitSheet(e);
-      this.orbit.mode = e.button === 2 ? 'pan' : (e.shiftKey || onSheet) ? 'sheet' : 'orbit';
+      this.orbit.mode = e.button === 2 ? 'pan' : (e.shiftKey || onSheet) ? 'sheet' : isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect())?'roll':'orbit';
       this.orbit.lastX = e.clientX; this.orbit.lastY = e.clientY;
       el.setPointerCapture(e.pointerId);
       el.focus();
@@ -341,6 +349,7 @@ export class WristView {
       el.style.cursor = this._hitSheet(e) ? 'grab' : 'default';
     });
     el.addEventListener('keydown', (e) => {
+      if(e.key===','||e.key==='.'){e.preventDefault();this.setSheetAngle((this.sheet.angle||0)+(e.key==='.'?2.5:-2.5),false);return;}
       // ↑ = toward the fingers (distal), ↓ = proximal, → = thumb side, ← = ulnar side
       const step = e.shiftKey ? 2 : 0.5; // mm
       let lat = this.sheet.lateral, along = this.sheet.along;
@@ -352,11 +361,13 @@ export class WristView {
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('dblclick', () => { this.target.set(0.04, 0.005, 0.0); }); // double-click: re-centre the view
     el.addEventListener('pointerup', () => { this.orbit.mode = null; });
+    el.addEventListener('pointercancel', () => { this.orbit.mode = null; });
     el.addEventListener('pointermove', (e) => {
       if (!this.orbit.mode) return;
       const dx = e.clientX - this.orbit.lastX, dy = e.clientY - this.orbit.lastY;
       this.orbit.lastX = e.clientX; this.orbit.lastY = e.clientY;
-      if (this.orbit.mode === 'orbit') {
+      if(this.orbit.mode==='roll')this.orbit.roll=(this.orbit.roll||0)+dx*.008;
+      else if (this.orbit.mode === 'orbit') {
         this.orbit.theta -= dx * 0.006;
         this.orbit.phi = Math.max(0.15, Math.min(1.5, this.orbit.phi - dy * 0.006));
       } else if (this.orbit.mode === 'pan') {
@@ -381,7 +392,7 @@ export class WristView {
 
   // Clamp to the allowed placement range (distal edge ≤ wrist crease, proximal edge within the segment) and apply.
   _moveSheet(lat, along) {
-    const half = (this._sheetLocal ? this._sheetLocal.lengthMm : this.layout.rows * this.layout.spacing + 4) / 2;
+    const half=patchAlongHalf(this._sheetLocal?.widthMm||this.layout.cols*this.layout.spacing+4,this._sheetLocal?.lengthMm||this.layout.rows*this.layout.spacing+4,this.sheet.angle);
     const min = WRIST_ANATOMY.SHEET_ALONG_MIN_MM + half, max = WRIST_ANATOMY.SHEET_ALONG_MAX_MM - half - 1;
     const latC = Math.max(WRIST_ANATOMY.SHEET_LATERAL_MIN_MM, Math.min(WRIST_ANATOMY.SHEET_LATERAL_MAX_MM, lat));
     this.setSheetOffset(latC, Math.max(min, Math.min(max, along)), false);
@@ -400,9 +411,19 @@ export class WristView {
   // pulseNorm 0..1 (at the wrist); pulseFn(delay_s) → 0..1 pulse value `delay_s` earlier (for the travelling wave).
   update(arteryOffset, channelNorm, snrDb, pulseNorm = 0, pulseFn = null, tissue = null) {
     const gain=Number(document.getElementById('tissueGain')?.value||1);
-    this._models.get('0')?.update(tissue,gain);
     const meter=document.getElementById('tissueReadout');if(meter)meter.textContent=`반경 변화 ${((tissue?.radiusDelta_mm||0)*1000).toFixed(1)} µm · 표면 ${Math.max(0,...(tissue?.displacement_mm||[]).map(Math.abs)).toFixed(4)} mm · 표시 ×${gain}`;
-    if(this._handModel==='S'||this._handModel==='T'){const fat=tissue?.fat_mm||2.2,depth=atlasArteryAt(this.sheet.along).depth_mm;if(this.section&&(Math.abs(this.section.profile.fat-fat)>.05||Math.abs(this.section.profile.arteryDepth-depth)>.5)){this.section.dispose();this.section=makeWristSection(this.sectionHost,fat,depth);this.section.focus(this._handModel==='T'?'top':'full');}this.section?.update({distension:tissue?.radiusDelta_mm||0,respiratory:0,cardiac:0},gain,performance.now()/1000,660,98,false,'reflection');return;}
+    if(this._handModel==='S'||this._handModel==='T'){
+      const fat=tissue?.fat_mm||2.2,depth=Math.max(1.3,atlasArteryAt(this.sheet.along).depth_mm+(tissue?.arteryDepthAdjust_mm||0)),lateral=tissue?.arteryLateralAdjust_mm||0;
+      if(this.section&&(Math.abs(this.section.profile.fat-fat)>.05||Math.abs(this.section.profile.arteryDepth-depth)>.05||Math.abs(this.section.profile.arteryX-lateral)>.05)){
+        this.section.dispose();this.section=makeWristSection(this.sectionHost,fat,depth,lateral);this.section.focus(this._handModel==='T'?'top':'full');
+      }
+      this.section?.update({distension:tissue?.radiusDelta_mm||0,respiratory:0,cardiac:0},gain,performance.now()/1000,660,98,false,'reflection');return;
+    }
+    this._models.get('0')?.update(tissue,gain);
+    const geometryKey=`${tissue?.fat_mm}:${Math.round((tissue?.arteryLateralShift_mm||0)*4)}:${Math.round((tissue?.arteryDepthShift_mm||0)*4)}`;
+    if(geometryKey!==this._patchGeometryKey){this._patchGeometryKey=geometryKey;this._layoutSheet();}
+    this._pulsePatch((tissue?.radiusDelta_mm||0)*gain);
+
     const lat = WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM + arteryOffset.lateral_mm;
     const depth0 = WRIST_ANATOMY.ARTERY_BASE_DEPTH_MM + (arteryOffset.depth_mm - 1.0);
     // Rebuild the artery path only on a meaningful shift (idle pronation jitter moves it by ~0.1 mm/frame;
@@ -449,6 +470,7 @@ export class WristView {
       this.target.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta)
     );
     this.camera.lookAt(this.target);
+    this.camera.rotateZ(this.orbit.roll||0);
     this.renderer.render(this.scene, this.camera);
   }
 

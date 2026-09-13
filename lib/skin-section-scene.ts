@@ -3,6 +3,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {makeSectionTexture} from './skin-section-texture';
 import {deformSection,tissueBoundary,sectionDeformationGLSL,type SectionProfile,type TissueDrive} from './skin-section-model';
 import {photonPaths,opticalAbsorption} from './skin-section';
+import {isCenterDrag} from '../public/simulators/radial/js/viewInteraction.js';
 
 export type SectionView='full'|'top'|'dermis'|'vessel';
 const layerColors=['#e6c3a7','#ba827d','#d59b9a','#b9767b','#c7a361','#856c73'];
@@ -12,6 +13,7 @@ export class SkinSectionScene{
  view:SectionView='full';drive:TissueDrive={distension:0,respiratory:0,cardiac:0};gain=1;
  uniforms:{[key:string]:{value:number}};led:T.Mesh;detector:T.Mesh;lightLines:T.LineSegments;heads:T.Points;paths:ReturnType<typeof photonPaths>;
  private lastOptics='';private energy:{reflection:number;transmission:number}={reflection:0,transmission:0};
+ private pointerAbort=new AbortController();
  constructor(public host:HTMLDivElement,public profile:SectionProfile){
   const p=profile;this.uniforms={uSectionDepth:{value:p.arteryDepth},uSectionRadius:{value:p.radius},uSectionExpansion:{value:0},uSectionLift:{value:0},uSectionContours:{value:0}};
   this.renderer=new T.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});this.renderer.setClearColor('#101b23');this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));this.renderer.outputColorSpace=T.SRGBColorSpace;this.renderer.toneMapping=T.ACESFilmicToneMapping;this.renderer.toneMappingExposure=.95;this.renderer.setSize(host.clientWidth,host.clientHeight);
@@ -21,6 +23,13 @@ export class SkinSectionScene{
   Object.assign(this.overlay.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none'});
   this.renderer.domElement.setAttribute('aria-label',`회전과 확대가 가능한 3D 피부 절단면 · ${p.arteryLabel}는 붉은 표식과 연결선으로 표시`);
   this.controls=new OrbitControls(this.camera,this.renderer.domElement);this.controls.enableDamping=true;this.controls.dampingFactor=.12;this.controls.minZoom=.5;this.controls.maxZoom=5;this.controls.maxPolarAngle=Math.PI*.86;
+  if(p.coupledWrist){
+   const el=this.renderer.domElement,options={capture:true,signal:this.pointerAbort.signal};let pointer:number|null=null,lastX=0;
+   el.addEventListener('pointerdown',e=>{if(e.button!==0||!isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect()))return;pointer=e.pointerId;lastX=e.clientX;this.controls.enabled=false;el.setPointerCapture(pointer);e.stopImmediatePropagation();},options);
+   el.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;const dx=e.clientX-lastX;lastX=e.clientX;const axis=this.controls.target.clone().sub(this.camera.position).normalize();this.camera.up.applyAxisAngle(axis,-dx*.008);this.camera.lookAt(this.controls.target);e.stopImmediatePropagation();},options);
+   const end=(e:PointerEvent)=>{if(e.pointerId!==pointer)return;pointer=null;this.controls.enabled=true;e.stopImmediatePropagation();};
+   el.addEventListener('pointerup',end,options);el.addEventListener('pointercancel',end,options);
+  }
   this.scene.add(new T.HemisphereLight(0xfff3e4,0x71616c,2.2));const light=new T.DirectionalLight(0xfff4eb,2.1);light.position.set(-6,10,18);this.scene.add(light);const rim=new T.DirectionalLight(0xa6cede,1.3);rim.position.set(12,-2,-9);this.scene.add(rim);
   const source=makeSectionTexture(p);this.texture=new T.CanvasTexture(source.canvas);this.texture.colorSpace=T.SRGBColorSpace;this.texture.anisotropy=Math.min(4,this.renderer.capabilities.getMaxAnisotropy());
   for(let layer=0;layer<6;layer++){
@@ -152,5 +161,5 @@ export class SkinSectionScene{
   }
   const a=project(-3,p.total+.7),b=project(0,p.total+.7),length=Math.hypot(b[0]-a[0],b[1]-a[1]);c.strokeStyle='#c5d9cf';c.lineWidth=2;c.beginPath();c.moveTo(22,h-25);c.lineTo(22+Math.min(length,w*.4),h-25);c.stroke();c.fillStyle='#b2c7c2';c.fillText(length<w*.4?'3 mm':'배율 확대',22,h-34);c.textAlign='right';c.fillText('드래그 회전 · 휠 확대 · 우클릭 이동',w-16,h-15);c.textAlign='left';
  }
- dispose(){this.controls.dispose();this.geometries.forEach(g=>g.dispose());this.materials.forEach(m=>m.dispose());this.texture.dispose();this.renderer.dispose();this.renderer.forceContextLoss();this.renderer.domElement.remove();this.overlay.remove();}
+ dispose(){this.pointerAbort.abort();this.controls.dispose();this.geometries.forEach(g=>g.dispose());this.materials.forEach(m=>m.dispose());this.texture.dispose();this.renderer.dispose();this.renderer.forceContextLoss();this.renderer.domElement.remove();this.overlay.remove();}
 }

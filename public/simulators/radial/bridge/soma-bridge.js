@@ -63576,15 +63576,20 @@ function Sm(e) {
 	};
 }
 //#endregion
+//#region public/simulators/radial/js/viewInteraction.js
+function Cm(e, t, n) {
+	return Math.abs(e - n.left - n.width / 2) < n.width * .18 && Math.abs(t - n.top - n.height / 2) < n.height * .18;
+}
+//#endregion
 //#region lib/skin-section-scene.ts
-var Cm = [
+var wm = [
 	"#e6c3a7",
 	"#ba827d",
 	"#d59b9a",
 	"#b9767b",
 	"#c7a361",
 	"#856c73"
-], wm = class {
+], Tm = class {
 	constructor(e, t) {
 		this.host = e, this.profile = t, this.scene = new Rn(), this.camera = new es(), this.overlay = document.createElement("canvas"), this.geometries = [], this.materials = [], this.view = "full", this.drive = {
 			distension: 0,
@@ -63593,9 +63598,9 @@ var Cm = [
 		}, this.gain = 1, this.lastOptics = "", this.energy = {
 			reflection: 0,
 			transmission: 0
-		};
+		}, this.pointerAbort = new AbortController();
 		let n = t;
-		this.uniforms = {
+		if (this.uniforms = {
 			uSectionDepth: { value: n.arteryDepth },
 			uSectionRadius: { value: n.radius },
 			uSectionExpansion: { value: 0 },
@@ -63611,7 +63616,26 @@ var Cm = [
 			width: "100%",
 			height: "100%",
 			pointerEvents: "none"
-		}), this.renderer.domElement.setAttribute("aria-label", `회전과 확대가 가능한 3D 피부 절단면 · ${n.arteryLabel}는 붉은 표식과 연결선으로 표시`), this.controls = new Ef(this.camera, this.renderer.domElement), this.controls.enableDamping = !0, this.controls.dampingFactor = .12, this.controls.minZoom = .5, this.controls.maxZoom = 5, this.controls.maxPolarAngle = Math.PI * .86, this.scene.add(new Lo(16774116, 7430508, 2.2));
+		}), this.renderer.domElement.setAttribute("aria-label", `회전과 확대가 가능한 3D 피부 절단면 · ${n.arteryLabel}는 붉은 표식과 연결선으로 표시`), this.controls = new Ef(this.camera, this.renderer.domElement), this.controls.enableDamping = !0, this.controls.dampingFactor = .12, this.controls.minZoom = .5, this.controls.maxZoom = 5, this.controls.maxPolarAngle = Math.PI * .86, n.coupledWrist) {
+			let e = this.renderer.domElement, t = {
+				capture: !0,
+				signal: this.pointerAbort.signal
+			}, n = null, r = 0;
+			e.addEventListener("pointerdown", (t) => {
+				t.button !== 0 || !Cm(t.clientX, t.clientY, e.getBoundingClientRect()) || (n = t.pointerId, r = t.clientX, this.controls.enabled = !1, e.setPointerCapture(n), t.stopImmediatePropagation());
+			}, t), e.addEventListener("pointermove", (e) => {
+				if (e.pointerId !== n) return;
+				let t = e.clientX - r;
+				r = e.clientX;
+				let i = this.controls.target.clone().sub(this.camera.position).normalize();
+				this.camera.up.applyAxisAngle(i, -t * .008), this.camera.lookAt(this.controls.target), e.stopImmediatePropagation();
+			}, t);
+			let i = (e) => {
+				e.pointerId === n && (n = null, this.controls.enabled = !0, e.stopImmediatePropagation());
+			};
+			e.addEventListener("pointerup", i, t), e.addEventListener("pointercancel", i, t);
+		}
+		this.scene.add(new Lo(16774116, 7430508, 2.2));
 		let r = new ns(16774379, 2.1);
 		r.position.set(-6, 10, 18), this.scene.add(r);
 		let i = new ns(10931934, 1.3);
@@ -63623,7 +63647,7 @@ var Cm = [
 				map: this.texture,
 				roughness: .78
 			}), r = new Xa({
-				color: Cm[e],
+				color: wm[e],
 				roughness: .72
 			});
 			this.deformMaterial(n, !0), this.deformMaterial(r, !0, e === 0), this.materials.push(n, r), this.scene.add(new X(t, [n, r]));
@@ -63940,9 +63964,9 @@ var Cm = [
 		e.strokeStyle = "#c5d9cf", e.lineWidth = 2, e.beginPath(), e.moveTo(22, n - 25), e.lineTo(22 + Math.min(u, t * .4), n - 25), e.stroke(), e.fillStyle = "#b2c7c2", e.fillText(u < t * .4 ? "3 mm" : "배율 확대", 22, n - 34), e.textAlign = "right", e.fillText("드래그 회전 · 휠 확대 · 우클릭 이동", t - 16, n - 15), e.textAlign = "left";
 	}
 	dispose() {
-		this.controls.dispose(), this.geometries.forEach((e) => e.dispose()), this.materials.forEach((e) => e.dispose()), this.texture.dispose(), this.renderer.dispose(), this.renderer.forceContextLoss(), this.renderer.domElement.remove(), this.overlay.remove();
+		this.pointerAbort.abort(), this.controls.dispose(), this.geometries.forEach((e) => e.dispose()), this.materials.forEach((e) => e.dispose()), this.texture.dispose(), this.renderer.dispose(), this.renderer.forceContextLoss(), this.renderer.domElement.remove(), this.overlay.remove();
 	}
-}, Tm = class {
+}, Em = class {
 	constructor(e) {
 		this.container = e, this.posture = "standing", this.orbit = {
 			theta: .3,
@@ -63997,14 +64021,14 @@ var Cm = [
 		this.view.dispose();
 	}
 };
-function Em(e, t = 2.2, n = 3.3) {
-	let r = gm({
+function Dm(e, t = 2.2, n = 3.3, r = 0) {
+	let i = gm({
 		...zf.find((e) => e.id === "wrist"),
 		arteryDepth: n
 	}, t);
-	r.arteryDepth = n, r.total = Math.max(r.total, n + 9), r.coupledWrist = !0;
-	let i = r.structures.find((e) => e.kind === "bone");
-	return i && (i.depth = Math.max(i.depth, n + 4.5)), new wm(e, r);
+	i.arteryDepth = n, i.arteryX = r, i.total = Math.max(i.total, n + 9), i.coupledWrist = !0;
+	let a = i.structures.find((e) => e.kind === "bone");
+	return a && (a.depth = Math.max(a.depth, n + 4.5)), new Tm(e, i);
 }
 //#endregion
-export { Tm as Avatar, Em as makeWristSection };
+export { Em as Avatar, Dm as makeWristSection };

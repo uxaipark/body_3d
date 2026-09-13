@@ -1,3 +1,4 @@
+import {clipPatchPath} from './patchGeometry.js';
 // Capacitive array snapshot visualizer with three modes:
 //   'heatmap' — 2D colour grid (canvas 2D)
 //   'bars'    — 3D cylinders whose height follows each electrode's ΔC (Three.js)
@@ -67,7 +68,7 @@ export class ArrayViz {
     const surfaceGroup = new THREE.Group(); scene.add(surfaceGroup);
 
     // Artery centre marker: thin line along the proximal→distal axis (+X)
-    const arteryLine = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.01, 0.012), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 }));
+    const arteryLine = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.95,depthTest:false}));
     arteryLine.position.y = 0.006; scene.add(arteryLine);
 
     const floorGroup = new THREE.Group(); scene.add(floorGroup); // grid lines + electrode numbers + axis labels
@@ -218,15 +219,15 @@ export class ArrayViz {
   }
 
   // grid: number[rows][cols] raw values; arteryLateral_mm / spacingMm for artery-line overlay.
-  draw(grid, { arteryLateral_mm = 0, spacingMm = 6, estLateral_mm = null, vMin = null, vMax = null, custom = null } = {}) {
+  draw(grid, { arteryLateral_mm = 0, arteryPath = null, spacingMm = 6, estLateral_mm = null, vMin = null, vMax = null, custom = null } = {}) {
     if (!grid || !grid.length) return;
     const rows = grid.length, cols = grid[0].length;
     if (this.mode === 'heatmap') {
-      this.heatmap.draw(grid, { arteryLateral_mm, spacingMm, estLateral_mm, vMin, vMax, custom });
+      this.heatmap.draw(grid, { arteryLateral_mm, arteryPath, spacingMm, estLateral_mm, vMin, vMax, custom });
       return;
     }
     if (this.mode === 'contour') {
-      this.contour.draw(grid, { arteryLateral_mm, spacingMm, estLateral_mm, vMin, vMax, custom });
+      this.contour.draw(grid, { arteryLateral_mm, arteryPath, spacingMm, estLateral_mm, vMin, vMax, custom });
       return;
     }
     // Dense interpolated grids (custom layouts) carry no per-cell electrode numbers in 3D
@@ -251,7 +252,8 @@ export class ArrayViz {
 
     const { pitch } = this._layout(rows, cols);
     const centerCol = (cols - 1) / 2 + arteryLateral_mm / spacingMm;
-    T.arteryLine.position.z = (centerCol - (cols - 1) / 2) * pitch; // lateral offset of the artery line
+    const points=arteryPath||[{along_mm:-rows*spacingMm/2,lateral_mm:arteryLateral_mm},{along_mm:rows*spacingMm/2,lateral_mm:arteryLateral_mm}];
+    T.arteryLine.geometry.setAttribute('position',new THREE.Float32BufferAttribute(clipPatchPath(points,cols*spacingMm/2,rows*spacingMm/2).flatMap(p=>[p.along_mm/spacingMm*pitch,.008,p.lateral_mm/spacingMm*pitch]),3));T.arteryLine.frustumCulled=false; // lateral offset of the artery line
     // Beam-search estimate (yellow) next to the true artery line (white)
     if (!T.estLine) { T.estLine = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.01, 0.008), new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.9 })); T.estLine.position.y = 0.012; T.scene.add(T.estLine); }
     T.estLine.visible = estLateral_mm != null;
