@@ -1,0 +1,119 @@
+# SOMA 세션 인계 — 2026-09-13
+
+새 세션에서는 이 문서를 먼저 읽고 `git status --short`로 이후 변경 여부를 확인합니다. 사용자는 현재 상태를 저장하고 세션을 종료한 뒤 이어서 작업하기를 요청했습니다. 새 기능 구현을 시작하라는 요청은 아직 없습니다.
+
+## 작업 위치
+
+- 사용자 작업 폴더: `/Users/elliotpark/dev/body_3d`
+- 실제 앱·Git 루트: `/Users/elliotpark/dev/body_3d/web` (`main`)
+- 기존 CBP 참고 코드: `/Users/elliotpark/dev/biosignal/cbp_algorithm`
+- 기존 디지털 트윈 참고: `/Users/elliotpark/dev/biosignal/cbp_algorithm/research/digital-twin`
+- 데모 폴더: `/Users/elliotpark/dev/body_3d/demo/soma-demo`
+- 배포 ZIP: `/Users/elliotpark/dev/body_3d/demo/soma-demo.zip` 및 `.zip.sha256`
+- 실제 OS 검증 로그: `/Users/elliotpark/dev/body_3d/demo/qa/results`
+
+## 저장·배포 상태
+
+인계 문서 작성 직전 Git 작업 트리는 깨끗했습니다. 마지막 기능·문서 변경 커밋은 `ec3d735c3dd0ef4d7495c24396fc14bef05b1457`이며 원격 `main`에 push 완료했습니다. 이 인계 문서는 그 다음 문서 전용 커밋으로 저장합니다. 정확한 최종 커밋은 `git log -1`로 확인합니다.
+
+- 공개된 앱 버전: Sites **v40**, 배포 성공 및 변경된 연구 Markdown 3개 HTTP 200·소스 바이트 일치 확인.
+- 앱 URL: https://soma-biosensing-lab.brianpark4142.chatgpt.site
+- 접근 범위: 소유자 전용. 변경하지 않습니다.
+- 프로젝트 ID: `appgprj_6aa49a886844819181b74c42869f2bf1`
+- v40 ID: `appgprj_6aa49a886844819181b74c42869f2bf1~appgver_b4664ae1fc7c8191997e7afb3b66990b`
+- 배포 ID: `appgdep_6aa647fa35048191a785c7ab13607de2`
+- 데모 manifest의 소스: `e067f37a4cf2be630965c133d4b3392a7ee0169c`.
+
+데모 ZIP은 직전 설치·매뉴얼 정리 시점의 스냅샷입니다. 이후 문서 감사 수정과 이 인계 문서는 아직 ZIP에 반영하지 않았습니다. 실행 중인 데모의 문서만 직접 수정하면 manifest 무결성 검사와 어긋납니다. 재배포 시 기존 패키징 도구로 전체를 다시 준비합니다.
+
+인계 시점 `http://127.0.0.1:3000`은 HTTP 200으로 응답했습니다. 세션 종료 후 프로세스가 유지된다고 가정하지 말고 다시 확인합니다. 실행 중인 서버를 불필요하게 종료하거나 같은 포트에 중복 실행하지 않습니다.
+
+## 현재 구현
+
+화면은 `/` 소개·썸네일, `/simulators/body` 전신, `/simulators/wrist` 손·손목, `/research` 연구 기록, `/manual` 사용자 매뉴얼입니다. 각 시뮬레이터는 기본 문서 링크로 이동하며 손목 엔진은 독립 iframe 모듈로 연결합니다.
+
+전신은 BodyParts3D 아틀라스 계통과 `skin-atlas-web.glb` 외피, 51개 본 리그, 공통 보행·달리기, 일어서기·반복·손 쥐기·침대 동작을 사용합니다. 피부계 초기 선택은 OFF, 편안 모드는 ON입니다. 이전 MakeHuman 외피는 현재 로드하지 않습니다. 피부계는 국소 단면 관찰 도구를 포함합니다.
+
+손목은 같은 아틀라스에서 추출한 오른손·원위 전완을 사용합니다. 뼈 29개, 근육·힘줄·근막 52개, 혈관 23개, 신경 22개는 이름 붙은 메시 항목 수입니다. 모든 미세 조직을 완전하게 모델링했다는 뜻은 아닙니다.
+
+- 손목 아바타의 보행은 전신과 같은 캡처·리그를 사용합니다. 걷기 중 오른팔 센서 자세로 보행 회전을 덮어쓰지 않습니다. 앉기는 실제 착석 유지 포즈입니다.
+- 요골동맥은 손바닥 동맥궁까지의 원본 경로를 유지합니다. 양 끝 고정·중간 이동을 부드러운 공간 변형으로 연결하고 주변 동맥망에도 같은 변형장을 적용합니다. 붉은 표면·법선 보정·국소 분할과 압력에 따른 미세 팽창을 적용했습니다.
+- 좌우·깊이 슬라이더는 손목 3D 바로 아래에 있습니다. 이동은 신호 모델·주변 조직·단면·스냅샷과 연결됩니다.
+- 패치는 피부 둘레를 따라 휘며 `,`와 `.` 키로 2.5°씩 회전합니다. 스냅샷의 흰 동맥 선은 동일한 중심선과 전극 변환을 사용합니다.
+- 손목 3D는 1:1 영역입니다. 해부학 드롭다운·표시 변위·피하지방은 한 줄이며 상단 개요 카드는 접기·펼치기가 가능합니다.
+- 중앙 좌우 드래그는 동맥 길이축 회전입니다(아틀라스 X축, 조직 단면 Z축). 패치 위에서는 Option/Alt로 회전을 강제할 수 있습니다.
+- 상단 오른쪽 드래그는 시계 방향, 하단 오른쪽은 반시계 방향입니다. 상하단 수직 드래그는 현재 화면 수평축을 기준으로 기울입니다. 좌우 가장자리는 일반 회전입니다.
+- 리셋은 모델 A·표시 변위 1·지방 2.2 mm·동맥 수동 편위/깊이 0·패치 기본 위치/각도·카메라를 복원합니다. 전극 배열과 전신 설정은 유지합니다.
+- 화면 밖 또는 접힌 3D 갱신 생략, 패치 변위 캐시, 손목 픽셀 비율 제한 등을 적용했습니다. 신호 시간축은 별도로 유지합니다.
+
+이는 대표 조직 물성과 축약 변형 모델입니다. 환자별 FEM·혈류·광학·임상 정확도 검증은 완료되지 않았습니다. MRC 등 기존 분석과 앞으로 이식할 MVDR·실제 ECG/PAT·PEP 분리·연속 혈압 파이프라인을 구분합니다.
+
+## 문서 구조와 직전 작업
+
+문서 전체 목차는 [docs/README](../README.md), 직전 감사는 [문서 점검 기록](documentation-audit.md), 검증은 [데모 결과](demo-validation.md)와 [구현 이력](../research/VALIDATION.md)입니다.
+
+- `docs/manual` 4개와 `docs/operations/demo-guide.md`가 사용자 매뉴얼의 단일 원본 5개입니다.
+- `scripts/docs/build-manual.mjs`가 `public/manual`과 `app/manual/content.json`을 생성합니다. 생성본을 직접 편집하지 않습니다.
+- 연구 원본은 `public/research/hand-wrist`에 있고 `docs/research/README.md`가 연결합니다.
+- 현재 구현은 `docs/anatomy`, `docs/motion`, 이전 외피 기록은 `docs/archive`에 있습니다.
+- 실행 코드는 `scripts`에 유지하며 Markdown 설명 문서는 넣지 않습니다.
+
+직전 감사는 당시 Markdown 34개·상대 파일 링크 49개·매뉴얼 5개와 JSON 동기화, `git diff --check`, 사이트 빌드를 통과했습니다. 이 인계 문서 추가 후 파일·링크 수는 증가합니다. 최초 통합의 85개 테스트와 과거 CPU 성능값을 현재 결과와 구분했고, 사용자의 Docker 정상 동작 보고를 별도로 기록했습니다.
+
+## 검증 범위
+
+- 마지막 전체 회귀 검사: 96개 통과. TypeScript 검사 통과. 문서 감사에서는 전체 생체 모델 테스트를 다시 실행하지 않았습니다.
+- macOS 26.6.2 ARM64: 신규 설치·해시·npm ci·재실행·서버 및 6개 페이지/GLB 2개/WASM 확인.
+- Ubuntu 22.04 Docker ARM64: 패키지·Node 설치부터 같은 검증과 서버 종료까지 확인.
+- Windows: macOS PowerShell 7.6.6에서 AST·CMD 정적 검사 및 타 OS 거부 확인. 실제 Windows 설치·실행은 미검증입니다.
+- 사용자가 “도커에서 잘 동작 했어”라고 별도 확인했습니다. 호스트 OS·버전·아키텍처는 제공하지 않았습니다.
+- 브라우저 시각 QA, 실기기 FPS·GPU 측정, 임상 정확도 시험을 위 결과로 추론하지 않습니다.
+
+## 다음 세션 실행 명령
+
+앱 루트에서 실행합니다. 의존성이 이미 있으면 무조건 재설치할 필요는 없습니다.
+
+```sh
+cd /Users/elliotpark/dev/body_3d/web
+git status --short
+git log -3 --oneline
+npm run docs:check
+```
+
+기능 변경에 따라 필요한 검사를 선택합니다.
+
+```sh
+npm test
+npx tsc --noEmit
+npm run build
+```
+
+손목 bridge 소스를 변경했다면 사이트 빌드 전에 `node scripts/research/build-bridge.mjs`를 실행합니다. Blender 기반 모델 재생성은 일반 문서·UI 수정에 필요하지 않습니다.
+
+기존 로컬 데모를 실행하려면:
+
+```sh
+curl -I http://127.0.0.1:3000
+bash /Users/elliotpark/dev/body_3d/demo/soma-demo/Start-macOS.command
+```
+
+서버가 이미 응답하면 Start를 중복 실행하지 않습니다. OS별 설치·포트 옵션은 [설치 안내](demo-guide.md)에 있습니다. 데모는 전용 Node 24.21.0·Wrangler 4.92.0을 사용하며 시스템 Node 설정을 바꾸지 않습니다.
+
+새 데모 배포가 필요할 때만:
+
+```sh
+npm run build
+npm run demo:prepare
+python3 scripts/demo/archive-demo.py ../demo/soma-demo
+```
+
+## 다음 단계 후보와 미완료 사항
+
+사용자의 장기 목표는 손목 정전용량 배열로 요골동맥 맥파를 얻고 beamforming·MRC·MVDR로 정제하며 국소 시간 지연과 ECG·HR을 결합하는 연속 혈압/SpO₂ 확장 시뮬레이터입니다. 설계는 [연구 목차](../../public/research/hand-wrist/README.md)에 있습니다. 다음 세션의 구체적인 우선 작업은 새 요청을 따라 정합니다.
+
+1. 손목 센싱용 전신 미리보기의 별도 경량 자산·선택 로딩과 실제 기기 성능 측정. 기존 전체 전신 GLB 로딩을 단순히 숨기는 것만으로는 다운로드·메모리 비용이 줄지 않습니다.
+2. 실제 Windows 설치·서버 검증.
+3. MVDR 웹 코어, 시간 보존 분석 경로, ECG 취득 프레임·PAT/PTT/PEP 구분을 설계에 따라 단계적으로 연결.
+4. 초음파 기반 개인별 손목 정합, 조직·접촉 및 광학 검증, 독립 혈압·SpO₂ 데이터 평가.
+
+Sites 작업은 `.openai/hosting.json`의 기존 프로젝트를 사용합니다. 다음 게시 때 접근 범위를 다시 읽고 기존 소유자 전용 상태를 유지합니다. 토큰·인증 헤더는 이 문서나 Git에 저장하지 않았으며, 필요한 자격 증명은 도구에서 새로 받습니다. 이번 인계 저장은 웹 기능 변경이나 새 배포 요청이 아닙니다.
