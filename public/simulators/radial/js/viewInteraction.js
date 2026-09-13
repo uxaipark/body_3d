@@ -20,7 +20,11 @@ export function dragWristCamera(camera,target,axis,dx,dy,mode,axialSign=axialRot
  if(mode==='axial'){rotateCameraAroundAxis(camera,target,axis,dx*.008*axialSign);return;}
  if(mode==='twistTop'||mode==='twistBottom'){
   const eye=camera.position.clone().sub(target).normalize();
-  rotateCameraAroundAxis(camera,target,eye,dx*.008*(mode==='twistTop'?1:-1));return;
+  rotateCameraAroundAxis(camera,target,eye,dx*.008*(mode==='twistTop'?1:-1));
+  // Vertical motion tilts around the current screen-horizontal axis, even
+  // after rolling the wrist. Horizontal motion retains its screen-roll rule.
+  const right=camera.up.clone().setFromMatrixColumn(camera.matrixWorld,0);
+  rotateCameraAroundAxis(camera,target,right,-dy*.006);return;
  }
  // Camera motion is inverse to the visible object's motion.
  camera.updateMatrixWorld();const up=camera.up.clone().setFromMatrixColumn(camera.matrixWorld,1);

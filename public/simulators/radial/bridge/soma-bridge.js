@@ -63599,7 +63599,7 @@ function Dm(e, t, n, r, i, a, o = Em(e, n)) {
 		return;
 	}
 	if (a === "twistTop" || a === "twistBottom") {
-		Tm(e, t, e.position.clone().sub(t).normalize(), r * .008 * (a === "twistTop" ? 1 : -1));
+		Tm(e, t, e.position.clone().sub(t).normalize(), r * .008 * (a === "twistTop" ? 1 : -1)), Tm(e, t, e.up.clone().setFromMatrixColumn(e.matrixWorld, 0), -i * .006);
 		return;
 	}
 	e.updateMatrixWorld(), Tm(e, t, e.up.clone().setFromMatrixColumn(e.matrixWorld, 1), -r * .006), Tm(e, t, e.up.clone().setFromMatrixColumn(e.matrixWorld, 0), -i * .006);

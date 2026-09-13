@@ -110,3 +110,23 @@ test('native camera retains rotation between frames and reset restores view and 
  view._positionCamera();assert.ok(view.camera.position.distanceTo(rotated)<1e-12);assert.ok(view.camera.up.distanceTo(rolledUp)<1e-12);
  view.orbit.radius=.07;view.target.set(.5,.2,.1);view.resetCamera();assert.ok(view.camera.position.distanceTo(eye)<1e-12);assert.ok(view.camera.up.distanceTo(up)<1e-12);
 });
+
+
+test('upper and lower vertical drag tilt around screen horizontal after any screen roll',()=>{
+ for(const kind of ['native','section'])for(const mode of ['twistTop','twistBottom'])for(const dy of [-16,16])for(const roll of [-120,0,120]){
+  const camera=kind==='native'?new T.PerspectiveCamera(36,1,.005,5):new T.OrthographicCamera(-25,25,25,-25,.01,180);
+  const target=new T.Vector3(),axis=kind==='native'?new T.Vector3(1,0,0):new T.Vector3(0,0,1);
+  if(kind==='native')camera.position.set(-.15,.2,-.12);else camera.position.set(12,13,32);
+  camera.lookAt(target);camera.updateMatrixWorld();
+  dragWristCamera(camera,target,axis,roll,0,'twistTop');
+  const right=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,0),range=camera.position.length();
+  const front=camera.position.clone().multiplyScalar(.15),before=front.clone().project(camera),eye=camera.position.clone();
+  dragWristCamera(camera,target,axis,0,dy,mode);
+  const after=front.clone().project(camera),afterRight=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,0);
+  assert.ok((after.y-before.y)*dy<0,'screen-down coordinates follow vertical drag');
+  assert.ok(Math.abs(after.x-before.x)<1e-10,'vertical drag does not add sideways movement');
+  assert.ok(afterRight.distanceTo(right)<1e-10,'screen horizontal remains the fixed tilt axis');
+  assert.ok(Math.abs(camera.position.length()-range)<1e-10,'zoom is unchanged');
+  dragWristCamera(camera,target,axis,0,-dy,mode);assert.ok(camera.position.distanceTo(eye)<1e-10);
+ }
+});
