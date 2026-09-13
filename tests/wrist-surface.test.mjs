@@ -6,7 +6,7 @@ import {buildSkinWrap,rotatePatchPoint,patchAlongHalf,clipPatchPath} from '../pu
 import {wristSurface} from '../public/simulators/radial/js/wristSurface.js';
 import {WristView} from '../public/simulators/radial/js/wristView.js';
 import {CapacitiveArrayModel} from '../public/simulators/radial/js/capacitiveArray.js';
-import {isCenterDrag} from '../public/simulators/radial/js/viewInteraction.js';
+import {isCenterDrag,dragWristOrbit} from '../public/simulators/radial/js/viewInteraction.js';
 
 test('skin arc continues over the wrist side to the dorsal surface without protruding or stretching',()=>{
  const geo=new T.CylinderGeometry(.02,.02,.13,192,1).rotateZ(Math.PI/2),wrap=buildSkinWrap(geo.attributes.position.array,geo.index.array);
@@ -37,12 +37,15 @@ test('snapshot artery path crosses the same patch centre at 0/90/180 degrees and
  const clipped=clipPatchPath([{lateral_mm:-30,along_mm:0},{lateral_mm:30,along_mm:0}],5,10);assert.deepEqual(clipped,[{lateral_mm:-5,along_mm:0},{lateral_mm:5,along_mm:0}]);
 });
 
-test('comma and period rotate the patch in 2.5 degree steps; central drag selects Z roll',()=>{
+test('comma and period rotate the patch in 2.5 degree steps; central drag selects Y yaw',()=>{
  const listeners={},el={style:{},addEventListener(k,fn){(listeners[k]??=[]).push(fn);},getBoundingClientRect(){return {left:0,top:0,width:800,height:800};},setPointerCapture(){},focus(){}};
  const view=Object.create(WristView.prototype);Object.assign(view,{renderer:{domElement:el},sheet:{angle:0},orbit:{},_layoutSheet(){},_hitSheet(){return false;}});view._bindPointer();
  const key=k=>listeners.keydown[0]({key:k,preventDefault(){}});key('.');assert.equal(view.sheet.angle,2.5);key(',');assert.equal(view.sheet.angle,0);key(',');assert.equal(view.sheet.angle,-2.5);
  assert.equal(isCenterDrag(400,400,el.getBoundingClientRect()),true);assert.equal(isCenterDrag(50,400,el.getBoundingClientRect()),false);
- listeners.pointerdown[0]({button:0,clientX:400,clientY:400,pointerId:1});assert.equal(view.orbit.mode,'roll');
+ listeners.pointerdown[0]({button:0,clientX:400,clientY:400,pointerId:1});assert.equal(view.orbit.mode,'yaw');
+ view.orbit.theta=0;view.orbit.phi=1;listeners.pointermove[1]({clientX:430,clientY:420});assert.ok(view.orbit.theta>0);assert.equal(view.orbit.phi,1);
+ listeners.pointerup[0]();listeners.pointerdown[0]({button:0,clientX:400,clientY:50,pointerId:1});assert.equal(view.orbit.mode,'orbit');const previous=view.orbit.theta;listeners.pointermove[1]({clientX:430,clientY:50});assert.ok(view.orbit.theta>previous);
+ const orbit={theta:.5,phi:1};dragWristOrbit(orbit,10,0,'yaw');dragWristOrbit(orbit,-10,0,'yaw');assert.ok(Math.abs(orbit.theta-.5)<1e-12);assert.equal(orbit.phi,1);
  view._hitSheet=()=>true;listeners.pointerdown[0]({button:0,clientX:400,clientY:400,pointerId:1});assert.equal(view.orbit.mode,'sheet');
 });
 
@@ -51,7 +54,7 @@ test('native interleaved GLB keeps unit normals; smooth radial tube expands, mov
  GLTFLoader.prototype.loadAsync=function(){return this.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');};
  let m;try{m=buildModel0({});await m.ready;}finally{GLTFLoader.prototype.loadAsync=load;}
  let skin,tube,original;m.group.traverse(n=>{if(n.userData?.layer==='skin')skin=n;if(n.name==='요골동맥 · native centreline')tube=n;if(n.userData?.sourceName==='Radial artery.r.001')original=n;});
- assert.equal(original.visible,false);assert.ok(tube);
+ assert.equal(original.visible,false);assert.ok(tube);assert.equal(tube.material.color.getHex(),0xff0000);assert.equal(tube.material.metalness,0);assert.equal(tube.material.toneMapped,false);
  assert.equal(skin.geometry.attributes.position.array.length,skin.geometry.attributes.position.count*3);
  const normals=skin.geometry.attributes.normal.array.slice(),rest=tube.geometry.attributes.position.array.slice();
  m.update({radiusDelta_mm:.06,fat_mm:2.2});const expanded=tube.geometry.attributes.position.array;

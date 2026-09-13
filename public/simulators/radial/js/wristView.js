@@ -1,6 +1,6 @@
 import {atlasArteryAt} from './atlasProfile.js';
 import {rotatePatchPoint,patchAlongHalf,normalizePatchAngle} from './patchGeometry.js';
-import {isCenterDrag} from './viewInteraction.js';
+import {isCenterDrag,dragWristOrbit} from './viewInteraction.js';
 import {makeWristSection} from '../bridge/soma-bridge.js';
 // 3D wrist close-up: forearm/wrist segment, radial artery (pulsating), FCR & palmaris
 // tendons, radius bone, and the flexible electrode sheet with its pads. The sheet can be
@@ -339,7 +339,7 @@ export class WristView {
       // Left-click ON the sheet/pads → drag the sheet; left-click elsewhere → orbit.
       // Right button → pan the whole view (camera target); Shift-drag → move the sheet.
       const onSheet = this._hitSheet(e);
-      this.orbit.mode = e.button === 2 ? 'pan' : (e.shiftKey || onSheet) ? 'sheet' : isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect())?'roll':'orbit';
+      this.orbit.mode = e.button === 2 ? 'pan' : (e.shiftKey || onSheet) ? 'sheet' : isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect())?'yaw':'orbit';
       this.orbit.lastX = e.clientX; this.orbit.lastY = e.clientY;
       el.setPointerCapture(e.pointerId);
       el.focus();
@@ -366,11 +366,8 @@ export class WristView {
       if (!this.orbit.mode) return;
       const dx = e.clientX - this.orbit.lastX, dy = e.clientY - this.orbit.lastY;
       this.orbit.lastX = e.clientX; this.orbit.lastY = e.clientY;
-      if(this.orbit.mode==='roll')this.orbit.roll=(this.orbit.roll||0)+dx*.008;
-      else if (this.orbit.mode === 'orbit') {
-        this.orbit.theta -= dx * 0.006;
-        this.orbit.phi = Math.max(0.15, Math.min(1.5, this.orbit.phi - dy * 0.006));
-      } else if (this.orbit.mode === 'pan') {
+      if(this.orbit.mode==='yaw'||this.orbit.mode==='orbit')dragWristOrbit(this.orbit,dx,dy,this.orbit.mode);
+      else if (this.orbit.mode === 'pan') {
         // Pan: translate the camera target in the screen plane (camera right/up), scaled with zoom
         const right = new THREE.Vector3(); const up = new THREE.Vector3();
         this.camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
@@ -470,7 +467,6 @@ export class WristView {
       this.target.z + o.radius * Math.sin(o.phi) * Math.cos(o.theta)
     );
     this.camera.lookAt(this.target);
-    this.camera.rotateZ(this.orbit.roll||0);
     this.renderer.render(this.scene, this.camera);
   }
 

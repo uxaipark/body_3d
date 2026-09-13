@@ -44,7 +44,7 @@ export function buildModel0(ctx){
   // Smooth tube follows the sampled native radial artery centreline; radius is
   // the same 1.1 mm reference used by the pressure–diameter mechanics model.
   const curve=new T.Curve();curve.getPoint=(t,target=new T.Vector3())=>{const along=atlasProfile[0].along_mm+t*(atlasProfile.at(-1).along_mm-atlasProfile[0].along_mm),a=atlasArteryAt(along);return target.set((55+along)*.001,a.centerY_mm*.001,a.lateral_mm*.001);};
-  const geo=new T.TubeGeometry(curve,160,.0011,40,false),mesh=new T.Mesh(geo,new T.MeshStandardMaterial({color:0xc94050,roughness:.4,metalness:.03}));
+  const geo=new T.TubeGeometry(curve,160,.0011,40,false),mesh=new T.Mesh(geo,new T.MeshStandardMaterial({color:0xff0000,emissive:0xb00000,emissiveIntensity:.6,roughness:1,metalness:0,toneMapped:false}));
   mesh.name='요골동맥 · native centreline';mesh.userData.layer='cardiovascular';mesh.frustumCulled=false;group.add(mesh);all.push(mesh);radial={mesh,rest:geo.attributes.position.array.slice(),normals:geo.attributes.normal.array.slice()};
   if(skin)wrap=wristSurface;
   // Native-surface-derived local subcutis envelope: representative, NOT segmented fat.

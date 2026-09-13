@@ -63580,16 +63580,19 @@ function Sm(e) {
 function Cm(e, t, n) {
 	return Math.abs(e - n.left - n.width / 2) < n.width * .18 && Math.abs(t - n.top - n.height / 2) < n.height * .18;
 }
+function wm(e, t, n, r) {
+	e.theta += t * .006, r === "orbit" && n !== 0 && (e.phi = Math.max(.15, Math.min(Math.PI - .15, e.phi - n * .006)));
+}
 //#endregion
 //#region lib/skin-section-scene.ts
-var wm = [
+var Tm = [
 	"#e6c3a7",
 	"#ba827d",
 	"#d59b9a",
 	"#b9767b",
 	"#c7a361",
 	"#856c73"
-], Tm = class {
+], Em = class {
 	constructor(e, t) {
 		this.host = e, this.profile = t, this.scene = new Rn(), this.camera = new es(), this.overlay = document.createElement("canvas"), this.geometries = [], this.materials = [], this.view = "full", this.drive = {
 			distension: 0,
@@ -63620,20 +63623,20 @@ var wm = [
 			let e = this.renderer.domElement, t = {
 				capture: !0,
 				signal: this.pointerAbort.signal
-			}, n = null, r = 0;
+			}, n = null, r = 0, i = 0, a = "orbit";
 			e.addEventListener("pointerdown", (t) => {
-				t.button !== 0 || !Cm(t.clientX, t.clientY, e.getBoundingClientRect()) || (n = t.pointerId, r = t.clientX, this.controls.enabled = !1, e.setPointerCapture(n), t.stopImmediatePropagation());
+				t.button === 0 && (n = t.pointerId, r = t.clientX, i = t.clientY, a = Cm(t.clientX, t.clientY, e.getBoundingClientRect()) ? "yaw" : "orbit", this.controls.enabled = !1, e.setPointerCapture(n), t.stopImmediatePropagation());
 			}, t), e.addEventListener("pointermove", (e) => {
 				if (e.pointerId !== n) return;
-				let t = e.clientX - r;
-				r = e.clientX;
-				let i = this.controls.target.clone().sub(this.camera.position).normalize();
-				this.camera.up.applyAxisAngle(i, -t * .008), this.camera.lookAt(this.controls.target), e.stopImmediatePropagation();
+				let t = e.clientX - r, o = e.clientY - i;
+				r = e.clientX, i = e.clientY;
+				let s = new Es().setFromVector3(this.camera.position.clone().sub(this.controls.target));
+				wm(s, t, o, a), this.camera.position.copy(this.controls.target).add(new W().setFromSpherical(s)), this.camera.up.set(0, 1, 0), this.camera.lookAt(this.controls.target), e.stopImmediatePropagation();
 			}, t);
-			let i = (e) => {
+			let o = (e) => {
 				e.pointerId === n && (n = null, this.controls.enabled = !0, e.stopImmediatePropagation());
 			};
-			e.addEventListener("pointerup", i, t), e.addEventListener("pointercancel", i, t);
+			e.addEventListener("pointerup", o, t), e.addEventListener("pointercancel", o, t);
 		}
 		this.scene.add(new Lo(16774116, 7430508, 2.2));
 		let r = new ns(16774379, 2.1);
@@ -63647,7 +63650,7 @@ var wm = [
 				map: this.texture,
 				roughness: .78
 			}), r = new Xa({
-				color: wm[e],
+				color: Tm[e],
 				roughness: .72
 			});
 			this.deformMaterial(n, !0), this.deformMaterial(r, !0, e === 0), this.materials.push(n, r), this.scene.add(new X(t, [n, r]));
@@ -63658,14 +63661,18 @@ var wm = [
 			n.radius + n.wall * .77,
 			n.radius + n.wall
 		];
-		for (let e = 0; e < 3; e++) this.vesselShell(n.arteryX, n.arteryDepth, o[e], o[e + 1], [
+		for (let e = 0; e < 3; e++) this.vesselShell(n.arteryX, n.arteryDepth, o[e], o[e + 1], (n.regionId === "wrist" ? [
+			"#ff2020",
+			"#dc0000",
+			"#ff0000"
+		] : [
 			"#e4b1a4",
 			"#b66b70",
 			"#ddc8b6"
-		][e]);
+		])[e], 1, n.regionId === "wrist");
 		this.vesselShell(n.veinX, n.arteryDepth + .3, .46, .56, "#9aacb1", .65);
-		let s = this.cylinder(n.radius, n.arteryX, n.arteryDepth, "#6c162b");
-		s.material.roughness = .38, this.cylinder(.46, n.veinX, n.arteryDepth + .3, "#36596e", .65), this.regionalStructures();
+		let s = this.cylinder(n.radius, n.arteryX, n.arteryDepth, n.regionId === "wrist" ? "#ff0000" : "#6c162b");
+		s.material.roughness = .85, n.regionId === "wrist" && (s.material.emissive.set("#a00000"), s.material.emissiveIntensity = .6, s.material.toneMapped = !1), this.cylinder(.46, n.veinX, n.arteryDepth + .3, "#36596e", .65), this.regionalStructures();
 		let c = new oa(.7, .17, .85);
 		this.geometries.push(c);
 		let l = new Xa({
@@ -63769,20 +63776,20 @@ var wm = [
 		}, !e, 0);
 		return o.setAttribute("position", new Y(r, 3)), o.setAttribute("uv", new Y(i, 2)), o.setIndex(a), o.computeVertexNormals(), o.computeBoundingSphere(), o.boundingSphere && (o.boundingSphere.radius += 7), this.geometries.push(o), o;
 	}
-	vesselShell(e, t, n, r, i, a = 1) {
-		let o = new Xa({
+	vesselShell(e, t, n, r, i, a = 1, o = !1) {
+		let s = new Xa({
 			color: i,
 			roughness: .53,
 			side: 2
 		});
-		this.deformMaterial(o), this.materials.push(o);
+		this.deformMaterial(s), this.materials.push(s), o && (s.roughness = 1, s.emissive.set(i), s.emissiveIntensity = .4, s.toneMapped = !1);
 		for (let i of [n, r]) {
 			let n = new sa(i, i, this.profile.thickness, 72, 32, !0);
-			n.rotateX(Math.PI / 2), n.scale(1, a, 1), n.translate(e, -t, -this.profile.thickness / 2), this.geometries.push(n), this.scene.add(new X(n, o));
+			n.rotateX(Math.PI / 2), n.scale(1, a, 1), n.translate(e, -t, -this.profile.thickness / 2), this.geometries.push(n), this.scene.add(new X(n, s));
 		}
 		for (let i of [.018, -this.profile.thickness - .018]) {
-			let s = new Ia(n, r, 72, 2);
-			s.scale(1, a, 1), s.translate(e, -t, i), this.geometries.push(s), this.scene.add(new X(s, o));
+			let o = new Ia(n, r, 72, 2);
+			o.scale(1, a, 1), o.translate(e, -t, i), this.geometries.push(o), this.scene.add(new X(o, s));
 		}
 	}
 	cylinder(e, t, n, r, i = 1) {
@@ -63966,7 +63973,7 @@ var wm = [
 	dispose() {
 		this.pointerAbort.abort(), this.controls.dispose(), this.geometries.forEach((e) => e.dispose()), this.materials.forEach((e) => e.dispose()), this.texture.dispose(), this.renderer.dispose(), this.renderer.forceContextLoss(), this.renderer.domElement.remove(), this.overlay.remove();
 	}
-}, Em = class {
+}, Dm = class {
 	constructor(e) {
 		this.container = e, this.posture = "standing", this.orbit = {
 			theta: .3,
@@ -64021,14 +64028,14 @@ var wm = [
 		this.view.dispose();
 	}
 };
-function Dm(e, t = 2.2, n = 3.3, r = 0) {
+function Om(e, t = 2.2, n = 3.3, r = 0) {
 	let i = gm({
 		...zf.find((e) => e.id === "wrist"),
 		arteryDepth: n
 	}, t);
 	i.arteryDepth = n, i.arteryX = r, i.total = Math.max(i.total, n + 9), i.coupledWrist = !0;
 	let a = i.structures.find((e) => e.kind === "bone");
-	return a && (a.depth = Math.max(a.depth, n + 4.5)), new Tm(e, i);
+	return a && (a.depth = Math.max(a.depth, n + 4.5)), new Em(e, i);
 }
 //#endregion
-export { Em as Avatar, Dm as makeWristSection };
+export { Dm as Avatar, Om as makeWristSection };

@@ -3,7 +3,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {makeSectionTexture} from './skin-section-texture';
 import {deformSection,tissueBoundary,sectionDeformationGLSL,type SectionProfile,type TissueDrive} from './skin-section-model';
 import {photonPaths,opticalAbsorption} from './skin-section';
-import {isCenterDrag} from '../public/simulators/radial/js/viewInteraction.js';
+import {isCenterDrag,dragWristOrbit} from '../public/simulators/radial/js/viewInteraction.js';
 
 export type SectionView='full'|'top'|'dermis'|'vessel';
 const layerColors=['#e6c3a7','#ba827d','#d59b9a','#b9767b','#c7a361','#856c73'];
@@ -24,9 +24,9 @@ export class SkinSectionScene{
   this.renderer.domElement.setAttribute('aria-label',`회전과 확대가 가능한 3D 피부 절단면 · ${p.arteryLabel}는 붉은 표식과 연결선으로 표시`);
   this.controls=new OrbitControls(this.camera,this.renderer.domElement);this.controls.enableDamping=true;this.controls.dampingFactor=.12;this.controls.minZoom=.5;this.controls.maxZoom=5;this.controls.maxPolarAngle=Math.PI*.86;
   if(p.coupledWrist){
-   const el=this.renderer.domElement,options={capture:true,signal:this.pointerAbort.signal};let pointer:number|null=null,lastX=0;
-   el.addEventListener('pointerdown',e=>{if(e.button!==0||!isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect()))return;pointer=e.pointerId;lastX=e.clientX;this.controls.enabled=false;el.setPointerCapture(pointer);e.stopImmediatePropagation();},options);
-   el.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;const dx=e.clientX-lastX;lastX=e.clientX;const axis=this.controls.target.clone().sub(this.camera.position).normalize();this.camera.up.applyAxisAngle(axis,-dx*.008);this.camera.lookAt(this.controls.target);e.stopImmediatePropagation();},options);
+   const el=this.renderer.domElement,options={capture:true,signal:this.pointerAbort.signal};let pointer:number|null=null,lastX=0,lastY=0,mode='orbit';
+   el.addEventListener('pointerdown',e=>{if(e.button!==0)return;pointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;mode=isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect())?'yaw':'orbit';this.controls.enabled=false;el.setPointerCapture(pointer);e.stopImmediatePropagation();},options);
+   el.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;const s=new T.Spherical().setFromVector3(this.camera.position.clone().sub(this.controls.target));dragWristOrbit(s,dx,dy,mode);this.camera.position.copy(this.controls.target).add(new T.Vector3().setFromSpherical(s));this.camera.up.set(0,1,0);this.camera.lookAt(this.controls.target);e.stopImmediatePropagation();},options);
    const end=(e:PointerEvent)=>{if(e.pointerId!==pointer)return;pointer=null;this.controls.enabled=true;e.stopImmediatePropagation();};
    el.addEventListener('pointerup',end,options);el.addEventListener('pointercancel',end,options);
   }
@@ -38,9 +38,10 @@ export class SkinSectionScene{
   }
   // True extruded vessel lumen and concentric wall layers across the block.
   const wallRadii=[p.radius,p.radius+p.wall*.16,p.radius+p.wall*.77,p.radius+p.wall];
-  for(let i=0;i<3;i++)this.vesselShell(p.arteryX,p.arteryDepth,wallRadii[i],wallRadii[i+1],['#e4b1a4','#b66b70','#ddc8b6'][i]);
+  for(let i=0;i<3;i++)this.vesselShell(p.arteryX,p.arteryDepth,wallRadii[i],wallRadii[i+1],(p.regionId==='wrist'?['#ff2020','#dc0000','#ff0000']:['#e4b1a4','#b66b70','#ddc8b6'])[i],1,p.regionId==='wrist');
   this.vesselShell(p.veinX,p.arteryDepth+.3,.46,.56,'#9aacb1',.65);
-  const blood=this.cylinder(p.radius,p.arteryX,p.arteryDepth,'#6c162b');blood.material.roughness=.38;
+  const blood=this.cylinder(p.radius,p.arteryX,p.arteryDepth,p.regionId==='wrist'?'#ff0000':'#6c162b');blood.material.roughness=.85;
+  if(p.regionId==='wrist'){blood.material.emissive.set('#a00000');blood.material.emissiveIntensity=.6;blood.material.toneMapped=false;}
   this.cylinder(.46,p.veinX,p.arteryDepth+.3,'#36596e',.65);
   this.regionalStructures();
   const pad=new T.BoxGeometry(.7,.17,.85);this.geometries.push(pad);const emitter=new T.MeshStandardMaterial({color:'#8fdbb1',emissive:'#284535',roughness:.35}),detector=new T.MeshStandardMaterial({color:'#86b6d6',roughness:.45});this.materials.push(emitter,detector);this.led=new T.Mesh(pad,emitter);this.detector=new T.Mesh(pad,detector);this.scene.add(this.led,this.detector);
@@ -89,8 +90,9 @@ export class SkinSectionScene{
   for(const right of[false,true])surface(40,rows,(u,v)=>{const x=right?p.width/2:-p.width/2;return[x,depth(x,v),-p.thickness+p.thickness*u];},!right,0);
   geometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geometry.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();geometry.computeBoundingSphere();if(geometry.boundingSphere)geometry.boundingSphere.radius+=7;this.geometries.push(geometry);return geometry;
  }
- private vesselShell(x:number,depth:number,inner:number,outer:number,color:string,flatten=1){
+ private vesselShell(x:number,depth:number,inner:number,outer:number,color:string,flatten=1,highlight=false){
   const material=new T.MeshStandardMaterial({color,roughness:.53,side:T.DoubleSide});this.deformMaterial(material);this.materials.push(material);
+  if(highlight){material.roughness=1;material.emissive.set(color);material.emissiveIntensity=.4;material.toneMapped=false;}
   for(const radius of[inner,outer]){const g=new T.CylinderGeometry(radius,radius,this.profile.thickness,72,32,true);g.rotateX(Math.PI/2);g.scale(1,flatten,1);g.translate(x,-depth,-this.profile.thickness/2);this.geometries.push(g);this.scene.add(new T.Mesh(g,material));}
   for(const z of[.018,-this.profile.thickness-.018]){const g=new T.RingGeometry(inner,outer,72,2);g.scale(1,flatten,1);g.translate(x,-depth,z);this.geometries.push(g);this.scene.add(new T.Mesh(g,material));}
  }
