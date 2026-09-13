@@ -83,7 +83,7 @@ test('native atlas preserves radial–palmar connection, bends between anchors a
  m.dispose();
 });
 
-test('projected wrist motion follows drag; upper-left is clockwise and lower-left counterclockwise',()=>{
+test('projected wrist motion follows drag; upper-right is clockwise and lower-right counterclockwise',()=>{
  for(const kind of ['native','section'])for(const mode of ['orbit','axial','twistTop','twistBottom'])for(const dx of [-12,12]){
   const camera=kind==='native'?new T.PerspectiveCamera(36,1,.005,5):new T.OrthographicCamera(-25,25,25,-25,.01,180);
   const target=new T.Vector3(),axis=kind==='native'?new T.Vector3(1,0,0):new T.Vector3(0,0,1);
@@ -95,7 +95,7 @@ test('projected wrist motion follows drag; upper-left is clockwise and lower-lef
   const axialDistance=camera.position.dot(axis),sign=axialRotationSign(camera,axis);
   dragWristCamera(camera,target,axis,dx,0,mode,sign);
   const after=point.clone().project(camera);
-  const desired=mode==='twistTop'?-dx:dx;
+  const desired=mode==='twistBottom'?-dx:dx;
   assert.ok((after.x-before.x)*desired>0,`${kind} ${mode}: projected direction for ${dx}`);
   assert.ok(Math.abs(camera.position.length()-radius)<1e-10);
   if(mode==='axial')assert.ok(Math.abs(camera.position.dot(axis)-axialDistance)<1e-10);
