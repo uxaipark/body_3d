@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Radial Artery Digital Twin — 연속혈압 시뮬레이터</title>
+<link rel="stylesheet" href="css/style.css" />
+<!-- 테마(다크/라이트/시스템)를 스타일시트 적용 전에 확정해 첫 페인트 깜빡임을 없앤다.
+     저장 키는 기존 dt.* 네임스페이스의 `dt.theme`, 값은 system|dark|light (js/theme.js 와 동일 규칙). -->
+<script>
+(function () {
+  try {
+    var q = new URLSearchParams(location.search).get('theme');
+    var v = (q === 'dark' || q === 'light' || q === 'system') ? q : localStorage.getItem('dt.theme');
+    if (v === 'dark' || v === 'light') document.documentElement.setAttribute('data-theme', v);
+  } catch (e) { /* private mode / no storage → prefers-color-scheme decides */ }
+})();
+</script>
+<style>.soma-load{position:absolute;bottom:15px;left:15px;color:#aadac8;font:12px sans-serif}#wrist3d{position:relative}#tissueGain,#tissueFat{width:90px}.wf-row{flex-wrap:wrap}#tissueReadout{width:100%}</style></head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Radial Artery Digital Twin</h1>
+    <p>심장 → 어깨 → 팔 → 손목 → 손바닥 → 손가락 동맥/정맥 · 맥파 · EMG · 정전용량 어레이 · PPG/SpO₂ · IMU · 16 kHz</p>
+    <p class="sim-banner" title="이 화면의 모든 수치·파형은 파라메트릭 시뮬레이션이며, 추정기는 시뮬레이터의 생성 관계를 역산합니다(모델 일치 상한). 임상 측정·검증 데이터가 아닙니다.">⚠ 시뮬레이션 값 — 임상 검증 아님</p>
+  </div>
+  <div class="metrics">
+    <div class="m big">
+      <div class="col dual">
+        <b><span id="m-bp">–</span><em>중심</em></b>
+        <b><span id="m-wristbp">–</span><em>+정수압</em></b>
+        <span>mmHg</span>
+        <label class="below" title="위: 시뮬레이터 설정 중심 BP(진값; 모사 커프 = 중심 가정, 실제 커프는 상완압). 아래: 중심 BP + 손목 정수압 오프셋(요골 맥압 증폭은 미반영 — 임상적 손목 BP 아님)">중심 BP (시뮬 설정 진값)<br/>중심 BP + 정수압 오프셋</label>
+        <button id="calib" title="커프 측정값을 입력해 두 알고리즘(어레이·PPG)을 함께 캘리브레이션">커프 캘리브레이션 (공통)</button></div>
+      <div class="col algo"><label>알고리즘 BP — 정전용량 어레이 <span id="m-capfault" class="faults"></span></label>
+        <span class="bprow"><b id="m-capbp">–</b><em id="m-capattach" class="att" title="시트 부착 상태(재배치 감지기, Rust attach.rs): 안정 / 접촉 변화(경고) / 과도 / 시트 이동(재캘리브레이션 필요) / 분리됨 — 캘리브레이션 시점의 빔서치 x̂(1차)·채널 결합 패턴·진폭 잔차·기저선 DC(보강) 대비 변화, 임계는 세션 자체 변동 기준">–</em></span><span>mmHg <em id="m-capcum" class="cum" title="캘리브레이션 이후 시뮬레이터 진값 대비 평균 절대 오차(mmHg, SBP / DBP) — 모델 일치 조건의 시뮬레이션 오차이며 임상 정확도가 아님">–</em></span>
+        <div class="kv">
+          <span>MAP</span><i id="m-capmap">–</i><span title="시뮬레이터 진값 대비 오차 (SBP/DBP)">오차</span><i id="m-caperr">– <em id="m-capconf" class="conf" title="추정기 신뢰도 0–1 = 사후 MAP 표준편차 × 창 품질 × 캘리브레이션 품질 × 홀드 감쇠. ⚠ = 생리 범위로 클램프됨(MAP 50–170 / PP 15–100)">–</em></i>
+          <span title="혈관 긴장도 × 경직도 (분리 불가, 곱으로 보고)">긴장·경직</span><i id="m-capx">–</i><span>국소 PWV</span><i id="m-cappwv">–</i>
+          <span>반사시간</span><i id="m-captrefl">–</i><span>RI</span><i id="m-capri">–</i>
+        </div></div>
+      <div class="col algo ppg"><label>알고리즘 BP — 검지 PPG<span id="m-ppgfault" class="faults"></span></label>
+        <b id="m-ppgbp">–</b><span>mmHg <em id="m-ppgcum" class="cum" title="캘리브레이션 이후 시뮬레이터 진값 대비 평균 절대 오차(mmHg, SBP / DBP) — 모델 일치 조건의 시뮬레이션 오차이며 임상 정확도가 아님">–</em></span>
+        <div class="kv">
+          <span>MAP</span><i id="m-ppgmap">–</i><span title="시뮬레이터 진값 대비 오차 (SBP/DBP)">오차</span><i id="m-ppgerr">– <em id="m-ppgconf" class="conf" title="추정기 신뢰도 0–1 = 사후 MAP 표준편차 × 창 품질 × 캘리브레이션 품질 × 홀드 감쇠. ⚠ = 생리 범위로 클램프됨(MAP 50–170 / PP 15–100)">–</em></i>
+          <span title="혈관 긴장도 × 경직도 (분리 불가, 곱으로 보고)">긴장·경직</span><i id="m-ppgx">–</i><span>PP</span><i>AC/DC</i>
+          <span>반사시간</span><i id="m-ppgtrefl">–</i><span>RI</span><i id="m-ppgri">–</i>
+        </div></div>
+    </div>
+    <div class="m"><label>HR</label><b id="m-hr">–</b><span>bpm</span></div>
+    <div class="m"><label>정수압 오프셋</label><b id="m-hydro">–</b><span>mmHg</span></div>
+    <div class="m"><label>손목-심장 높이차</label><b id="m-height">–</b><span>cm</span></div>
+    <div class="m"><label>심장→요골 지연</label><b id="m-radial">–</b><span>ms</span></div>
+    <div class="m"><label>심장→손가락 지연</label><b id="m-finger">–</b><span>ms</span></div>
+    <div class="m"><label>SpO₂</label><b id="m-spo2">–</b><span>%</span></div>
+    <div class="m"><label>동작 아티팩트</label><b id="m-motion">–</b><span>%</span></div>
+    <div class="m"><label>요골동맥 편위/깊이</label><b id="m-art">–</b><span>mm</span></div>
+    <div class="m dense"><label>어깨/팔꿈치/회내</label><b id="m-ang">–</b><span>deg</span></div>
+    <div class="m"><label>마스터 샘플링</label><b id="m-fs">–</b><span>Hz</span></div>
+    <div class="m"><label>정전용량 샘플링</label><b id="m-capfs">–</b><span>Hz</span></div>
+    <div class="m"><label>몸통 sway (ML/AP)</label><b id="m-sway">–</b><span>mm</span></div>
+    <div class="m"><label>누적 샘플</label><b id="m-samples">–</b><span></span></div>
+  </div>
+</header>
+
+<main>
+  <section class="left">
+    <div class="panel controls avatar-card">
+      <h2>3D 아바타</h2>
+      <div id="avatar" class="avatar"></div>
+    </div>
+    <div class="panel controls">
+      <h2>자세 / 움직임</h2>
+      <div class="row"><label>신체 자세</label><select id="bodyPosture"></select></div>
+      <div class="row"><label>팔 위치</label><select id="armPos"></select></div>
+      <div class="row"><label>팔 미세 움직임</label><input id="idleArm" type="range" min="0" max="1" step="0.01" value="0.4" /><output id="idleArmOut"></output></div>
+      <div class="row"><label>몸통 전체 미세 움직임</label><input id="idleBody" type="range" min="0" max="1" step="0.01" value="0.4" /><output id="idleBodyOut"></output></div>
+      <div class="row"><label>신장 (체형)</label><input id="height" type="range" min="140" max="200" step="1" value="170" /><output id="heightOut"></output></div>
+      <div class="row"><label>체중 (체형)</label><input id="weight" type="range" min="40" max="120" step="1" value="70" /><output id="weightOut"></output></div>
+      <div class="row"><label title="대표 체형 한 쌍(신장·체중)을 신장/체중 슬라이더에 넣어 체형→손목 기하 사슬을 한 번에 본다. 대표값일 뿐 모집단 통계가 아님. '보통(기준)' = 트윈 기준 체형 170/70 (기존 동작과 비트 동일)">체형 프리셋</label><span class="body-presets" id="bodyPresets"></span><span></span></div>
+      <p class="hint" id="bodyDerived" title="js/anthropometry.js — 체형→손목 조직 파라미터. 모든 계수는 모델 가정(문헌 보정 필요); 손목은 지방 희소 부위라 BMI 효과를 의도적으로 작게 둠. 기본 170 cm/70 kg = 기존 동작과 동일"></p>
+      <p class="hint" id="bodyGeom" title="js/anthropometry.js deriveWristCrossSection — 손목 둘레 → 타원 단면(폭·깊이·볼라 곡률반지름). 종횡비 0.70과 기준 폭 58 mm는 모델 가정(docs/CLINICAL_AUDIT.md §6.16). 3D 손목 단면과 설계도구 사진 정합이 이 값을 따른다"></p>
+      <p class="hint">아바타: 드래그로 회전, 휠로 줌.</p>
+    </div>
+    <div class="panel controls wrist-card">
+      <h2>손목 단면 (3D)</h2>
+    <div id="wrist" class="wrist">
+      <div id="wrist3d" class="wrist-3d"></div>
+      <div class="wrist-foot">
+        <div class="wf-row">
+          <span class="wf-title">손 모델</span>
+          <select id="handModel" data-no-preset title="전신 SOMA와 같은 해부학 메시 · 단면은 대표 조직 모델">
+            <option value="A">해부학 레이어</option><option value="0">피부 외형</option><option value="S">3D 조직 단면</option><option value="T">표면 등고선</option>
+          </select>
+          <span class="hint wf-credit" id="handNote"></span>
+          <label>표시 변위 <input id="tissueGain" type="range" min="1" max="8" value="1" step="1" data-no-preset></label>
+          <label>피하지방 <input id="tissueFat" type="range" min=".5" max="6" step=".1" value="2.2"><output id="tissueFatOut">2.2 mm</output></label>
+          <span id="tissueReadout" class="hint"></span>
+        </div>
+        <div class="wf-row">
+          <span class="wf-title">범례</span>
+          <span class="wf-legend"><i class="sw art"></i>요골동맥 <i class="sw ten"></i>건 <i class="sw bone"></i>요골 <i class="sw sheet"></i>전극 시트</span>
+          <span class="wf-help" tabindex="0" title="패치 클릭-드래그: 패치 이동 · 빈 곳 좌클릭-드래그: 3D 회전 · 우클릭-드래그: 화면 이동(팬) · 더블클릭: 중앙 복귀 · Shift-드래그: 패치 이동 · 방향키 ↑손가락쪽 ↓몸통쪽 →엄지쪽 ←새끼쪽 (Shift: 2 mm) · 휠: 줌 · along 0 = 손목 주름, − = 몸통쪽">?</span>
+        </div>
+        <div class="wf-row">
+          <span class="wf-kv" title="시트 중심의 가로 위치 (0 = 정중선, + 엄지쪽)"><span>시트 lateral</span><b id="w-lat">0.0</b><em>mm</em></span>
+          <span class="wf-kv" title="시트 중심의 세로 위치 (0 = 손목 주름, − 몸통쪽)"><span>along</span><b id="w-along">0.0</b><em>mm</em></span>
+          <span class="wf-kv"><span>best SNR</span><b id="w-snr">–</b><em>dB</em></span>
+          <span class="wf-kv"><span>MRC</span><b id="w-mrc">–</b><em>dB</em></span>
+        </div>
+        <div class="wf-row wf-ctl">
+          <span><b>패치 드래그</b> 이동</span><span><b>빈 곳 드래그</b> 회전</span><span><b>우클릭 드래그</b> 팬</span><span><b>더블클릭</b> 중앙</span><span><b>Shift 드래그</b> 패치</span><span><b>방향키</b> 0.5 mm</span><span><b>휠</b> 줌</span>
+        </div>
+        <!-- E안(실사 GLB 손) 자산의 저작자 표시 — CC BY-NC 4.0 이 요구하는 것이고, E 가 켜져 있을 때만 보인다. -->
+        <div class="wf-row" id="handCreditRow" hidden>
+          <span class="hint wf-credit">전신과 같은 Z-Anatomy / BodyParts3D 원본 · 조직 물성은 대표값</span>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div class="panel controls">
+      <h2>손목 정전용량 어레이 / 전극 패치</h2>
+      <div class="row"><label>정전용량 샘플링</label><select id="capFs">
+        <option value="100">100 Hz</option><option value="250">250 Hz</option><option value="500">500 Hz</option>
+        <option value="1000" selected>1 kHz</option><option value="2000">2 kHz</option><option value="4000">4 kHz</option>
+        <option value="8000">8 kHz</option><option value="16000">16 kHz</option></select><output id="capFsOut"></output></div>
+      <div class="row" id="layoutRow"><label>전극 레이아웃</label><span class="layout-ctl"><select id="layoutSel"><option value="grid">규칙 격자 (슬라이더)</option></select><button id="openDesigner" class="btn" type="button" title="패치 전극 설계도구 열기">설계도구</button></span><span></span></div>
+      <div class="row"><label>전극 총수 (최대 20)</label><span id="arrayCount" class="hint" style="margin:0">3×3 = 9 / 20</span><span></span></div>
+      <div class="row"><label>Rows (동맥 방향)</label><input id="rows" type="range" min="1" max="8" step="1" value="3" /><output id="rowsOut"></output></div>
+      <div class="row"><label>Cols (가로 방향)</label><input id="cols" type="range" min="1" max="6" step="1" value="3" /><output id="colsOut"></output></div>
+      <div class="row"><label>전극 간격</label><input id="spacing" type="range" min="2" max="12" step="0.5" value="4" /><output id="spacingOut"></output></div>
+      <div class="row"><label>시트 가로 위치 (0=정중선, +엄지쪽)</label><input id="sheetLat" type="range" min="-18" max="24" step="0.5" value="12" /><output id="sheetLatOut"></output></div>
+      <div class="row"><label>시트 세로 위치 (0=손목 시작)</label><input id="sheetAlong" type="range" min="-100" max="0" step="0.5" value="-9" /><output id="sheetAlongOut"></output></div>
+      <div class="row"><label title="스트랩/패치의 국소 압착 압력(0–1). 0.5 = 이 트윈의 기준 접촉 상태(= 압착 80 mmHg 가정)이고, 이 값에서만 §6.15 이전 동작과 정확히 같습니다. 압평(P_hold ≈ MAP에서 최적) → 수축기 첨두 감쇠 → 폐색 → 정맥 울혈 — 모두 모델 가정">접촉 압력</label><input id="contact" type="range" min="0" max="1" step="0.01" value="0.5" /><output id="contactOut"></output></div>
+      <div class="row"><label title="동맥벽의 지수형 탄성 E(P) = E₀·e^{ζP} (Hughes형). ζ = 0 이면 기존 선형 ΔC ∝ PP (기본값·비트 동일). ζ = 0.012 는 트윈 자신의 PWV 압력 법칙(+0.6 %/mmHg → D ∝ 1/g²)과 정합하는 값이며, 이때 압력 경화가 박동 내부에서 계산되므로 g² 항은 자동으로 빠집니다(이중 계산 없음). 고혈압에서 진폭 포화 + 수축기 첨두 압축(RI 단서 왜곡) — 모델 가정(문헌 보정 필요)">비선형 압력-직경 ζ</label><input id="capNonlin" type="range" min="0" max="0.03" step="0.001" value="0" /><output id="capNonlinOut"></output></div>
+      <div class="row"><label title="강체 평면 패치가 손목의 볼라 곡률을 얼마나 따라가는가. 1 = 완전 순응(트윈의 기존 암묵 가정, 이격 0 → 비트 동일), 0 = 전혀 휘지 않는 강체 패치 → 패치 중앙에서 멀수록 피부-패드 사이 공기/점착층 간극이 커지고, 직렬 커패시터로 1/(1+간극/0.6 mm)² 만큼 결합이 줄어듭니다 — 모델 가정">패치 순응도 (곡률)</label><input id="patchConform" type="range" min="0" max="1" step="0.05" value="1" /><output id="patchConformOut"></output></div>
+      <p class="hint" id="capContactOut" title="접촉압·곡률·비선형 탄성 유도값. 모든 계수는 모델 가정(문헌 보정 필요) — docs/CLINICAL_AUDIT.md §6.15"></p>
+      <div class="row"><label>노이즈 모델</label><select id="capNoiseModel" title="합성: 기존 CDC급 가정 / 실측 기반: 12패드 패치 실측(data_version1)에서 피팅한 백색·1/f·공통모드·호흡·부착 드리프트·자세변화 과도·양자화 (docs/NOISE_MODEL.md)">
+        <option value="synthetic" selected>합성</option><option value="measured">실측 기반(v1 패치)</option></select><output id="capNoiseModelOut"></output></div>
+    </div>
+    <div class="panel controls">
+      <h2>심장 / 혈압</h2>
+      <div class="row"><label>심장 상태</label><select id="rhythm"></select></div>
+      <div class="row"><label title="BP 직접: 기존 동작(SBP/DBP가 설정값, SV·TPR은 역산 표시값) / SV·TPR 구동: 2요소 윈드케셀로 SBP·DBP를 유도 — HR이 혈압을 움직인다 (docs/CLINICAL_AUDIT.md §6.13)">혈역학 구동</label><select id="hemoDrive">
+        <option value="bp" selected>BP 직접 지정 (SBP/DBP)</option>
+        <option value="hemo">SV · 말초저항 구동 (윈드케셀)</option></select><output id="hemoDriveOut"></output></div>
+      <div class="row"><label>심박수</label><input id="hr" type="range" min="35" max="160" step="1" value="72" /><output id="hrOut"></output></div>
+      <div class="row bp-drive"><label>SBP</label><input id="sbp" type="range" min="80" max="200" step="1" value="118" /><output id="sbpOut"></output></div>
+      <div class="row bp-drive"><label>DBP</label><input id="dbp" type="range" min="40" max="120" step="1" value="76" /><output id="dbpOut"></output></div>
+      <div class="row hemo-drive"><label title="1회 박출량. PP ≈ SV/C (C = 동맥 유순도), MAP = CO·TPR — 모델 가정">1회 박출량 (SV)</label><input id="sv" type="range" min="30" max="140" step="1" value="71" /><output id="svOut"></output></div>
+      <div class="row hemo-drive"><label title="총 말초혈관저항 (mmHg·s/mL, 중심정맥압 0 가정). MAP = CO·TPR — 모델 가정">말초저항 (TPR)</label><input id="tpr" type="range" min="0.4" max="2.5" step="0.01" value="1.06" /><output id="tprOut"></output></div>
+      <div class="row"><label>혈관 긴장도 (tone)</label><input id="tone" type="range" min="0.7" max="1.5" step="0.01" value="1.0" /><output id="toneOut"></output></div>
+      <div class="row"><label>혈관 경직도 (나이)</label><input id="stiff" type="range" min="0.8" max="1.6" step="0.01" value="1.0" /><output id="stiffOut"></output></div>
+      <div class="row"><label title="트윈 전체가 공유하는 단일 호흡 위상원(RSA·pulsus·정맥 펌프·PPG/정전용량 기저선). 기본 15 회/분 = 기존 0.25 Hz">호흡수</label><input id="respRate" type="range" min="6" max="30" step="1" value="15" /><output id="respRateOut"></output></div>
+      <div class="row"><label title="호흡 깊이(1 = 기준 일회호흡량). RSA 진폭과 호흡성 SBP 변동에 곱해진다 — 센서 쪽 호흡 항의 진폭은 그대로">호흡 깊이</label><input id="respDepth" type="range" min="0" max="2" step="0.05" value="1" /><output id="respDepthOut"></output></div>
+      <div class="row"><label title="흡기 시 SBP 하강(pulsus paradoxus)의 최대-최소 진폭. 정상 3–8 mmHg, >10–12 mmHg는 심낭압전/중증 천식. 폐 통과시간 가정으로 흡기보다 1.5박동 뒤에 나타난다 — 모델 가정">호흡성 SBP 변동</label><input id="pulsus" type="range" min="0" max="20" step="0.5" value="3" /><output id="pulsusOut"></output></div>
+      <p class="hint" id="hemoDerived" title="2요소(RC) 윈드케셀 층 — MAP = CO·TPR, PP = (SV/C)·Φ(RR, LVET, τ), C = C_ref/(tone^0.1·stiff^1.0·pwvGain)² (Bramwell–Hill, 대동맥 기시부). 모든 상수는 모델 가정 — docs/CLINICAL_AUDIT.md §6.13"></p>
+      <button id="pause">⏸ 일시정지</button>
+    </div>
+  </section>
+
+  <section class="right">
+    <div class="chart-grid">
+      <div class="card wide2 hemo h248">
+        <h3>혈역학 — 동맥압 전파 · 혈류 속도</h3>
+        <div class="subrow">
+          <div class="sub"><h4>동맥압 (심장 → 손가락 전파, 중력 정수압 반영)</h4><canvas id="c-pressure"></canvas></div>
+          <div class="sub"><h4>요골동맥 유속 / 정맥 환류 속도</h4><canvas id="c-velocity"></canvas></div>
+        </div>
+      </div>
+      <div class="card wide2 sensors h248">
+        <h3>센서 파형 — 손목 정전용량 어레이 · 검지 PPG 링</h3>
+        <div class="subrow r53">
+          <div class="sub">
+            <h4>정전용량 어레이 — 좌: 전 채널 파형 (위→아래) · 우: MRC 빔포밍 vs 시뮬레이터 진값 요골동맥 맥파</h4>
+            <div class="sub-optwrap">
+              <div class="opts sub-opts twocol capopts">
+                <div class="ocol"><span class="grp"><span class="lbl">노이즈/아티팩트:</span>
+                <label><input type="checkbox" id="capHum" /> 60 Hz 전원 험</label>
+                <label title="접촉 임피던스·호흡에 의한 기저선 변동"><input type="checkbox" id="capWander" /> 기저선 변동</label>
+                <label title="동작 아티팩트 ×3"><input type="checkbox" id="capMotion" /> 동작 ×3</label>
+                <label title="전자(프런트엔드) 노이즈 ×3"><input type="checkbox" id="capNoise" /> 전자 ×3</label></span></div>
+                <div class="ocol capinfo-wrap"><span class="lbl">계산값 (분석 코어):</span>
+                  <div id="capInfo" class="capinfo" title="MRC 빔포밍·빔서치·국소 PWV 등 분석 코어가 이 창에서 계산한 값 — 시뮬레이터 진값 대비 지표는 실센서에서는 계산할 수 없다."></div></div>
+              </div>
+            </div>
+            <canvas id="c-cap"></canvas>
+          </div>
+          <div class="sub">
+            <h4>검지 PPG 링 (Red / IR)</h4>
+            <div class="sub-optwrap">
+              <div class="opts sub-opts twocol">
+                <div class="ocol"><span class="grp"><span class="lbl">노이즈/아티팩트:</span>
+                <label><input type="checkbox" id="ppgAmbient" /> 주변광 120 Hz</label>
+                <label><input type="checkbox" id="ppgWander" /> 기저선 변동</label>
+                <label title="동작 아티팩트 ×3"><input type="checkbox" id="ppgMotion" /> 동작 ×3</label>
+                <label title="기존 토글 — 이제 아래 손가락 온도 사슬의 20 °C 끝점(AC ×0.35)으로 매핑됩니다."><input type="checkbox" id="ppgLowPerf" /> 저관류(차가운 손)</label></span></div>
+                <div class="ocol optics"><span class="lbl" title="⚠ 시뮬레이션 가정: 광학식 PPG의 알려진 기기 한계 우려(짙은 피부톤·저관류에서 정확도 저하)를 알고리즘 강건성 시험용으로 모델링한 것입니다. 아래 계수·편향 크기는 모두 이 트윈의 모델 가정(문헌 보정 필요)이며 임상적으로 검증된 추정치가 아닙니다.">피부 광학·관류 (모델 가정 ⚠):</span>
+                <label class="sld" title="Fitzpatrick I–VI. 표피 멜라닌은 660 nm(Red)를 940 nm(IR)보다 강하게 흡수 → DC 감쇠(Red > IR) + 광자 예산 감소(SNR). Beer–Lambert 상 DC·AC가 함께 줄어 R-비는 1차적으로 상쇄되고, 편향은 맥동 유효 광경로 단축의 Red/IR 차이(2차 효과)에서만 발생합니다. 기본 III–IV = 기존 트윈 동작과 비트 동일한 지점. ⚠ 표시되는 SpO₂ 편향은 모델 가정이지 임상 추정치가 아닙니다."><span>피부 톤</span><input type="range" id="ppgFitz" min="1" max="6" step="0.5" value="3.5" /><b id="ppgFitzOut" class="val">–</b></label>
+                <label class="sld" title="손가락 온도 → 혈관운동 긴장도(기존 arteryToneScalar에 곱하는 국소 배수) → 관류지수(PI) → AC 진폭. perf(T) = 0.35^((33−T)/13) — 33 °C에서 정확히 ×1(기존 동작), 20 °C에서 정확히 ×0.35(기존 '저관류' 토글 상수). 모델 가정(문헌 보정 필요)."><span>손가락 온도</span><input type="range" id="ppgTemp" min="20" max="36" step="0.5" value="33" /><b id="ppgTempOut" class="val">–</b></label></div>
+              </div>
+              <div class="opts sub-opts derived"><span class="lbl" title="⚠ 모두 이 트윈의 모델 가정에서 유도된 값입니다(문헌 보정 필요). 특히 SpO₂ 편향은 시뮬레이션 가정이며 임상적으로 검증된 정확도 추정치가 아닙니다.">유도값 (모델 가정 ⚠ · 임상 추정치 아님)</span><span id="ppgOpticsOut" class="vals">–</span></div>
+            </div>
+            <canvas id="c-ppg"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card wide2 array">
+        <h3>정전용량 어레이 — C(x,t) 스냅샷 · 전극별 맥파 도달 지연 Δt</h3>
+        <div id="pwvChips" class="chips"></div>
+        <div class="subrow">
+          <div class="sub square snap">
+            <h4><span class="ttl">C(x,t) 스냅샷 (흰 점선 = 시뮬레이터 진값 동맥 · 노란 선 = 빔서치 추정)</span>
+              <span class="radio-group">
+                <label><input type="radio" name="arrayViz" value="heatmap" checked /> 히트맵</label>
+                <label><input type="radio" name="arrayViz" value="contour" /> 등고선</label>
+                <label><input type="radio" name="arrayViz" value="surface" /> 3D 전위곡면</label>
+              </span>
+            </h4>
+            <div class="viz-stack"><canvas id="c-heat"></canvas><canvas id="c-heat3d"></canvas></div>
+          </div>
+          <div class="sub square timing">
+            <h4>전극별 맥파 도달 지연 Δt (ms, #1 행 기준) — 추정 / 모델 진값 · 손목 3D와 동일 배치</h4>
+            <canvas id="c-timing"></canvas>
+          </div>
+        </div>
+        <div class="viz-foot ctrlbar">
+          <span class="radio-group inline">
+            <span class="lbl">맥파 전파 시각화 강화(행간 지연 ×N):</span>
+            <label><input type="radio" name="waveExag" value="1" /> 실제</label>
+            <label><input type="radio" name="waveExag" value="100" checked /> ×100</label>
+            <label><input type="radio" name="waveExag" value="300" /> ×300</label>
+          </span>
+          <span class="radio-group inline">
+            <span class="lbl">스케일:</span>
+            <label><input type="radio" name="vizScale" value="fixed" checked /> 고정 (4.9–6.2 pF)</label>
+            <label><input type="radio" name="vizScale" value="hold" /> 자동 (피크 홀드)</label>
+          </span>
+          <span class="radio-group inline">
+            <span class="lbl">재생 속도:</span>
+            <label><input type="radio" name="vizSmooth" value="x1" checked /> ×1</label>
+            <label><input type="radio" name="vizSmooth" value="x05" /> ×0.5</label>
+            <label><input type="radio" name="vizSmooth" value="x025" /> ×0.25</label>
+            <label><input type="radio" name="vizSmooth" value="x01" /> ×0.1</label>
+            <label><input type="radio" name="vizSmooth" value="x005" /> ×0.05</label>
+          </span>
+        </div>
+      </div>
+      <div class="card wide2 motion h248">
+        <h3>움직임 — 근전도 · 손목 IMU</h3>
+        <div class="subrow">
+          <div class="sub emg"><h4>근전도 (EMG) · 근육 활성도</h4><div class="emg-body"><canvas id="c-emg"></canvas><div id="emg-bars" class="bars compact"></div></div></div>
+          <div class="sub imu"><h4>손목 IMU — 가속도계 (g) · 자이로 (deg/s)</h4><canvas id="c-acc"></canvas><canvas id="c-gyr"></canvas></div>
+        </div>
+      </div>
+      <div class="card h248 spo2"><h3>SpO₂ 실시간 변화</h3><canvas id="c-spo2"></canvas></div>
+    </div>
+
+    <div class="card anatomy collapsible">
+      <h3 class="toggle">해부학적 경로</h3>
+      <div class="two">
+        <div>
+          <h4>동맥 (심장 → 말초)</h4>
+          <table><thead><tr><th>분절</th><th>심장거리(cm)</th><th>직경(mm)</th><th>맥파 도달 지연</th></tr></thead><tbody id="anatomy-art"></tbody></table>
+        </div>
+        <div>
+          <h4>정맥 (말초 → 심장)</h4>
+          <table><thead><tr><th>분절</th><th>심장거리(cm)</th><th>직경(mm)</th><th>판막</th></tr></thead><tbody id="anatomy-ven"></tbody></table>
+        </div>
+      </div>
+      <p class="hint">모델링 주의: 본 디지털 트윈은 생리학적으로 타당한 파라메트릭 근사(맥파 전파 지연·Moens-Korteweg식 PWV 스케일링·정수압·펜듈럼 토크 기반 EMG·거리가중 정전 결합)로 구성된 연구용 시뮬레이터이며, 실제 CFD/유한요소 해석이나 측정 데이터가 아닙니다.</p>
+    </div>
+  </section>
+</main>
+
+<!-- Cuff calibration modal: enter the reference cuff reading used to calibrate BOTH algorithms -->
+<div id="calibModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <h3>커프 캘리브레이션</h3>
+    <p class="hint" style="margin:0 0 8px">커프 혈압계로 <b>3회 측정</b>한 값의 평균으로 캘리브레이션합니다(오차 범위를 반영한 통계값). 정전용량 어레이·검지 PPG 두 알고리즘이 <b>같은 값</b>으로 캘리브레이션됩니다.</p>
+    <div class="row"><label>입력 방식</label><select id="calSource"><option value="auto">자동 — 커프 측정 3회 모사 (기기 오차 포함)</option><option value="manual">수동 — 3회 측정값 직접 입력</option></select></div>
+    <table class="cal-table">
+      <thead><tr><th></th><th>SBP (mmHg)</th><th>DBP (mmHg)</th></tr></thead>
+      <tbody>
+        <tr><td>1회</td><td><select id="calSbp1"></select></td><td><select id="calDbp1"></select></td></tr>
+        <tr><td>2회</td><td><select id="calSbp2"></select></td><td><select id="calDbp2"></select></td></tr>
+        <tr><td>3회</td><td><select id="calSbp3"></select></td><td><select id="calDbp3"></select></td></tr>
+      </tbody>
+    </table>
+    <div class="cal-stats" id="calStats">–</div>
+    <p class="hint" id="calNow" style="margin:6px 0 0"></p>
+    <div class="modal-actions"><button id="calCancel" class="btn">취소</button><button id="calOk" class="btn primary">캘리브레이션 적용</button></div>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

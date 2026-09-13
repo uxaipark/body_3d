@@ -1,0 +1,873 @@
+/* ---------------------------------------------------------------------------
+   Theme tokens. The app is dark-native: `:root` below IS the dark palette and its
+   values are byte-identical to the pre-theme stylesheet, so the dark rendering is
+   unchanged. The light palette is defined ONCE (--light-* block) and switched on in
+   two places: an explicit `data-theme="light"` (menu 보기 > 테마, persisted in
+   localStorage `dt.theme`) and `prefers-color-scheme: light` when no explicit choice
+   was made. `data-theme="dark"` always wins over the media query.
+   Canvas plots (scopes, snapshot, Δt map, 3D views) keep a DARK plot surface in both
+   themes — their text/axis colours are drawn in JS by charts.js/arrayViz.js/three.js;
+   `--plot-bg` is transparent in dark (identical to before) and dark in light.  */
+:root {
+  color-scheme: dark;
+  --bg: #0b1020;
+  --bg2: #0a0f1e;            /* menubar */
+  --panel: #111827;
+  --card: #0f172a;
+  --surface: #0f172a;        /* pop-overs, menus, footers */
+  --border: #1f2a44;
+  --border2: #334155;        /* dialogs, menus, separators */
+  --hover: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --dim: #64748b;
+  --accent: #fbbf24;
+  --accent2: #fde68a;
+  --link: #93c5fd;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --violet: #a78bfa;
+  --header-bg: linear-gradient(180deg, #0f172a, #0b1020);
+  --bigcard-bg: linear-gradient(180deg, #131c33, #0f172a);
+  --sub-bg: rgba(15,23,42,0.55);
+  --overlay: rgba(3,7,18,0.7);
+  --shadow: rgba(0,0,0,0.5);
+  --shadow-lg: rgba(0,0,0,0.6);
+  --code-bg: #0b1020;
+  --hl: #1e3a5f;
+  --plot: #0b1020;           /* 3D / designer canvas backdrop */
+  --plot-bg: transparent;    /* <canvas> backdrop — see the note above */
+  --track-bg: #0b1020;
+  --thumb: #3b4a63;
+  --thumb-edge: #55627d;
+  --icon-bg: #111a2e;
+}
+/* Light palette — one definition, applied by an explicit choice or by the OS preference. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #eef2f7;
+  --bg2: #dde5ee;
+  --panel: #ffffff;
+  --card: #ffffff;
+  --surface: #ffffff;
+  --border: #cbd5e1;
+  --border2: #94a3b8;
+  --hover: #e2e8f0;
+  --text: #0f172a;
+  --muted: #475569;
+  --dim: #64748b;
+  --accent: #a16207;
+  --accent2: #92400e;
+  --link: #1d4ed8;
+  --ok: #047857;
+  --warn: #b45309;
+  --bad: #b91c1c;
+  --violet: #6d28d9;
+  --header-bg: linear-gradient(180deg, #ffffff, #e9eef5);
+  --bigcard-bg: linear-gradient(180deg, #ffffff, #eef2f7);
+  --sub-bg: rgba(241,245,249,0.85);
+  --overlay: rgba(51,65,85,0.45);
+  --shadow: rgba(15,23,42,0.18);
+  --shadow-lg: rgba(15,23,42,0.28);
+  --code-bg: #f1f5f9;
+  --hl: #dbeafe;
+  --plot: #0b1020;
+  --plot-bg: #0b1020;
+  --track-bg: #e2e8f0;
+  --thumb: #94a3b8;
+  --thumb-edge: #64748b;
+  --icon-bg: #ffffff;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #eef2f7; --bg2: #dde5ee; --panel: #ffffff; --card: #ffffff; --surface: #ffffff;
+    --border: #cbd5e1; --border2: #94a3b8; --hover: #e2e8f0;
+    --text: #0f172a; --muted: #475569; --dim: #64748b;
+    --accent: #a16207; --accent2: #92400e; --link: #1d4ed8;
+    --ok: #047857; --warn: #b45309; --bad: #b91c1c; --violet: #6d28d9;
+    --header-bg: linear-gradient(180deg, #ffffff, #e9eef5);
+    --bigcard-bg: linear-gradient(180deg, #ffffff, #eef2f7);
+    --sub-bg: rgba(241,245,249,0.85);
+    --overlay: rgba(51,65,85,0.45); --shadow: rgba(15,23,42,0.18); --shadow-lg: rgba(15,23,42,0.28);
+    --code-bg: #f1f5f9; --hl: #dbeafe;
+    --plot: #0b1020; --plot-bg: #0b1020;
+    --track-bg: #e2e8f0; --thumb: #94a3b8; --thumb-edge: #64748b; --icon-bg: #ffffff;
+  }
+}
+/* Canvas plots keep their dark surface in light mode (see the token note above) */
+canvas { background: var(--plot-bg); }
+.avatar canvas, .wrist-3d canvas { background: none; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; font-size: 13px; }
+/* Header: brand (fixed) + a FIXED-size metrics grid — cards never resize as values change.
+   Column 1 = the BP card (spans both rows), then 7 columns of 106 px cards in 2 rows (HR first). */
+header { display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: start; padding: 10px 18px; border-bottom: 1px solid var(--border); background: var(--header-bg); }
+.brand h1 { margin: 0; font-size: 17px; letter-spacing: 0.2px; }
+.brand p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.metrics { display: grid; grid-template-columns: 540px repeat(7, 98px); grid-template-rows: 64px 64px; grid-auto-flow: row; gap: 7px; overflow: visible; } /* no scrollbars on the header */
+.m { display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; width: 98px; height: 64px; padding: 4px 6px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; white-space: nowrap; }
+.m label { font-size: 9.5px; color: var(--muted); }
+.m b { font-size: 13px; font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; color: var(--accent); line-height: 1.25; }
+.m span { font-size: 9.5px; color: var(--muted); }
+.m.dense b { font-size: 10px; letter-spacing: -0.4px; }
+/* BP comparison card: three EQUAL columns; per-algorithm details as a 2-column key/value grid */
+.m.big { grid-row: 1 / span 2; width: 540px; height: 135px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; padding: 6px 4px; border-color: var(--border2); background: var(--bigcard-bg); }
+.m.big .col { display: flex; flex-direction: column; justify-content: flex-start; padding: 0 8px; min-width: 0; }
+.m.big .col + .col { border-left: 1px solid var(--border); }
+.m.big .col label { font-size: 9.5px; color: var(--muted); white-space: normal; line-height: 1.2; margin-bottom: 2px; display: block; }
+.m.big .col b { font-size: 17px; }
+.m.big .col.algo b { color: var(--ok); }
+.m.big .col.algo.ppg b { color: var(--violet); }
+.m.big .col.dual b { display: flex; align-items: baseline; gap: 6px; font-size: 17px; line-height: 1.2; }
+.m.big .col.dual b em { font-style: normal; font-size: 9.5px; color: var(--muted); font-family: inherit; }
+.m.big .col.dual b span { font-size: inherit; color: var(--accent); }
+.m.big i { font-style: normal; color: var(--text); font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+/* 열은 540 px 카드의 1/3(≈164 px)이고 `.m` 은 nowrap 이라, 긴 값이 들어오면 옆 열로 삐져나온다.
+   각 열의 직속 span 을 블록으로 잘라 그 열 안에서만 그려지게 한다(2026-08-25 사용자 보고). */
+.m.big .col > span { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.m.big .cum { font-style: normal; font-size: 10px; color: var(--text); font-family: ui-monospace, Menlo, monospace; margin-left: 6px; }
+.m.big .cum.good { color: var(--ok); } .m.big .cum.warn { color: var(--warn); } .m.big .cum.bad { color: var(--bad); }
+.kv .conf { font-style: normal; font-size: 9.5px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; margin-left: 2px; }
+.kv .conf.good { color: var(--ok); } .kv .conf.warn { color: var(--warn); } .kv .conf.bad { color: var(--bad); }
+/* attachment-state chip (sheet re-placement monitor) in the array BP column label; the cuff button pulses while a re-calibration is required */
+.m.big .att { font-style: normal; font-size: 9px; font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; margin-left: 4px; padding: 0 5px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; display: inline-block; vertical-align: baseline; line-height: 12px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.m.big .att.good { color: var(--ok); border-color: rgba(52,211,153,0.5); }
+.m.big .att.warn { color: var(--warn); border-color: rgba(251,191,36,0.5); }
+.m.big .att.bad { color: var(--bad); border-color: rgba(248,113,113,0.6); background: rgba(248,113,113,0.12); }
+/* 고장 검출 칩 (docs/CLINICAL_AUDIT.md §6.17, 표시 전용): 부착 칩과 같은 알약 모양, 없으면 자리도 차지하지 않는다 */
+.m.big .faults:empty { display: none; }
+.m.big .faults .att { margin-left: 4px; }
+#calib.recal { color: var(--bad); border-color: var(--bad); animation: recal-pulse 1.2s ease-in-out infinite; }
+@keyframes recal-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); } 50% { box-shadow: 0 0 0 4px rgba(248,113,113,0.35); } }
+.m.big .kv { display: grid; grid-template-columns: auto minmax(0,1fr) auto minmax(0,1fr); column-gap: 6px; row-gap: 1px; margin-top: 3px; font-size: 9.5px; align-items: baseline; }
+.m.big .kv span { color: var(--muted); white-space: nowrap; }
+.m.big .kv i { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m.big .col.dual label.below { margin: 4px 0 0; }
+#calib { font-size: 10px; padding: 2px 6px; margin-top: 3px; align-self: flex-start; background: var(--card); color: var(--accent); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+#calib:hover { border-color: var(--accent); }
+/* Modal */
+.modal { position: fixed; inset: 0; z-index: 1000; background: var(--overlay); display: flex; align-items: center; justify-content: center; }
+.modal.hidden { display: none; }
+.modal-box { width: 420px; max-width: calc(100vw - 32px); background: var(--panel); border: 1px solid var(--border2); border-radius: 10px; padding: 14px 16px; box-shadow: 0 20px 60px var(--shadow-lg); }
+.modal-box h3 { margin: 0 0 8px; font-size: 14px; color: var(--accent); }
+.modal-box .row { grid-template-columns: 90px 1fr; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.cal-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+.cal-table th { color: var(--muted); font-weight: 600; text-align: left; padding: 2px 6px; }
+.cal-table td { padding: 3px 6px; }
+.cal-table td:first-child { color: var(--muted); width: 40px; }
+.cal-table .dd { width: 100%; }
+.cal-stats { margin-top: 8px; padding: 6px 8px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--text); line-height: 1.5; }
+.cal-stats b { color: var(--accent); }
+.modal-box.manual-off .cal-table { opacity: 0.55; }
+.btn { padding: 6px 12px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font: inherit; }
+.btn.primary { background: rgba(251,191,36,0.15); color: var(--accent); border-color: var(--accent); }
+.btn:hover { border-color: var(--accent); }
+
+/* The page itself never scrolls: header is fixed-height, <main> takes the rest; each column scrolls
+   on its own behind a custom thick scrollbar (.vsb) with per-card shortcut icons (js/scrollbars.js). */
+body { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+header { flex: 0 0 auto; }
+/* 왼쪽 열은 예전처럼 고정폭이되 446 → 552px 로 키웠다(2026-08-26 사용자 요청).
+   비율(%)이 아니라 고정값을 쓰는 이유는 왼쪽 패널의 슬라이더 행(.row)이 고정 3열이라
+   화면 폭에 따라 열 폭이 흔들리면 안 되기 때문. 내역: 526px 열 + 26px 스크롤바. */
+main { display: grid; grid-template-columns: 552px minmax(0, 1fr); gap: 10px; padding: 14px 10px 14px 18px; flex: 1 1 auto; min-height: 0; height: auto; }
+.scol { display: flex; min-height: 0; min-width: 0; gap: 4px; }
+.scol > section { flex: 1 1 auto; min-width: 0; position: relative; }
+.noscrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.noscrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.vsb { position: relative; flex: 0 0 22px; width: 22px; border-radius: 11px; background: var(--track-bg); border: 1px solid var(--border); box-sizing: border-box; user-select: none; touch-action: none; }
+.vsb.noscroll .vsb-thumb { display: none; }
+.vsb-thumb { position: absolute; left: 3px; right: 3px; border-radius: 8px; background: var(--thumb); box-shadow: inset 0 0 0 1px var(--thumb-edge); cursor: grab; transition: background 0.12s; }
+.vsb-thumb:hover, .vsb-thumb.drag { background: #3b82f6; cursor: grabbing; }
+.vsb-icons { position: absolute; inset: 0; pointer-events: none; }
+.vsb-ic { pointer-events: auto; position: absolute; left: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; padding: 0; margin: 0; border-radius: 5px; border: 1px solid var(--border2); background: var(--icon-bg); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.5); transition: transform 0.1s, border-color 0.1s, color 0.1s; }
+.vsb-ic svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; display: block; }
+.vsb-ic:hover { color: var(--text); }
+.vsb-ic.active { color: var(--link); }
+.vsb-ic:hover { transform: translate(-50%, -50%) scale(1.25); z-index: 3; }
+/* The shortcut BUTTON of the card currently at the column centre is drawn larger (×1.3) — no glow, no colour change; the card itself is untouched */
+.vsb-ic.active { transform: translate(-50%, -50%) scale(1.3); border-color: var(--dim); z-index: 2; }
+.vsb-ic.active:hover { transform: translate(-50%, -50%) scale(1.35); }
+.left { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; padding-right: 2px; } /* same gap as .chart-grid so collapsed stacks match */
+.avatar { flex: 0 0 360px; height: 360px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--plot); }
+/* Avatar lives in a collapsible panel (heading toggles it like the other control panels) */
+.panel.avatar-card, .panel.wrist-card { padding: 6px 8px 8px; }
+.panel.avatar-card h2, .panel.wrist-card h2 { margin-bottom: 6px; }
+.panel.avatar-card.collapsed .avatar, .panel.wrist-card.collapsed .wrist { display: none; }
+.panel.wrist-card .wrist { height: 430px; }
+.avatar canvas { display: block; width: 100% !important; height: 100% !important; }
+.wrist { position: relative; flex: 0 0 430px; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--plot); }
+.wrist-3d { position: relative; flex: 1 1 auto; min-height: 0; }
+.wrist-3d canvas { display: block; width: 100% !important; height: 100% !important; }
+/* Compact footer below the 3D canvas (nothing drawn over the 3D image): legend · sheet position · SNR · help */
+.wrist-foot { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; padding: 5px 8px; font-size: 10.5px; color: var(--muted); border-top: 1px solid var(--border); background: var(--surface); white-space: nowrap; overflow: hidden; }
+.wf-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.wf-note { color: var(--dim); margin-left: 4px; }
+.wf-ctl { gap: 4px 9px; color: var(--muted); font-size: 10px; flex-wrap: wrap; white-space: nowrap; }
+.wf-ctl b { color: var(--text); font-weight: 600; }
+.wf-title { color: var(--text); font-weight: 600; }
+.wf-legend { display: inline-flex; align-items: center; gap: 4px; }
+.wf-legend .sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin: 0 2px 0 6px; vertical-align: -1px; }
+.wf-legend .sw.art { background: #ef4444; } .wf-legend .sw.ten { background: #e2e8f0; } .wf-legend .sw.bone { background: #94a3b8; } .wf-legend .sw.sheet { background: #fbbf24; }
+.wf-kv { display: inline-flex; align-items: baseline; gap: 3px; }
+.wf-kv b { color: var(--accent); font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; font-weight: 600; }
+.wf-kv em { font-style: normal; color: var(--muted); }
+.wf-help { margin-left: auto; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border2); display: inline-flex; align-items: center; justify-content: center; color: var(--text); font-size: 10px; cursor: help; }
+.wf-help:hover { border-color: var(--accent); color: var(--accent); }
+.card.tall canvas { height: 150px; } /* same height as the other scope cards */
+/* Full-width card holding two sub-cards side by side */
+.card.wide2 { grid-column: 1 / -1; }
+/* Equal fixed height for the three scope cards (혈역학 · 센서 파형 · 움직임); the sensor card's
+   extra option row fits inside the same height. Collapsing overrides it. */
+.card.wide2.h248 { height: 258px; display: flex; flex-direction: column; }
+.card.wide2.h248 > .subrow { flex: 1 1 auto; min-height: 0; align-items: stretch; }
+.card.wide2.h248 .sub { display: flex; flex-direction: column; min-height: 0; }
+.card.wide2.h248 .sub canvas { flex: 1 1 auto; height: 0 !important; min-height: 0; }
+.card.wide2.h248 .sub.imu canvas { height: 0 !important; }
+.card.wide2.h248 .sub.emg .emg-body { flex: 1 1 auto; height: auto; min-height: 0; }
+.card.wide2.h248 .sub.emg .emg-body canvas { height: 100% !important; }
+.card.wide2.h248.collapsed { height: auto; display: block; }
+/* 센서 파형 카드(2026-08-25 사용자 요청): ① 노이즈/광학 옵션을 카드 상단 한 줄에 몰아 두지 않고 각 그래프 위로
+   옮겼고, ② 그만큼 필요한 세로 공간을 위해 카드 높이를 1.5배(258 → 387 px)로 키운다. */
+.card.wide2.sensors.h248 { height: 387px; }
+.sensors .sub-optwrap { flex: 0 0 auto; }
+.sensors .sub-opts { margin: 0 0 3px; font-size: 10.5px; gap: 2px 12px; }
+.sensors .sub-opts.optics { display: block; }
+/* 값 표시 칸의 폭을 고정 — 값 길이가 달라져도 슬라이더·다음 항목의 위치가 흔들리지 않는다(사용자 보고). */
+.opts label.sld { display: grid; grid-template-columns: 62px 88px 90px; align-items: center; gap: 6px; margin-top: 2px; }
+.opts label.sld > span { color: var(--muted); }
+.opts .val { display: inline-block; min-width: 90px; text-align: left; font-weight: 600; font-variant-numeric: tabular-nums; }
+.opts .ellip { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Single-canvas card at the same fixed height (SpO₂) */
+.card.h248.spo2 { height: 258px; display: flex; flex-direction: column; }
+.card.h248.spo2 > canvas { flex: 1 1 auto; height: 0 !important; min-height: 0; }
+.card.h248.spo2.collapsed { height: auto; display: block; }
+.opts { display: flex; flex-wrap: wrap; gap: 2px 18px; margin: 0 0 6px; font-size: 11px; color: var(--text); }
+.opts .grp { display: inline-flex; flex-wrap: wrap; gap: 2px 10px; align-items: center; white-space: nowrap; }
+.opts .lbl { color: var(--muted); }
+.opts label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.opts input { accent-color: var(--accent); margin: 0; }
+.card.wide2 .subrow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.card.wide2 .subrow.r53 { grid-template-columns: 8fr 4fr; } /* 12 parts: [strips 2 | combined 4 | info 2] : PPG 4 */
+.card.wide2 .sub { background: var(--sub-bg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+.card.wide2 .sub h4 { margin: 0 0 4px; font-size: 11.5px; color: var(--muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.wide2 .sub canvas { height: 150px; }
+
+/* Custom dropdown */
+.dd { position: relative; width: 100%; }
+.dd-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; font: inherit; cursor: pointer; text-align: left; }
+.dd-btn:hover { border-color: var(--accent); }
+.dd-btn:disabled, .dd.disabled .dd-btn { opacity: 0.5; cursor: not-allowed; }
+.dd-caret { color: var(--muted); font-size: 11px; }
+.dd-list { position: absolute; z-index: 50; left: 0; right: 0; top: calc(100% + 3px); margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 24px var(--shadow); display: none; max-height: 240px; overflow-y: auto; }
+.dd.open .dd-list { display: block; }
+.dd-item { padding: 6px 8px; border-radius: 4px; cursor: pointer; color: var(--text); }
+.dd-item:hover { background: rgba(251,191,36,0.12); }
+.dd-item.selected { color: var(--accent); font-weight: 600; }
+/* The avatar/wrist boxes are a dark 3D surface in BOTH themes, so this text keeps a light colour */
+.avatar-fallback { display: flex; align-items: center; justify-content: center; height: 100%; padding: 20px; text-align: center; color: #94a3b8; line-height: 1.6; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; flex: 0 0 auto; }
+.panel h2 { margin: 2px 0 6px; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.6px; cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; }
+.panel h2::after { content: '▾'; font-size: 12px; color: var(--muted); transition: transform 0.15s; }
+.panel.collapsed h2 { margin: 0; height: 18px; line-height: 18px; }
+.panel.collapsed { padding-top: 8px; padding-bottom: 8px; } /* collapsed panel height = collapsed card height (8 + 18 + 8 px) */
+.panel.collapsed h2::after { transform: rotate(-90deg); }
+.panel.collapsed > :not(h2) { display: none; }
+/* 좌우 캡션이 두 줄로 접히지 않도록 슬라이더 폭을 양보한다(2026-08-26 사용자 요청).
+   현재 왼쪽 열에서 가장 긴 캡션 = "시트 가로 위치 (0=정중선, +엄지쪽)" 184px,
+   가장 긴 값 = "1.00 (완전 순응·기존)" 138px — 두 열을 그 폭으로 고정하고 남는 폭을 슬라이더에 준다.
+   1fr 하한을 0으로 둔 이유: 좁은 데스크톱에서 슬라이더가 아니라 행 전체가 넘치는 것을 막기 위함. */
+.row { display: grid; grid-template-columns: 186px minmax(0, 1fr) 140px; gap: 8px; align-items: center; margin: 5px 0; }
+.row label { color: var(--muted); }
+.row.hidden { display: none; }
+.row.disabled { opacity: 0.45; }
+.row select, .row input[type=range] { width: 100%; }
+.row select { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; }
+.row .dd { grid-column: 2 / span 2; }
+.layout-ctl { grid-column: 2 / span 2; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.layout-ctl .dd, .layout-ctl select { flex: 1 1 auto; min-width: 0; width: auto; }
+.layout-ctl .btn { flex: 0 0 auto; white-space: nowrap; padding: 4px 10px; font-size: 11.5px; }
+/* 체형 프리셋 (자세/움직임 카드) — 좁은 카드에서도 줄바꿈으로 흘러가게 */
+.body-presets { grid-column: 2 / span 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
+.body-presets .btn { flex: 0 1 auto; white-space: nowrap; padding: 3px 8px; font-size: 11px; }
+.row output { font-family: ui-monospace, Menlo, monospace; text-align: right; color: var(--text); }
+input[type=range] { accent-color: var(--accent); }
+button#pause { margin-top: 10px; width: 100%; padding: 8px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+button#pause:hover { border-color: var(--accent); }
+.hint { color: var(--muted); font-size: 11px; margin: 8px 0 0; }
+
+.right { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; align-items: start; /* cards keep their own fixed height, never stretched by a taller neighbour */ }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; box-sizing: border-box; }
+.card > h3 { height: 18px; line-height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.card h3 { margin: 0 0 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.card canvas { display: block; width: 100%; height: 150px; }
+/* Feasibility chips (can the PWV be measured with this array + sampling rate?) */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; flex: 0 0 auto; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; line-height: 16px; border: 1px solid; white-space: nowrap; }
+.chip::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.ok { color: var(--ok); border-color: rgba(52,211,153,0.5); background: rgba(52,211,153,0.1); }
+.chip.warn { color: var(--warn); border-color: rgba(251,191,36,0.5); background: rgba(251,191,36,0.1); }
+.chip.bad { color: var(--bad); border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.1); }
+.chip.info { color: var(--muted); border-color: var(--border); background: rgba(148,163,184,0.08); }
+.chip.info::before { display: none; }
+/* fixed widths + tabular digits so chips never jitter as values change */
+.chip { font-variant-numeric: tabular-nums; font-family: ui-monospace, Menlo, monospace; justify-content: center; box-sizing: border-box; }
+.chip.w1 { width: 230px; }
+.chip.w2 { width: 250px; }
+/* Square sub-cards: snapshot (heatmap / contour / 3D) and the per-electrode Δt table, each as wide as tall.
+   The aspect ratio is put on the ROW (2:1 for two squares) so the grid row really is that tall and the
+   control bar below is pushed down instead of being overlapped. */
+/* The GRAPHIC areas themselves are the squares (width = height), so both sub-cards' plots are
+   identical in size regardless of caption / chip heights above them. */
+/* Both sub-cards are squares (row = 2:1) with identical one-line captions, so the graphic areas
+   (flex: 1) are identical too. Feasibility chips live above the row, not inside a sub-card. */
+.card.array > .subrow { aspect-ratio: 2 / 1; min-height: 0; align-items: stretch; }
+.sub.square { display: flex; flex-direction: column; min-height: 0; height: 100%; box-sizing: border-box; }
+.sub.square > h4 { flex: 0 0 auto; height: 18px; line-height: 18px; }
+.viz-stack { position: relative; flex: 1 1 auto; height: 0; min-height: 0; width: 100%; }
+.card.wide2 .sub.square .viz-stack canvas, .viz-stack canvas { position: absolute; inset: 0; width: 100%; height: 100% !important; }
+.card.array > .chips { margin: 0 0 8px; justify-content: flex-end; }
+/* Card-level control bar under the two square sub-cards: full card width, control groups
+   never break mid-label; on narrow screens whole groups wrap to the next line. */
+.card.array > .viz-foot.ctrlbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 22px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+.card.array > .viz-foot.ctrlbar .radio-group.inline { white-space: nowrap; gap: 8px; }
+.sub.square .viz-foot { flex: 0 0 auto; }
+.card.wide2 .sub.square #c-timing { flex: 1 1 auto; height: 0 !important; min-height: 0; width: 100%; display: block; }
+.sub.snap > h4 { display: flex; align-items: center; gap: 10px; overflow: visible; }
+.sub.snap > h4 .ttl { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Every card collapses by clicking its heading (radios/labels inside the heading don't toggle) */
+.card > h3 { cursor: pointer; user-select: none; }
+.card > h3::after { content: '▾'; float: right; color: var(--muted); margin-left: 8px; transition: transform 0.15s; }
+.card.collapsed > h3::after { transform: rotate(-90deg); }
+.card.collapsed > :not(h3) { display: none !important; } /* !important: beats .subrow/.viz-foot display rules so sub-cards collapse too */
+.card.collapsed { aspect-ratio: auto; }
+.radio-group { display: inline-flex; gap: 10px; font-weight: 400; color: var(--text); flex: 0 0 auto; }
+.radio-group label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.radio-group input { accent-color: var(--accent); margin: 0; }
+.viz-foot { margin-top: 4px; font-size: 11px; line-height: 16px; color: var(--muted); }
+.wave-info { font-size: 10.5px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; margin: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.radio-group.inline { float: none; display: inline-flex; gap: 12px; }
+.radio-group .lbl { color: var(--muted); }
+.bars { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
+.emg .emg-body { display: grid; grid-template-columns: 3fr 2fr; gap: 10px; align-items: center; height: 150px; }
+.emg canvas { height: 150px; }
+.emg .bars.compact { padding-top: 0; gap: 6px; }
+.emg .bars.compact .bar-row { grid-template-columns: 96px 1fr; font-size: 10px; }
+.emg .bars.compact .bar { height: 9px; }
+/* IMU: two stacked scopes inside the same 150 px body as every other card (72 + 6 + 72) */
+.imu canvas { height: 72px !important; }
+.imu canvas + canvas { margin-top: 6px; }
+.bars.compact { gap: 3px; padding-top: 8px; }
+.bars.compact .bar-row { font-size: 10px; grid-template-columns: 118px 1fr; }
+.bars.compact .bar { height: 7px; }
+.bar-row { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; font-size: 11px; color: var(--muted); }
+.bar { height: 10px; background: var(--hover); border-radius: 4px; overflow: hidden; }
+.bar .fill { height: 100%; width: 0%; background: linear-gradient(90deg, #34d399, #fbbf24, #f87171); transition: width 0.12s linear; }
+
+.anatomy .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.card.collapsed > h3 { margin-bottom: 0; }
+/* Drag-and-drop reordering */
+.card > h3[draggable] { cursor: grab; }
+.card.dragging { opacity: 0.45; }
+.card.drop-before { box-shadow: 0 -3px 0 0 var(--accent); }
+.card.drop-after { box-shadow: 0 3px 0 0 var(--accent); }
+.anatomy h4 { margin: 6px 0; font-size: 12px; color: var(--text); }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+th, td { padding: 3px 6px; border-bottom: 1px solid var(--border); text-align: left; }
+th { color: var(--muted); font-weight: 600; }
+td:nth-child(n+2) { font-family: ui-monospace, Menlo, monospace; }
+
+/* ---------- Thin top menu bar ---------- */
+.menubar { flex: 0 0 28px; height: 28px; display: flex; align-items: stretch; gap: 2px; padding: 0 10px; background: var(--bg2); border-bottom: 1px solid var(--border); font-size: 12px; user-select: none; position: relative; z-index: 1500; } /* above the full-page designer and modals so the menus keep working */
+.mb-brand { display: flex; align-items: center; padding: 0 10px 0 2px; margin-right: 6px; color: var(--muted); font-weight: 600; letter-spacing: 0.3px; border: 0; border-right: 1px solid var(--border); border-radius: 0; background: none; font: inherit; font-weight: 600; cursor: pointer; }
+.mb-brand:hover { color: var(--text); }
+.mb-menu { position: relative; display: flex; }
+.mb-btn { background: none; border: 0; color: var(--text); padding: 0 10px; height: 28px; cursor: pointer; border-radius: 4px 4px 0 0; font: inherit; }
+.mb-btn:hover, .mb-menu.open > .mb-btn { background: var(--hover); }
+.mb-list { display: none; position: absolute; top: 28px; left: 0; min-width: 230px; background: var(--surface); border: 1px solid var(--border2); border-radius: 0 6px 6px 6px; box-shadow: 0 10px 28px var(--shadow); padding: 4px; z-index: 1600; }
+.mb-menu.open > .mb-list { display: block; }
+.mb-item { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; background: none; border: 0; color: var(--text); padding: 6px 10px 6px 6px; border-radius: 4px; cursor: pointer; font: inherit; text-decoration: none; white-space: nowrap; box-sizing: border-box; }
+.mb-item:hover { background: var(--hover); }
+.mb-check { display: inline-block; width: 12px; color: var(--link); font-size: 11px; }
+.mb-sep { height: 1px; background: var(--border2); margin: 4px 6px; }
+.mb-status { margin-left: auto; display: flex; align-items: center; color: var(--muted); font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+/* Reference modal */
+.modal-box.wide { width: 1100px; max-width: calc(100vw - 32px); max-height: calc(100vh - 40px); display: flex; flex-direction: column; }
+.refs-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.refs-head h3 { margin: 0; }
+.refs-intro { color: var(--muted); font-size: 12px; margin: 6px 0 8px; }
+.refs-body { overflow: auto; min-height: 0; padding-right: 6px; }
+.refs-body h4 { margin: 14px 0 6px; font-size: 12.5px; color: var(--accent); }
+.refs-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.refs-table th, .refs-table td { border-bottom: 1px solid var(--border); padding: 5px 6px; vertical-align: top; text-align: left; }
+.refs-table th { color: var(--muted); font-weight: 600; font-size: 11px; }
+.refs-table td.mono { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: var(--text); }
+.refs-table td.muted { color: var(--muted); font-size: 11px; }
+.refnum { color: var(--link); text-decoration: none; font-family: ui-monospace, Menlo, monospace; }
+.refnum:hover { text-decoration: underline; }
+.refs-list { font-size: 12px; line-height: 1.45; padding-left: 26px; }
+.refs-list li { margin: 3px 0; padding: 2px 4px; border-radius: 4px; transition: background 0.3s; }
+.refs-list li.hl { background: var(--hl); }
+
+/* ---------- Patch electrode designer ---------- */
+/* Designer = full-page view under the menubar (not a floating dialog); other dialogs stack above it */
+.modal.pd { top: 28px; background: var(--bg); align-items: stretch; justify-content: stretch; padding: 0; z-index: 1000; }
+.modal.refs, .modal.docview, #calibModal { z-index: 1200; }
+.modal-box.pd-box { width: 100%; max-width: none; height: 100%; max-height: none; border-radius: 0; border: 0; box-shadow: none; display: flex; flex-direction: column; padding: 10px 16px 12px; }
+.pd-body { display: grid; grid-template-columns: 180px 1fr 300px; gap: 12px; flex: 1 1 auto; min-height: 0; margin-top: 8px; }
+.pd-thumbs { overflow-y: auto; overflow-x: hidden; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.pd-thumbs-title { font-size: 11.5px; color: var(--accent); margin: 2px 0 0; }
+.pd-thumb { border: 1px solid var(--border); border-radius: 6px; padding: 5px; background: var(--card); cursor: pointer; }
+.pd-thumb:hover { border-color: #64748b; }
+.pd-thumb.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.pd-thumb-cv { display: block; width: 100%; border-radius: 4px; }
+.pd-thumb-cap { font-size: 11px; color: var(--text); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd-thumb-sub { font-size: 10px; color: var(--muted); }
+.pd-left { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.pd-canvas { flex: 1 1 auto; min-height: 0; width: 100%; height: 100%; border: 1px solid var(--border); border-radius: 6px; background: var(--plot); cursor: crosshair; touch-action: none; }
+.pd-status { height: 18px; font-size: 11px; color: var(--ok); opacity: 0; transition: opacity 0.2s; margin-top: 4px; }
+.pd-status.on { opacity: 1; }
+.pd-right { overflow-y: auto; overflow-x: hidden; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.pd-group { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px 8px; margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pd-group legend { color: var(--accent); font-size: 11.5px; padding: 0 4px; }
+.pd-field { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 11.5px; color: var(--muted); width: 100%; }
+.pd-field input[type=number], .pd-field select { width: 110px !important; }
+.pd-field input[type=text] { width: 100% !important; max-width: 180px; }
+.pd-field input, .pd-field select { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 5px; font: inherit; font-size: 11.5px; }
+.pd-field input:disabled, .pd-field select:disabled { opacity: 0.45; }
+.pd-row { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; align-items: center; }
+.pd-row select { flex: 1 1 auto; min-width: 0; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; font: inherit; font-size: 11.5px; }
+.pd-hint { width: 100%; font-size: 10.5px; color: var(--muted); line-height: 1.35; }
+.pd-group .btn { padding: 4px 10px; font-size: 11.5px; }
+.row.disabled { opacity: 0.45; pointer-events: none; }
+#layoutRow .btn { padding: 2px 8px; font-size: 11px; margin-left: 6px; }
+/* In-app markdown viewer */
+.refs-body.md { font-size: 12.5px; line-height: 1.5; }
+.refs-body.md h1 { font-size: 16px; margin: 4px 0 8px; color: var(--accent); }
+.refs-body.md h2 { font-size: 14px; margin: 14px 0 6px; color: var(--accent); }
+.refs-body.md h3 { font-size: 13px; margin: 12px 0 4px; color: var(--accent2); }
+.refs-body.md p { margin: 6px 0; }
+.refs-body.md code { background: var(--hover); padding: 1px 4px; border-radius: 3px; font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+.refs-body.md pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; overflow: auto; }
+.refs-body.md pre code { background: none; padding: 0; }
+.refs-body.md table { border-collapse: collapse; font-size: 11.5px; margin: 6px 0; }
+.refs-body.md th, .refs-body.md td { border: 1px solid var(--border); padding: 4px 6px; vertical-align: top; text-align: left; }
+.refs-body.md th { color: var(--muted); background: var(--surface); }
+.refs-body.md ul, .refs-body.md ol { padding-left: 22px; margin: 4px 0; }
+.refs-body.md a { color: var(--link); }
+
+.pd-seg { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
+.pd-seg-label { font-size: 11.5px; color: var(--muted); margin-right: 4px; }
+/* 손목 폭 가정 read-out (사진 정합 스케일) — 체형에서 유도 */
+.pd-width-note { font-size: 11.5px; color: var(--muted); margin-left: 10px; white-space: nowrap; }
+.pd-seg .btn { padding: 4px 10px; font-size: 11.5px; }
+
+.pd-gear { width: 24px; height: 24px; padding: 0 !important; display: inline-flex; align-items: center; justify-content: center; margin-right: 2px; }
+.pd-gear svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+
+.sim-banner { margin: 4px 0 0 !important; font-size: 10px !important; color: #fbbf24 !important; border: 1px solid rgba(251,191,36,0.35); border-radius: 4px; padding: 1px 5px; display: inline-block; cursor: help; white-space: normal; line-height: 1.3 !important; }
+
+.card.collapsed > h3 { margin: 0; }
+.card.collapsed { padding-top: 8px; padding-bottom: 8px; }
+
+/* ---------------------------------------------------------------------------
+   Narrow / mobile layout (ROADMAP §2.3-16).
+   Wide (> 1100 px): the page itself never scrolls — two fixed columns, each with its
+   own custom scrollbar (js/scrollbars.js).
+   Narrow (≤ 1100 px): that model does not fit, so the PAGE scrolls natively, the two
+   columns stack into one and the custom column scrollbars are folded away by
+   js/scrollbars.js (`setNarrow`), which re-targets the shortcut-icon rail to the page
+   scroller instead of hiding the feature.                                          */
+@media (max-width: 1100px) {
+  html, body { height: auto; }
+  body { display: block; height: auto; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; }
+  /* minmax(0,1fr) everywhere a grid track holds nowrap content: otherwise the auto minimum of the
+     BP card / metric tiles widens the header past the viewport and the text is clipped. */
+  header { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 8px 34px 8px 12px; } /* right pad = fixed shortcut rail */
+  .brand h1 { font-size: 15px; }
+  .brand p { overflow-wrap: anywhere; }
+  /* min() so a viewport narrower than one tile still yields a single fitting column (430 px showed a
+     clipped 4th column: 4×92 + 3×6 = 386 > 368 available), and the tile's own text may never set the
+     auto minimum — otherwise a long monospace value re-widens the grid past the viewport. */
+  .metrics { grid-template-columns: repeat(auto-fill, minmax(min(92px, 100%), 1fr)); grid-template-rows: auto; gap: 6px; min-width: 0; }
+  .m { width: auto; min-width: 0; white-space: normal; height: auto; min-height: 56px; }
+  .m b, .m span, .m label, .m i { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .m.dense b, .m b { overflow-wrap: anywhere; }
+  .m.big { grid-column: 1 / -1; grid-row: auto; width: auto; height: auto; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .m.big .col + .col { border-left: 0; border-top: 1px solid var(--border); padding-top: 5px; }
+  .m.big .kv { grid-template-columns: auto minmax(0, 1fr); }
+  .menubar { flex-wrap: nowrap; }
+  .mb-btn, .mb-brand { white-space: nowrap; }
+  .mb-menu, .mb-brand { flex: 0 0 auto; }
+  main { display: block; height: auto; min-height: 0; min-width: 0; padding: 10px 12px 28px; }
+  .scol { display: block; }
+  .scol > .vsb { display: none; }
+  .left, .right { overflow: visible; min-height: 0; padding-right: 0; }
+  .chart-grid { grid-template-columns: minmax(0, 1fr); }
+  .card, .card.wide2 .sub, .panel { min-width: 0; }
+  /* minmax(0,…) again: the nowrap sub-card captions would otherwise set an auto minimum wider than the phone */
+  .card.wide2 .subrow, .card.wide2 .subrow.r53, .anatomy .two, .emg .emg-body { grid-template-columns: minmax(0, 1fr); }
+  .card.wide2 .sub h4 { white-space: normal; }
+  .opts .grp { white-space: normal; }
+  .emg .emg-body { height: auto; }
+  .card.wide2.h248, .card.h248.spo2, .card.wide2.sensors.h248 { height: auto; display: block; }
+  .opts label.sld { grid-template-columns: 62px 1fr 90px; }
+  .card.wide2.h248 .sub canvas, .card.h248.spo2 > canvas { height: 140px !important; }
+  .card.wide2.h248 .sub.imu canvas { height: 88px !important; }
+  .card.array > .subrow { aspect-ratio: auto; }
+  .card.array .sub.square { height: min(78vw, 340px); }
+  .row { grid-template-columns: 96px 1fr 56px; gap: 6px; }
+  .wrist-foot { white-space: normal; }
+  .wf-row { flex-wrap: wrap; gap: 4px 10px; }
+  .avatar { flex: 0 0 260px; height: 260px; }
+  .panel.wrist-card .wrist, .wrist { flex-basis: 320px; height: 320px; }
+  .modal-box.wide { width: 100%; }
+  /* Patch designer: a desktop tool, but it must stay READABLE and scrollable on a phone —
+     one column, nothing allowed to shrink to zero, header controls wrap instead of squeezing. */
+  .modal-box.pd-box { padding: 8px 10px 10px; }
+  .pd-box > .refs-head { flex-wrap: wrap; row-gap: 6px; }
+  .pd-box > .refs-head > h3 { flex: 1 1 100%; font-size: 12.5px; }
+  .pd-seg, .pd-width-note { flex: 0 0 auto; }
+  .pd-width-note { margin-left: 0; white-space: normal; }
+  .pd-body { display: flex; flex-direction: column; overflow-y: auto; gap: 8px; }
+  .pd-body > * { flex: 0 0 auto; }
+  .pd-thumbs { flex-direction: row; overflow-x: auto; overflow-y: hidden; max-height: 124px; padding-bottom: 4px; }
+  .pd-thumbs-title { flex: 0 0 auto; align-self: center; white-space: nowrap; writing-mode: vertical-rl; }
+  .pd-thumb { min-width: 128px; flex: 0 0 auto; }
+  .pd-left { height: 340px; }
+  .pd-canvas { height: 300px; min-height: 300px; }
+  .pd-right { overflow: visible; min-width: 0; }
+  .pd-field { flex-wrap: wrap; }
+  .pd-field input[type=number], .pd-field select { width: 92px !important; }
+  .menubar { overflow-x: auto; overflow-y: hidden; }
+  .chip.w1, .chip.w2 { width: auto; min-width: 0; max-width: 100%; }
+  /* Shortcut-icon rail (js/scrollbars.js narrow mode): the page is the scroller */
+  .vsb.page-rail { display: block; position: fixed; right: 4px; top: 34px; bottom: 8px; width: 22px; z-index: 900; opacity: 0.94; }
+  body.narrow main { padding-right: 34px; } /* keep the cards clear of the fixed rail */
+}
+@media (max-width: 520px) {
+  /* Fixed 3 columns, not auto-fill: at 430 px auto-fill still resolved to 4 tracks and clipped the
+     rightmost tile (the fixed shortcut rail eats 34 px that auto-fill's track math did not see). */
+  .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .row { grid-template-columns: 1fr; }
+  .row output { text-align: left; }
+  .row .dd, .layout-ctl, .body-presets { grid-column: 1; }
+  .opts .grp { white-space: normal; }
+}
+
+/* ---------------------------------------------------------------------------
+   Scenario preset bar + timeline scrubber (ROADMAP §2.3-13, js/scenarioPlayer.js) */
+.scen-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 5px 12px; background: var(--panel); border-bottom: 1px solid var(--border); font-size: 11.5px; }
+.scen-bar.hidden { display: none; }
+.scen-bar .scen-sel { min-width: 210px; max-width: 320px; flex: 0 1 auto; }
+.scen-bar .scen-sel select { width: 100%; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; font: inherit; }
+.scen-bar .btn { padding: 3px 9px; font-size: 11.5px; }
+.scen-bar .btn.play { min-width: 68px; }
+.scen-time { font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; color: var(--accent); white-space: nowrap; }
+.scen-note { color: var(--muted); flex: 1 1 220px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scen-track { position: relative; flex: 1 1 260px; min-width: 180px; height: 20px; cursor: pointer; touch-action: none; }
+.scen-track .rail { position: absolute; left: 0; right: 0; top: 8px; height: 6px; border-radius: 3px; background: var(--track-bg); border: 1px solid var(--border); }
+.scen-track .fill { position: absolute; left: 0; top: 8px; height: 6px; border-radius: 3px; background: var(--accent); opacity: 0.75; }
+.scen-track .tick { position: absolute; top: 3px; width: 2px; height: 16px; background: var(--border2); border-radius: 1px; }
+.scen-track .tick.on { background: var(--link); }
+.scen-track .head { position: absolute; top: 2px; width: 8px; height: 18px; margin-left: -4px; border-radius: 3px; background: var(--accent); box-shadow: 0 0 0 1px var(--bg); }
+.scen-chip { font-family: ui-monospace, Menlo, monospace; font-size: 10px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; cursor: help; }
+.scen-chip.warn { color: var(--warn); border-color: rgba(251,191,36,0.55); }
+.scen-state { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 240px; min-width: 0; }
+@media (max-width: 1100px) { .scen-bar { padding: 5px 34px 5px 10px; } .scen-note { flex-basis: 100%; } }
+
+/* ---------------------------------------------------------------------------
+   ⑥ Live sensor stream status bar (ROADMAP §3-5, js/sources/websocket.js).
+   Sits directly under the menubar while a live stream is attached and shows the four things a live
+   transport can do to a signal that a simulator never can: connection state, latency, frame loss and
+   configuration mismatch. Colour follows the connection state (green connected / amber reconnecting
+   / red stalled or error) — the same ok/warn/bad tokens the attachment chips already use. */
+.livebar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 5px 12px; background: var(--panel); border-bottom: 1px solid var(--border); font-size: 11.5px; }
+.livebar.hidden { display: none; }
+.livebar .lv-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: 0 0 auto; box-shadow: 0 0 0 2px rgba(148,163,184,0.18); }
+.livebar .lv-state { font-weight: 600; color: var(--muted); white-space: nowrap; }
+.livebar[data-state="connected"] .lv-dot { background: var(--ok); box-shadow: 0 0 0 2px rgba(52,211,153,0.22); }
+.livebar[data-state="connected"] .lv-state { color: var(--ok); }
+.livebar[data-state="connecting"] .lv-dot,
+.livebar[data-state="reconnecting"] .lv-dot { background: var(--warn); box-shadow: 0 0 0 2px rgba(251,191,36,0.22); animation: lv-pulse 1s ease-in-out infinite; }
+.livebar[data-state="connecting"] .lv-state,
+.livebar[data-state="reconnecting"] .lv-state { color: var(--warn); }
+.livebar[data-state="stalled"] .lv-dot, .livebar[data-state="error"] .lv-dot { background: var(--bad); box-shadow: 0 0 0 2px rgba(248,113,113,0.22); }
+.livebar[data-state="stalled"] .lv-state, .livebar[data-state="error"] .lv-state { color: var(--bad); }
+@keyframes lv-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.livebar .lv-url { color: var(--link); font-size: 10.5px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.livebar .lv-kv { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; cursor: help; }
+.livebar .lv-kv > span { color: var(--muted); font-size: 10.5px; }
+.livebar .lv-kv > b { font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
+.livebar .lv-warn { color: var(--warn); flex: 1 1 200px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; }
+.livebar .lv-stop { padding: 3px 9px; font-size: 11.5px; margin-left: auto; }
+@media (max-width: 1100px) { .livebar { padding: 5px 34px 5px 10px; } .livebar .lv-url { flex-basis: 100%; max-width: none; } }
+
+/* ---------------------------------------------------------------------------
+   Data export dialog (ROADMAP §2.3-14, js/exportData.js) */
+.exp-grid { display: grid; grid-template-columns: 150px 1fr; gap: 6px 10px; align-items: center; margin: 8px 0; font-size: 12px; }
+.exp-grid > span { color: var(--muted); }
+.exp-grid b { font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+.exp-opts { display: flex; flex-direction: column; gap: 5px; margin: 8px 0; font-size: 12px; }
+.exp-opts label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.exp-opts input { accent-color: var(--accent); }
+.exp-warn { color: var(--warn); font-size: 11px; line-height: 1.45; margin: 6px 0 0; }
+.exp-note { color: var(--muted); font-size: 11px; line-height: 1.45; margin: 6px 0 0; }
+.exp-note code { background: var(--code-bg); padding: 1px 4px; border-radius: 3px; font-family: ui-monospace, Menlo, monospace; }
+
+/* 두 그래프의 시작 y 와 높이를 맞춘다 — 옵션 줄 수가 서로 달라도 캔버스는 같은 크기로 (2026-08-25). */
+.sensors .sub-optwrap { min-height: 68px; }
+@media (max-width: 1100px) { .sensors .sub-optwrap { min-height: 0; } }
+
+/* 정전용량 그래프와 PPG 그래프의 **높이를 정확히 같게** (2026-08-25 사용자 요청).
+   옵션 줄 수가 서로 다르므로 각 서브가 제 높이를 따로 계산하면 캔버스 높이가 어긋난다.
+   subgrid 로 두 서브가 [제목 / 옵션 / 캔버스] 세 행을 공유하게 하면, 옵션 행은 둘 중 높은 쪽에
+   맞춰지고 캔버스 행(1fr)은 양쪽이 같은 높이를 받는다. */
+.card.wide2.sensors.h248 > .subrow { grid-template-rows: auto auto 1fr; align-items: stretch; }
+.card.wide2.sensors.h248 > .subrow > .sub { display: grid; grid-template-rows: subgrid; grid-row: span 3; min-height: 0; }
+.card.wide2.sensors.h248 .sub-optwrap { min-height: 0; align-self: start; }
+.card.wide2.sensors.h248 .sub canvas { height: 100% !important; min-height: 0; align-self: stretch; }
+@media (max-width: 1100px) {
+  .card.wide2.sensors.h248 > .subrow > .sub { display: block; }
+  .card.wide2.sensors.h248 .sub canvas { height: 140px !important; }
+}
+
+/* 센서 파형 카드 3차 정리 (2026-08-25 사용자 요청)
+   ① 옵션은 세로로 나열 — 한 항목당 한 줄, 그룹 라벨이 머리글.
+   ② 유도값은 한 줄로 길게 늘어놓지 않고 두 줄로 감싸 고정.
+   ③ **카드 가로가 숫자에 따라 들쭉날쭉하던 원인** = `8fr 4fr` 트랙의 자동 최소폭이 min-content 라,
+      nowrap 인 긴 숫자 문자열이 트랙을 밀어냈다. minmax(0, …) 로 최소폭을 0 으로 고정한다. */
+.card.wide2 .subrow, .card.wide2 .subrow.r53 { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); }
+.card.wide2.sensors.h248 .sub-opts .grp { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; white-space: nowrap; min-width: 0; }
+.card.wide2.sensors.h248 .sub-opts .lbl { margin-bottom: 1px; }
+.card.wide2.sensors.h248 .sub-opts.optics .grp { display: block; }
+.card.wide2.sensors.h248 .ellip {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  white-space: normal; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; min-height: 2.7em;
+}
+
+/* `.sub-opts .grp` 의 nowrap 이 더 구체적이라 유도값이 두 줄로 감싸지지 않았다 — 특이도를 맞춘다.
+   그리고 옵션을 세로로 나열하면서 줄어든 그래프 공간을 위해 카드 높이를 다시 키운다
+   (258 → 387 → 470 px; 그래프 높이는 subgrid 로 양쪽 동일). */
+.card.wide2.sensors.h248 { height: 470px; }
+.card.wide2.sensors.h248 .sub-opts .ellip {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  white-space: normal; overflow: hidden; line-height: 1.35; min-height: 2.7em; align-items: initial;
+}
+@media (max-width: 1100px) { .card.wide2.sensors.h248 { height: auto; } }
+
+/* 두 메인 그래프의 **가로도 동일**하게 (2026-08-25 사용자 요청): 기존 8fr:4fr → 1:1.
+   정전용량 캔버스는 내부에 [채널 스트립 | 결합 파형 | 정보] 세 구획을 스스로 그리므로 폭이 줄면
+   그만큼 좁게 렌더된다(캔버스가 컨테이너를 따라가므로 코드 변경은 불필요). */
+.card.wide2.sensors.h248 > .subrow.r53 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* 센서 파형 카드 4차 (2026-08-25 사용자 요청)
+   ① PPG 옵션: 노이즈/아티팩트(좌) · 피부 광학·관류(우) 2열 배치.
+   ② 유도값: 설명(라벨)과 측정값을 분리하고, 값은 3열 × 2행 고정 칩이라 숫자가 바뀌어도
+      줄 수·폭이 흔들리지 않는다. */
+.card.wide2.sensors.h248 .sub-opts.twocol { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 14px; align-items: start; }
+.card.wide2.sensors.h248 .sub-opts .ocol { min-width: 0; }
+.card.wide2.sensors.h248 .sub-opts.derived { display: block; margin-top: 2px; }
+.card.wide2.sensors.h248 .sub-opts.derived .lbl { display: block; margin-bottom: 2px; }
+.card.wide2.sensors.h248 .vals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px 10px; }
+.card.wide2.sensors.h248 .kvp { display: flex; align-items: baseline; gap: 4px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.card.wide2.sensors.h248 .kvp i { font-style: normal; color: var(--muted); }
+.card.wide2.sensors.h248 .kvp b { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* 좌우 **메인 파형의 폭을 동일**하게 (2026-08-25 사용자 요청).
+   좌측 캔버스는 [채널 스트립 150 + 간격 8 + 메인 파형 + 간격 8 + 정보 176] 구조라(charts.js 고정 폭),
+   두 서브를 같은 폭으로 두면 메인 파형만 342 px 좁아진다. 좌측 트랙에 그 342 px 를 얹고 나머지를
+   1:1 로 나눈다:  L = (C − gap + 342)/2,  R = (C − gap − 342)/2  →  L − 342 = R. */
+.card.wide2.sensors.h248 > .subrow.r53 {
+  gap: 10px;
+  grid-template-columns: calc((100% - 10px + 342px) / 2) minmax(0, 1fr);
+}
+@media (max-width: 1100px) {
+  .card.wide2.sensors.h248 > .subrow.r53 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* 메인 파형 폭을 맞추느라 PPG 서브가 좁아졌으므로(≈370 px) 그 안의 2열 옵션을 그 폭에 맞춘다:
+   노이즈 열은 짧은 라벨이라 좁게, 광학 열은 슬라이더가 있어 넓게. 유도값 칩은 2열 × 3행.
+   (2026-08-25) */
+.card.wide2.sensors.h248 .sub-opts.twocol { grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr); gap: 2px 10px; }
+.card.wide2.sensors.h248 .opts label.sld { grid-template-columns: 58px 66px minmax(0, 1fr); gap: 5px; }
+.card.wide2.sensors.h248 .opts .val { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card.wide2.sensors.h248 .vals { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px 12px; }
+
+/* 정전용량 어레이: 캔버스 안에 있던 "계산값" 패널을 옵션 오른쪽 넓은 공간으로 옮겼다(2026-08-25 요청).
+   메인 파형이 그만큼 넓어지고(charts.js infoW = 0), 값은 잘리지 않는 HTML 로 렌더된다. */
+.card.wide2.sensors.h248 .sub-opts.capopts { grid-template-columns: minmax(0, 150px) minmax(0, 1fr); }
+.card.wide2.sensors.h248 .capinfo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; margin-top: 1px;
+  font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; font-size: 10px; line-height: 1.45; color: var(--text); }
+.card.wide2.sensors.h248 .capinfo .ci { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card.wide2.sensors.h248 .capinfo .ci.lg { display: flex; align-items: center; gap: 5px; }
+.card.wide2.sensors.h248 .capinfo .ci.lg i { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 2px; }
+
+/* 좌측 캔버스에서 정보 패널을 HTML 로 뺐으므로 추가 폭은 [스트립 150 + 간격 8] = 158 px 만 필요하다. */
+.card.wide2.sensors.h248 > .subrow.r53 { grid-template-columns: calc((100% - 10px + 158px) / 2) minmax(0, 1fr); }
+
+/* 피부 톤 / 손가락 온도 슬라이더를 실제 색 스펙트럼으로 (2026-08-25 요청).
+   ⚠ 표시용 예시 색이며 보정된 피부 반사율·열화상 값이 아니다. 썸 색은 JS 가 --skin 으로 넣는다. */
+#ppgFitz, #ppgTemp { -webkit-appearance: none; appearance: none; height: 13px; background: transparent; cursor: pointer; }
+#ppgFitz::-webkit-slider-runnable-track, #ppgTemp::-webkit-slider-runnable-track { height: 7px; border-radius: 4px; border: 1px solid var(--border2); }
+#ppgFitz::-webkit-slider-runnable-track { background: linear-gradient(90deg, #f6e0d0, #f0d0b8, #e0b48f, #c99065, #a06a45, #6b4530); }
+#ppgTemp::-webkit-slider-runnable-track { background: linear-gradient(90deg, #4a7fd4, #59a6d8, #8fc7c2, #dfc39a, #e08a5a, #d4452e); }
+#ppgFitz::-webkit-slider-thumb, #ppgTemp::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 13px; height: 13px; border-radius: 50%;
+  margin-top: -4px; background: var(--skin, #c9a07c); border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--border2); }
+/* 혈압 숫자 오른쪽으로 옮긴 부착 상태 칩 */
+.m.big .col.algo b + .att { margin-left: 6px; vertical-align: 3px; }
+
+/* 혈압 숫자와 부착 상태 칩을 같은 줄에 (2026-08-25 요청) — .col 이 세로 flex 라 형제로 두면 줄이 나뉜다. */
+.m.big .col.algo .bprow { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.m.big .col.algo .bprow .att { margin-left: 0; flex: 0 1 auto; }
+/* 슬라이더 폭은 그리드 열이 정한다(인라인 88px 제거) */
+.card.wide2.sensors.h248 .opts label.sld input[type="range"] { width: 100%; min-width: 0; }
+
+/* 혈압 숫자 옆 칩 — 같은 줄을 유지하도록 폭을 최소화(문구는 축약, 전체 의미는 title). */
+.m.big .col.algo .bprow .att { font-size: 8.5px; padding: 0 4px; line-height: 11px; max-width: 96px; }
+
+/* 캡션 열을 max-content 로 — "손가락 온도"(≈62 px)가 58 px 고정 열을 넘어 슬라이더 위로 겹치던 문제
+   (2026-08-25 사용자 보고). 캡션은 필요한 만큼만, 슬라이더가 남는 폭을 flex 로 가져간다. */
+.card.wide2.sensors.h248 .opts label.sld { grid-template-columns: max-content minmax(44px, 1fr) minmax(0, 88px); gap: 6px; }
+.card.wide2.sensors.h248 .opts label.sld > span { white-space: nowrap; overflow: hidden; }
+
+/* 슬라이더를 최대한 길게 (2026-08-25 요청): 캡션과 값은 윗줄(좌·우), 슬라이더는 그 아래 **열 전체 폭**.
+   캡션이 슬라이더와 같은 줄을 다투지 않으므로 겹침도 원천적으로 불가능하다. */
+.card.wide2.sensors.h248 .opts label.sld {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "cap val" "sld sld";
+  gap: 0 8px; margin-top: 3px;
+}
+.card.wide2.sensors.h248 .opts label.sld > span { grid-area: cap; }
+.card.wide2.sensors.h248 .opts label.sld .val { grid-area: val; text-align: right; min-width: 0; }
+.card.wide2.sensors.h248 .opts label.sld input[type="range"] { grid-area: sld; width: 100%; margin-top: 1px; }
+
+/* 색 스펙트럼이 잘 보이도록 트랙을 두껍게 (2026-08-25 요청). 두 슬라이더는 같은 행 전체 폭을 쓰므로
+   길이는 항상 동일하다. */
+#ppgFitz, #ppgTemp { height: 18px; }
+#ppgFitz::-webkit-slider-runnable-track, #ppgTemp::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; }
+#ppgFitz::-webkit-slider-thumb, #ppgTemp::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -3px; border-width: 3px; }
+
+/* 최종 배치 (2026-08-25 요청): [이름 68px] [슬라이더 = 남는 폭] [값 60px] 한 줄.
+   이름 열을 고정폭으로 두어 ① "손가락 온도"(≈64 px)가 넘쳐 슬라이더와 겹치지 않고,
+   ② 두 슬라이더의 시작 x 와 길이가 정확히 같아진다. 값 열도 고정폭이라 숫자가 바뀌어도 길이 불변. */
+.card.wide2.sensors.h248 .opts label.sld {
+  grid-template-columns: 68px minmax(50px, 1fr) 60px;
+  grid-template-areas: "cap sld val";
+  gap: 0 8px; align-items: center; margin-top: 4px;
+}
+.card.wide2.sensors.h248 .opts label.sld > span { grid-area: cap; }
+.card.wide2.sensors.h248 .opts label.sld input[type="range"] { grid-area: sld; width: 100%; margin: 0; }
+.card.wide2.sensors.h248 .opts label.sld .val { grid-area: val; text-align: right; }
+/* 더 두껍게 */
+#ppgFitz, #ppgTemp { height: 20px; }
+#ppgFitz::-webkit-slider-runnable-track, #ppgTemp::-webkit-slider-runnable-track { height: 14px; border-radius: 7px; }
+#ppgFitz::-webkit-slider-thumb, #ppgTemp::-webkit-slider-thumb { width: 18px; height: 18px; margin-top: -3px; border-width: 3px; }
+
+/* 회귀 수정 (2026-08-25): 가로 흔들림을 잡으려고 minmax(0,…) 를 넣으면서 `.card.wide2 .subrow` 전체에
+   8fr:4fr 을 적용해 버려, r53 이 아닌 카드들(혈역학·움직임·정전용량 스냅샷 등)의 두 서브 폭이 8:4 로
+   틀어졌다. 기본은 1:1, 8:4 는 r53 에만 — 최소폭 0 은 양쪽 모두 유지한다. */
+.card.wide2 .subrow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.card.wide2 .subrow.r53 { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); }
+
+/* 스크롤바 바로가기 아이콘: 카드가 접혀 있으면 점선 테두리 + 흐린 색으로 구분 (2026-08-25 요청).
+   펼쳐진 카드는 기존 그대로(실선·정상 명도), 현재 보고 있는 카드는 .active 로 강조된다. */
+.vsb-ic.is-collapsed { border-style: dashed; opacity: 0.6; }
+.vsb-ic.is-collapsed svg { stroke-width: 1.4; stroke-dasharray: 2.6 2.2; }
+.vsb-ic.is-collapsed:hover { opacity: 1; }
+.vsb-ic.active.is-collapsed { opacity: 0.85; }
+
+/* 접힘 복구 (2026-08-25 사용자 보고): `.card.wide2.sensors.h248`(4클래스) 의 고정 높이가
+   `.card.wide2.h248.collapsed`(3클래스) 보다 구체적이라, 접어도 470 px 가 그대로 남아
+   "카드는 그대로인데 내용만 사라진" 상태가 됐다. 접힘 규칙을 같은 구체도로 다시 선언한다. */
+.card.wide2.sensors.h248.collapsed { height: auto; display: block; }
+
+/* 시뮬레이션 설정 프리셋 모달 (js/simPresets.js) — 2026-08-25 */
+.modal.presets .preset-list { max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--card); margin: 6px 0; }
+.modal.presets .preset-row { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; padding: 6px 9px; background: none; border: 0;
+  border-bottom: 1px solid var(--border); color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.modal.presets .preset-row:last-child { border-bottom: 0; }
+.modal.presets .preset-row:hover { background: var(--hover); }
+.modal.presets .preset-row.sel { background: var(--hl); }
+.modal.presets .preset-row b { font-size: 12.5px; }
+.modal.presets .preset-row span { font-size: 10.5px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+.modal.presets .preset-empty { padding: 14px 10px; color: var(--muted); font-size: 11.5px; text-align: center; }
+.modal.presets .preset-name { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 4px; }
+.modal.presets .preset-name input { padding: 5px 8px; background: var(--card); color: var(--text); border: 1px solid var(--border2); border-radius: 6px; font: inherit; }
+.modal.presets .preset-status { min-height: 16px; margin-top: 6px; font-size: 11px; color: var(--ok); }
+.modal.presets .preset-status.bad { color: var(--bad); }
+.modal.presets .modal-actions { justify-content: space-between; }
+.modal.presets .modal-actions .btn:disabled { opacity: 0.45; cursor: default; }
+
+/* 설정 프리셋 모달은 화면 중앙이 아니라 "설정" 메뉴 버튼 아래에 붙는 팝오버로 띄운다(2026-08-25 요청).
+   오버레이는 투명하게 두어(클릭 시 닫기는 유지) 화면 전체가 어두워지지 않는다. */
+.modal.presets { align-items: flex-start; justify-content: flex-start; background: transparent; }
+.modal.presets .modal-box { box-shadow: 0 14px 44px var(--shadow-lg); }
+
+/* 상단 스트립 재배치 (2026-08-25 사용자 요청)
+   ① 작은 수치 카드는 3줄(라벨/값/단위) → **2줄**(라벨 / 값+단위)로 낮추고,
+   ② 2행 × 7열 → **3행 × 5열**로 세워서 가로를 약 200 px 줄인 뒤,
+   ③ 그 폭을 혈압 카드에 넘겨(540 → 750 px) 생략기호(…)로 잘리던 정보를 다 보이게 한다. */
+.metrics { grid-template-columns: 750px repeat(5, 98px); grid-template-rows: repeat(3, 44px); }
+.m.big { grid-row: 1 / span 3; width: 750px; height: 100%; }
+.m.big .kv { grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); column-gap: 8px; }
+
+/* 위 블록의 `.m …` 규칙이 혈압 카드(.m.big — grid)에도 걸려 `align-content: center` 가 행 트랙을
+   세로 중앙으로 몰아버렸다(내용이 카드 아래쪽에 붙어 보이던 원인). 작은 카드에만 적용한다. */
+.m.big { align-content: stretch; }
+.m:not(.big) { height: 44px; display: flex; flex-flow: row wrap; align-content: center; gap: 0 4px; padding: 3px 6px; }
+.m:not(.big) label { flex: 0 0 100%; line-height: 1.15; }
+.m:not(.big) b, .m:not(.big) span { flex: 0 0 auto; line-height: 1.2; }
+
+/* 혈압 카드: **수치는 절대 생략·축약하지 않는다** (2026-08-25 사용자 요청).
+   ① 값 칸의 ellipsis/overflow 제거, ② kv 열을 내용 폭(max-content)으로 잡아 눌리지 않게,
+   ③ 카드 폭을 760–880 px 로 넓히고 작은 수치 카드는 남는 폭에 auto-fill 로 채운다
+   (화면이 좁아지면 카드 열이 줄고 행이 늘어나므로 헤더가 가로로 넘치지 않는다). */
+.metrics { grid-template-columns: minmax(760px, 880px) repeat(auto-fill, minmax(98px, 1fr)); }
+.m.big { width: auto; grid-row: 1 / -1; }
+.m.big .kv { grid-template-columns: max-content max-content max-content max-content; column-gap: 10px; }
+.m.big .kv i, .m.big .kv span { overflow: visible; text-overflow: clip; white-space: nowrap; }
+.m.big .col > span { overflow: visible; text-overflow: clip; }
+.m.big .cum { white-space: nowrap; }
+
+/* 혈압 카드 내부 비율 (2026-08-25 요청): 중심/정수압 열을 줄이고 알고리즘 두 열을 넓힌다.
+   그리고 작은 수치 카드는 auto-fill 대신 **열 방향 흐름**으로 채워 14장이 정확히 3행 × 5열이 되게 한다
+   (auto-fill 이 4열을 잡아 4행째에 카드 한 장만 남던 문제). 좁은 화면은 1100 px 미디어쿼리가 처리. */
+.metrics { grid-template-columns: minmax(620px, 880px); grid-auto-flow: column; grid-auto-columns: 98px; }
+.m.big { grid-column: 1; grid-row: 1 / -1; }
+.m.big { grid-template-columns: 0.74fr 1.13fr 1.13fr; }
+
+/* 혈압 숫자 2배 (17 → 34 px, 2026-08-25 요청). 숫자가 커진 만큼 스트립 행 높이를 44 → 62 px 로
+   키우고(3행 = 200 px), 작은 수치 카드는 그 행을 채우게 해 격자를 흐트러뜨리지 않는다. */
+.metrics { grid-template-rows: repeat(3, 62px); }
+.m:not(.big) { height: 100%; }
+.m.big .col b, .m.big .col.dual b { font-size: 34px; line-height: 1.15; }
+.m.big .col.dual b em { font-size: 11px; }
+.m.big .col.algo .bprow .att { font-size: 9.5px; line-height: 13px; padding: 0 5px; vertical-align: 8px; }
+
+/* 혈압 카드 아래 여백 제거 (2026-08-25 요청): 알고리즘 열 내용은 108 px, 중심/정수압 열이 148 px 라
+   행 높이를 62 → 50 px 로 줄여 카드(3행 = 164 px)를 내용에 맞춘다. 숫자 크기는 34 px 유지. */
+.metrics { grid-template-rows: repeat(3, 50px); }
+.m.big { padding: 5px 4px; }
+.m.big .col.dual label.below { margin: 2px 0 0; line-height: 1.25; }
+.m.big #calib { margin-top: 2px; padding: 2px 7px; }
+
+/* 손목 카드 푸터의 손 모델 선택기와 자산 저작자 표시 (2026-08-26).
+   전부 `.wrist-foot` 안으로만 한정한다 — 다른 카드의 select/드롭다운은 건드리지 않는다.
+   (js/dropdown.js 가 native select 를 숨기고 `.dd` 로 갈아 끼우므로 둘 다 적어 둔다.
+    `.dd` 의 기본 width:100% 를 여기서만 무르지 않으면 푸터 한 줄을 통째로 먹는다.) */
+.wrist-foot select { font: inherit; font-size: 10.5px; padding: 1px 4px; border-radius: 4px;
+  border: 1px solid var(--border2); background: var(--surface); color: var(--text); width: 150px; }
+.wrist-foot .dd { width: 150px; flex: 0 0 auto; }
+.wrist-foot .dd-btn { padding: 1px 6px; font-size: 10.5px; border-radius: 4px; }
+.wrist-foot .dd-caret { font-size: 9px; }
+.wrist-foot .dd-item { padding: 4px 7px; font-size: 11px; }
+.wf-credit { margin: 0; font-size: 10px; white-space: normal; }
+.wf-credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+/* `.wf-row { display: flex }` 가 브라우저 기본 `[hidden] { display: none }` 를 이기므로
+   푸터 안에서만 hidden 을 되살린다 (E안 저작자 표시 줄을 0/A 에서 숨기는 데 필요). */
+.wrist-foot .wf-row[hidden] { display: none; }

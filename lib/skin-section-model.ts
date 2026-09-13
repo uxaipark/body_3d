@@ -1,3 +1,4 @@
+import {surroundingDisplacement} from '../public/simulators/radial/js/wristMechanics.js';
 import type {SkinRegion} from './skin-section';
 /** Regional topology presets in millimetres. Representative cutaneous windows,
  * not patient imaging or a claim that every vessel is a named major artery. */
@@ -25,7 +26,7 @@ export function regionalAnatomy(id:string,softDepth:number):RegionalAnatomy{
 }
 
 
-export interface SectionProfile extends RegionalAnatomy {regionId:string;thickness:number;epidermis:number;papillary:number;dermis:number;fat:number;total:number;arteryDepth:number;radius:number;wall:number;hair:boolean}
+export interface SectionProfile extends RegionalAnatomy {coupledWrist?:boolean;regionId:string;thickness:number;epidermis:number;papillary:number;dermis:number;fat:number;total:number;arteryDepth:number;radius:number;wall:number;hair:boolean}
 export interface TissueDrive {distension:number;respiratory:number;cardiac:number}
 export function sectionProfile(region:SkinRegion,fat=region.fat):SectionProfile{
  const epidermis=region.id==='finger'?.28:region.id==='ear'?.09:.12;
@@ -62,6 +63,7 @@ export class SectionRelaxation{
  * redistributes tissue. Bone/tendon restrictions alter local area conservation.
  * The lumen itself changes volume intentionally. */
 export function deformSection(x:number,depth:number,z:number,p:SectionProfile,state:TissueDrive,gain=1):[number,number,number]{
+ if(p.coupledWrist){const u=surroundingDisplacement(x,depth,p.arteryX,p.arteryDepth,Math.min(state.distension*gain,p.radius*.32),p.fat),mobility=sectionMobility(x,depth,p);const xx=x+u.lateral_mm*mobility;return [xx,-depth+u.vertical_mm*mobility+sectionCurvature(xx,z,p),z];}
  const delta=Math.min(state.distension*gain,p.radius*.32),dy=depth-p.arteryDepth,rx=x-p.arteryX,r=Math.hypot(rx,dy),R=p.radius;
  const factor=r<R?(R+delta)/R:Math.sqrt(1+((R+delta)**2-R*R)/Math.max(r*r,1e-10));
  let u=rx*factor,v=p.arteryDepth+dy*factor;
@@ -88,7 +90,17 @@ vec2 tissueVelocity(vec2 p,float A,float width){
 }
 float sectionMobility(vec2 p){float restriction=0.0;${supports}return 1.0-restriction;}
 float sectionCurve(float x,float z){return -x*x/${f(2*profile.curveX)}-(z+${f(profile.thickness/2)})*(z+${f(profile.thickness/2)})/${f(2*profile.curveZ)};}
-vec3 sectionWarp(vec3 p){
+${profile.coupledWrist?`vec3 sectionWarp(vec3 p){
+ float x=p.x-${f(profile.arteryX)},d=max(0.0,-p.y),y=uSectionDepth-d,R=1.1,r=length(vec2(x,y));
+ float dr=min(uSectionExpansion,uSectionRadius*.32),radial=dr*R/max(R,r),support=exp(-max(0.0,d-uSectionDepth)/4.0),skinWeight=exp(-d/1.8);
+ float width=max(2.5,uSectionDepth*1.2+${f(profile.fat)}*.25),q=x/width;
+ float kernel=(exp(-q*q/2.0)-exp(-q*q/8.0)/4.0)/.75*exp(-max(0.0,uSectionDepth-1.1)/(3.0+${f(profile.fat)}));
+ float mobility=sectionMobility(vec2(p.x,d));
+ float xx=p.x+radial*x/max(R,r)*support*mobility;
+ float yy=p.y+((1.0-skinWeight)*radial*y/max(R,r)+skinWeight*kernel*dr)*support*mobility;
+ return vec3(xx,yy+sectionCurve(xx,p.z),p.z);
+}
+vec3 unusedOriginalWarp(vec3 p){`:'vec3 sectionWarp(vec3 p){'}
  float R=uSectionRadius,delta=min(uSectionExpansion,R*.32),dy=-p.y-uSectionDepth,r=length(vec2(p.x-(${f(profile.arteryX)}),dy));
  float f=r<R?(R+delta)/R:sqrt(1.0+((R+delta)*(R+delta)-R*R)/max(r*r,1e-10));
  vec2 q=vec2((p.x-(${f(profile.arteryX)}))*f,uSectionDepth+dy*f);float width=max(1.7,uSectionDepth*.9),A=delta*.65;

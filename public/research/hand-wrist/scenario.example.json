@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 2,
+  "status": "design-not-executed",
+  "id": "radial-array-ecg-pep-mismatch-001",
+  "seed": 4172,
+  "duration_s": 180,
+  "anatomy": {
+    "asset": "SOMA native right hand",
+    "personalized": false,
+    "diameter_mm": 2.2,
+    "fat_mm": 2.2,
+    "registration": "atlas geometry; ultrasound normalization pending"
+  },
+  "array": {
+    "rows": 3,
+    "cols": 4,
+    "pad_mm": [
+      3,
+      3
+    ],
+    "pitch_mm": 3.5,
+    "middleRowStagger_mm": 1.75,
+    "channelMapping": "must use measured PCB ADC order"
+  },
+  "acquisition": {
+    "cap_Hz": 1000,
+    "ecg_Hz": 1000,
+    "red_Hz": 250,
+    "ir_Hz": 250,
+    "adcSkew_us": 0,
+    "note": "zero skew is ideal simultaneous acquisition, not measured hardware"
+  },
+  "phases": [
+    {
+      "start_s": 0,
+      "end_s": 60,
+      "condition": "rest",
+      "SBP_truth_mmHg": 120,
+      "DBP_truth_mmHg": 80,
+      "HR_input_bpm": 72,
+      "PEP_truth_ms": 90
+    },
+    {
+      "start_s": 60,
+      "end_s": 120,
+      "condition": "PEP change at fixed BP",
+      "SBP_truth_mmHg": 120,
+      "DBP_truth_mmHg": 80,
+      "HR_input_bpm": 100,
+      "PEP_truth_ms": 60
+    },
+    {
+      "start_s": 120,
+      "end_s": 180,
+      "condition": "pressure change at fixed HR",
+      "SBP_truth_mmHg": 140,
+      "DBP_truth_mmHg": 90,
+      "HR_input_bpm": 100,
+      "PEP_truth_ms": 60
+    }
+  ],
+  "estimator": {
+    "input": "acquisition-frame only; never this scenario truth",
+    "methods": [
+      "signed-MRC",
+      "loaded-MVDR",
+      "proximal-distal beams"
+    ],
+    "calibration": "separate baseline cuff sample"
+  },
+  "evaluation": {
+    "split": "separate forward parameters / subject / session",
+    "metrics": [
+      "BP bias and spread",
+      "valid coverage",
+      "timing bias_ms",
+      "PTT CI_ms",
+      "waveform distortion",
+      "latency_ms"
+    ],
+    "clinicalClaim": false
+  }
+}

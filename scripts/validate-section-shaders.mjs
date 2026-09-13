@@ -5,8 +5,9 @@ try{
  const {SkinSectionScene}=await server.ssrLoadModule('/lib/skin-section-scene.ts'),{sectionProfile}=await server.ssrLoadModule('/lib/skin-section-model.ts'),{skinRegions}=await server.ssrLoadModule('/lib/skin-section.ts');
  const include=source=>source.replace(/#include <([\w_]+)>/g,(_,name)=>include(T.ShaderChunk[name]));
  let count=0;
- for(const region of skinRegions){
+ for(const region of [...skinRegions,{...skinRegions.find(r=>r.id==='wrist'),id:'wrist-coupled'}]){
   const scene=Object.create(SkinSectionScene.prototype);Object.assign(scene,{profile:sectionProfile(region),uniforms:{},scene:new T.Scene(),geometries:[],materials:[]});
+  if(region.id==='wrist-coupled')scene.profile.coupledWrist=true;
   for(const [cut,top]of [[true,false],[true,true],[false,false]]){const mat=new T.MeshStandardMaterial();scene.deformMaterial(mat,cut,top);scene.materials.push(mat);}
   scene.regionalStructures();
   for(const [i,material]of scene.materials.entries()){

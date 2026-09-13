@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SOMA acquisition frame v2 — DESIGN, not legacy Rust wire format",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "sessionId",
+    "clockId",
+    "frameSequence",
+    "streams"
+  ],
+  "properties": {
+    "version": {
+      "const": 2
+    },
+    "sessionId": {
+      "type": "string"
+    },
+    "clockId": {
+      "type": "string"
+    },
+    "frameSequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "streams": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "modality",
+          "channelId",
+          "unit",
+          "sampleRateHz",
+          "firstSampleIndex",
+          "firstTimeNs",
+          "samples",
+          "flags"
+        ],
+        "properties": {
+          "modality": {
+            "enum": [
+              "CAP",
+              "ECG",
+              "PPG_RED",
+              "PPG_IR",
+              "IMU"
+            ]
+          },
+          "channelId": {
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "pF",
+              "mV",
+              "count",
+              "g",
+              "deg/s"
+            ]
+          },
+          "sampleRateHz": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "firstSampleIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "firstTimeNs": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "64-bit monotonic timestamp as decimal string; avoid JS integer overflow"
+          },
+          "adcOffsetNs": {
+            "type": "integer"
+          },
+          "filterDelayNs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "samples": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "number"
+            }
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "clipped",
+                "dropout",
+                "contact_loss",
+                "motion",
+                "clock_unsynced",
+                "warmup",
+                "resampled"
+              ]
+            }
+          },
+          "sourceRateHz": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "pipelineId": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "calibrationId": {
+      "type": "string"
+    },
+    "layoutId": {
+      "type": "string"
+    }
+  }
+}

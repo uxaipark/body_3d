@@ -1,0 +1,4 @@
+import Link from 'next/link';
+import {Activity} from 'lucide-react';
+export function SimulatorNav({active}:{active:'home'|'body'|'wrist'|'research'}){return <nav className="simulator-nav" aria-label="시뮬레이터 메뉴">{([['home','/','시뮬레이터'],['body','/simulators/body','전신 트윈'],['wrist','/simulators/wrist','손·손목 센싱'],['research','/research','연구 기록']] as const).map(([key,href,label])=><Link key={key} href={href} aria-current={active===key?'page':undefined}>{label}</Link>)}</nav>}
+export function LabHeader({active}:{active:'home'|'body'|'wrist'|'research'}){return <header className="topbar portal-topbar"><Link className="brand" href="/" aria-label="SOMA 시뮬레이터 홈"><span className="brand-mark"><Activity size={23}/></span><span>SOMA<span className="brand-period">.</span></span><span className="brand-sub">DIGITAL HUMAN LAB</span></Link><SimulatorNav active={active}/><span className="portal-research-badge"><i className="status-dot"/> RESEARCH WORKSPACE</span></header>}
