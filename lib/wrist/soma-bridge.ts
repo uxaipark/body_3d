@@ -25,8 +25,10 @@ export class Avatar {
   if(this.posture==='sitting')r.poseTask('stand',2.5);
   else if(this.posture==='lying')r.poseTask('lie',14);
   else r.pose(torso?.gaitPhase||0,torso?.walking?1:0,0);
-  // Shared kinematics input, fixed bone lengths, no bending bone geometry.
-  if(this.posture!=='lying'){
+  // Arm-position controls apply to stationary sensing poses only. Walking
+  // already supplies coordinated shoulders, elbows and inward-facing palms
+  // from the shared capture; an Euler override erases the right forearm roll.
+  if(this.posture!=='lying'&&this.posture!=='walking'&&!torso?.walking){
    r.bone('upperArm.r').rotation.set(-angles.shoulderAbd*Math.PI/180,0,0);
    r.bone('forearm.r').rotation.set(-angles.elbowFlex*Math.PI/180,0,0);
    r.bone('hand.r').rotation.set(-angles.wristFlex*Math.PI/180,angles.wristPron*Math.PI/180,0);

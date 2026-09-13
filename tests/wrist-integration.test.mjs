@@ -6,6 +6,30 @@ import * as T from 'three';
 import {HumanRig,BONE_NAMES} from '../lib/rig.ts';
 import {Avatar} from '../public/simulators/radial/bridge/soma-bridge.js';
 
+test('walking wrist avatar preserves both captured arms and palm orientation across the complete stride',()=>{
+ const rig=new HumanRig(),skinRig=new HumanRig(),reference=new HumanRig(),view={rig,skinRig,focus(){},
+  uniforms:Object.fromEntries(['uLungInflation','uResp','uBeat','uCardiacCycles','uPulseGain'].map(k=>[k,{value:0}])),
+  softBody:{update(){}},chair:{},bedGroup:{},controls:{update(){}},renderer:{render(){}}};
+ const avatar=Object.create(Avatar.prototype);Object.assign(avatar,{view,lastTime:0,orbit:{},lastOrbit:'{}'});avatar.setBodyPosture('walking');
+ let previous=null;
+ for(let i=0;i<=120;i++){
+  const phase=i/120;reference.pose(phase,1,0);
+  // Even a lingering arm preset must not overwrite the walking right arm.
+  avatar.update({shoulderAbd:95,elbowFlex:95,wristPron:30,wristFlex:20},{heart:.5},null,{walking:true,gaitPhase:phase},{t:phase,instantHR:72});
+  const hands=[];
+  for(const side of ['l','r'])for(const part of ['upperArm','forearm','hand']){
+   const name=`${part}.${side}`,actual=rig.bone(name),expected=reference.bone(name);
+   assert.ok(actual.quaternion.angleTo(expected.quaternion)<1e-6,`${name}: captured rotation was overwritten`);
+   assert.ok(skinRig.bone(name).quaternion.angleTo(actual.quaternion)<1e-6,`${name}: skin pose differs`);
+   if(part==='hand')hands.push(actual.getWorldPosition(new T.Vector3()));
+  }
+  if(previous)hands.forEach((p,j)=>assert.ok(p.distanceTo(previous[j])<.03,'wrist jumped between adjacent stride samples'));
+  previous=hands;
+ }
+ avatar.setBodyPosture('standing');avatar.update({shoulderAbd:30,elbowFlex:95,wristPron:0,wristFlex:0},{heart:0},null,{walking:false,gaitPhase:0},{t:2,instantHR:72});
+ assert.ok(Math.abs(rig.bone('forearm.r').rotation.x+95*Math.PI/180)<1e-8,'standing sensor arm control must remain active');
+});
+
 test('shipped wrist avatar holds a seated pelvis and bent knees with planted feet, then returns to standing',()=>{
  const rig=new HumanRig(),skinRig=new HumanRig(),view={rig,skinRig,focus(){},
   uniforms:Object.fromEntries(['uLungInflation','uResp','uBeat','uCardiacCycles','uPulseGain'].map(k=>[k,{value:0}])),
