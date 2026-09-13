@@ -8,6 +8,7 @@ const routes = [
   ['/simulators/body', '전신 3D 해부학 모델'],
   ['/simulators/wrist', 'wrist-simulator-frame'],
   ['/research', '구현의 기록, 다음 실험의 설계.'],
+  ['/manual', '사용 매뉴얼'],
 ];
 for (const [path, content] of routes) {
   const response = await fetch(new URL(path, base), {redirect: 'manual'});

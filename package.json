@@ -7,12 +7,13 @@
   },
   "scripts": {
     "dev": "vinext dev",
-    "build": "vinext build",
+    "build": "node scripts/docs/build-manual.mjs && vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
-    "build:wrist": "node scripts/research/build-wrist-atlas.mjs && node scripts/research/build-bridge.mjs"
+    "build:wrist": "node scripts/research/build-wrist-atlas.mjs && node scripts/research/build-bridge.mjs",
+    "demo:prepare": "node scripts/demo/prepare-demo.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

@@ -1,5 +1,8 @@
 # Regional skin inspection
 
+갱신: 2026-09-13 · 현재 코드 기준 구현 기록. 재생성 명령은 `web` 루트에서 실행합니다.
+
+
 The 12 selectable regions use representative tissue windows rather than subject-specific imaging. Dimensions and curvature radii are illustrative millimetre presets, not clinical measurements. The wrist window is 24 × 24 mm; fingertip and earlobe windows are smaller. Both transverse and longitudinal curvature are applied by the same CPU/GPU map to layers, vessels, supporting structures and optical paths.
 
 - Wrist: radial artery between the FCR and brachioradialis tendon landmarks, with radius deeper in the window. The vein is offset to avoid the FCR tendon.
@@ -23,3 +26,9 @@ Anatomical references:
 - [Skin layers, OpenStax](https://openstax.org/books/anatomy-and-physiology-2e/pages/5-1-layers-of-the-skin)
 - [Skeletal muscle organization, OpenStax](https://openstax.org/books/anatomy-and-physiology-2e/pages/10-2-skeletal-muscle)
 - [External ear anatomy, NCBI Bookshelf](https://www.ncbi.nlm.nih.gov/books/NBK470359/)
+
+## 현재 화면에서 사용하기
+
+전신 트윈의 피부계를 켜고 피부 표시점 또는 영역 이름을 선택하면 3D 단면 모달을 엽니다. 전체·표면 등고선·진피·혈관 초점과 지방 두께·광학 경로·맥동 표시 배율을 탐색할 수 있습니다. 손목 센싱의 `3D 조직 단면`/`표면 등고선`은 같은 대표 구조를 신호 생성의 조직 변위와 연결합니다. 아틀라스 보기와 이 대표 블록의 차이는 [변형 모델](skin-section-model.md)에 설명합니다.
+
+[웹 사용자 문서](../manual/skin.md) · [관련 테스트](../../tests/skin-section-mechanics.test.mjs)

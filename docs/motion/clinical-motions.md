@@ -1,5 +1,8 @@
 # Authored sit-to-stand and hand-grip tasks
 
+갱신: 2026-09-13 · 현재 코드 기준 구현 기록. 재생성 명령은 `web` 루트에서 실행합니다.
+
+
 These are kinematic task animations, not clinical motion capture, force prediction,
 or validated clinical protocols. Existing CMU walking/running data is unchanged.
 
@@ -96,3 +99,9 @@ cull a lying body at close camera distances. The envelope includes tissue offset
 and is checked against every native skin vertex through the full bed sequence.
 Bed framing tracks the trunk while preserving zoom/orbit distance and pan offset;
 zoom no longer converges on the old empty standing target. Near clipping is 3 mm.
+
+## 손목 센싱 아바타와의 연결
+
+손목 센싱의 걷기는 전신과 같은 캡처·보행 주기(1.1166667초)와 HumanRig를 공유합니다. 양팔 보행 캡처를 손목 팔 자세 덮어쓰기로 대체하지 않습니다. 서기/앉기에서는 센싱 팔 위치 제어를 유지합니다. 손목 페이지의 자세 목록과 전신의 임상 작업 목록은 서로 다른 메뉴이며, 위 모든 임상 작업이 손목 자세 목록에 있다는 뜻은 아닙니다.
+
+현재 사용 흐름은 [전신 트윈 매뉴얼](../manual/body.md), 손목 자세와 부착은 [손목 매뉴얼](../manual/wrist.md)을 참조하세요.

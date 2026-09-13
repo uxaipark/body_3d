@@ -1,0 +1,13 @@
+{
+  "name": "soma-local-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.21.0" },
+  "scripts": {
+    "install:demo": "node runtime/runner.mjs install",
+    "start": "node runtime/runner.mjs start",
+    "verify": "node runtime/runner.mjs verify"
+  },
+  "dependencies": { "wrangler": "4.92.0" }
+}
