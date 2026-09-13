@@ -98,7 +98,7 @@ export class WristView {
     const section=key==='S'||key==='T';this.renderer.domElement.style.display=section?'none':'';
     if(section&&!this.section){this.sectionHost=document.createElement('div');Object.assign(this.sectionHost.style,{position:'absolute',inset:'0'});this.container.append(this.sectionHost);this.section=makeWristSection(this.sectionHost,Number(document.getElementById('tissueFat')?.value||2.2),atlasArteryAt(this.sheet.along).depth_mm);}
     if(this.sectionHost)this.sectionHost.style.display=section?'':'none';
-    if(section){this.section.setView(key==='T'?'top':'full');this.section.resize();}
+    if(section){this.section.focus(key==='T'?'top':'full');this.section.resize();}
     this._layoutSheet();return key;
   }
 
@@ -402,7 +402,7 @@ export class WristView {
     const gain=Number(document.getElementById('tissueGain')?.value||1);
     this._models.get('0')?.update(tissue,gain);
     const meter=document.getElementById('tissueReadout');if(meter)meter.textContent=`반경 변화 ${((tissue?.radiusDelta_mm||0)*1000).toFixed(1)} µm · 표면 ${Math.max(0,...(tissue?.displacement_mm||[]).map(Math.abs)).toFixed(4)} mm · 표시 ×${gain}`;
-    if(this._handModel==='S'||this._handModel==='T'){const fat=tissue?.fat_mm||2.2,depth=atlasArteryAt(this.sheet.along).depth_mm;if(this.section&&(Math.abs(this.section.profile.fat-fat)>.05||Math.abs(this.section.profile.arteryDepth-depth)>.5)){this.section.dispose();this.section=makeWristSection(this.sectionHost,fat,depth);this.section.setView(this._handModel==='T'?'top':'full');}this.section?.update({distension:tissue?.radiusDelta_mm||0,respiratory:0,cardiac:0},gain,performance.now()/1000,660,98,false,'reflection');return;}
+    if(this._handModel==='S'||this._handModel==='T'){const fat=tissue?.fat_mm||2.2,depth=atlasArteryAt(this.sheet.along).depth_mm;if(this.section&&(Math.abs(this.section.profile.fat-fat)>.05||Math.abs(this.section.profile.arteryDepth-depth)>.5)){this.section.dispose();this.section=makeWristSection(this.sectionHost,fat,depth);this.section.focus(this._handModel==='T'?'top':'full');}this.section?.update({distension:tissue?.radiusDelta_mm||0,respiratory:0,cardiac:0},gain,performance.now()/1000,660,98,false,'reflection');return;}
     const lat = WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM + arteryOffset.lateral_mm;
     const depth0 = WRIST_ANATOMY.ARTERY_BASE_DEPTH_MM + (arteryOffset.depth_mm - 1.0);
     // Rebuild the artery path only on a meaningful shift (idle pronation jitter moves it by ~0.1 mm/frame;

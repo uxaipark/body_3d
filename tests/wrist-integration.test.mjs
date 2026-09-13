@@ -35,3 +35,11 @@ test('native wrist contains all 29 bones and named vessels, nerves and tendons, 
  assert.ok(!JSON.stringify(m).match(/femur|tibia|fibula|phalanx of.*foot/i));
  assert.ok(WebAssembly.validate(fs.readFileSync('public/simulators/radial/js/analysis/dt_core.wasm')));
 });
+test('wrist mode adapter focuses the section and switches renderer visibility through S/T/A',async()=>{
+ const {WristView}=await import('../public/simulators/radial/js/wristView.js');
+ const view=Object.create(WristView.prototype),focused=[],native={ready:Promise.resolve(),setMode(){},group:{visible:true}};
+ Object.assign(view,{_models:new Map([['0',native]]),renderer:{domElement:{style:{}}},section:{focus(mode){focused.push(mode);},resize(){}},sectionHost:{style:{}},_layoutSheet(){}});
+ assert.equal(await view.setHandModel('S'),'S');assert.equal(view.renderer.domElement.style.display,'none');assert.equal(native.group.visible,false);
+ assert.equal(await view.setHandModel('T'),'T');assert.deepEqual(focused,['full','top']);
+ assert.equal(await view.setHandModel('A'),'A');assert.equal(view.sectionHost.style.display,'none');assert.equal(native.group.visible,true);
+});

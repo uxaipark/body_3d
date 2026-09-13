@@ -1,7 +1,7 @@
 # 통합 확인 — 2026-09-13
 
 - `npx tsc --noEmit`: 성공.
-- `npm test`: 84/84 성공(기존 79 + 손목 통합 5).
+- `npm test`: 85/85 성공(기존 79 + 손목 통합 6).
 - `node scripts/validate-section-shaders.mjs`: 138개 vertex/fragment shader 오프라인 컴파일 성공.
 - GLTFLoader로 손목 GLB 직접 파싱: 127개 메시, 각 계통 metadata 확인.
 - TwinEngine → acquisition frames → 기존 WASM 코어, 6.4초 입력에서 MRC 및 feature 결과 반환 확인. 임상 정확도 시험이 아님.
