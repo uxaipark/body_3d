@@ -63605,7 +63605,13 @@ var Cm = [
 			antialias: !0,
 			alpha: !1,
 			powerPreference: "high-performance"
-		}), this.renderer.setClearColor("#101b23"), this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)), this.renderer.outputColorSpace = We, this.renderer.toneMapping = 4, this.renderer.toneMappingExposure = .95, this.renderer.setSize(e.clientWidth, e.clientHeight), this.renderer.domElement.setAttribute("aria-label", "회전과 확대가 가능한 3D 피부 절단면"), this.renderer.domElement.style.touchAction = "none", e.appendChild(this.renderer.domElement), e.appendChild(this.overlay), this.overlay.className = "section-label-overlay", this.controls = new Ef(this.camera, this.renderer.domElement), this.controls.enableDamping = !0, this.controls.dampingFactor = .12, this.controls.minZoom = .5, this.controls.maxZoom = 5, this.controls.maxPolarAngle = Math.PI * .86, this.scene.add(new Lo(16774116, 7430508, 2.2));
+		}), this.renderer.setClearColor("#101b23"), this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)), this.renderer.outputColorSpace = We, this.renderer.toneMapping = 4, this.renderer.toneMappingExposure = .95, this.renderer.setSize(e.clientWidth, e.clientHeight), this.renderer.domElement.setAttribute("aria-label", "회전과 확대가 가능한 3D 피부 절단면"), this.renderer.domElement.style.touchAction = "none", e.appendChild(this.renderer.domElement), e.appendChild(this.overlay), this.overlay.className = "section-label-overlay", getComputedStyle(e).position === "static" && (e.style.position = "relative"), Object.assign(this.overlay.style, {
+			position: "absolute",
+			inset: "0",
+			width: "100%",
+			height: "100%",
+			pointerEvents: "none"
+		}), this.renderer.domElement.setAttribute("aria-label", `회전과 확대가 가능한 3D 피부 절단면 · ${n.arteryLabel}는 붉은 표식과 연결선으로 표시`), this.controls = new Ef(this.camera, this.renderer.domElement), this.controls.enableDamping = !0, this.controls.dampingFactor = .12, this.controls.minZoom = .5, this.controls.maxZoom = 5, this.controls.maxPolarAngle = Math.PI * .86, this.scene.add(new Lo(16774116, 7430508, 2.2));
 		let r = new ns(16774379, 2.1);
 		r.position.set(-6, 10, 18), this.scene.add(r);
 		let i = new ns(10931934, 1.3);
@@ -63867,23 +63873,15 @@ var Cm = [
 		let i = (e, r, i = .06) => {
 			let a = new W(...bm(e, r, i, this.profile, this.drive, this.gain)).project(this.camera);
 			return [(a.x + 1) * t / 2, (1 - a.y) * n / 2];
-		}, a = this.profile, o = this.view === "top" ? [] : this.view === "vessel" ? [
-			[
-				a.arteryLabel,
-				a.arteryDepth,
-				a.arteryX
-			],
-			[
-				"정맥",
-				a.arteryDepth + .3,
-				a.veinX
-			],
-			...a.structures.filter((e) => e.kind === "tendon" || e.kind === "bone").map((e) => [
-				e.label,
-				e.depth,
-				e.x
-			])
-		] : this.view === "dermis" ? [
+		}, a = this.profile, o = this.view === "top" ? [] : this.view === "vessel" ? [[
+			"정맥",
+			a.arteryDepth + .3,
+			a.veinX
+		], ...a.structures.filter((e) => e.kind === "tendon" || e.kind === "bone").map((e) => [
+			e.label,
+			e.depth,
+			e.x
+		])] : this.view === "dermis" ? [
 			[
 				"표피 · 기저층",
 				a.epidermis,
@@ -63932,7 +63930,12 @@ var Cm = [
 			let a = r.position.clone().project(this.camera), o = (a.x + 1) * t / 2, s = (1 - a.y) * n / 2;
 			e.fillStyle = "#daede1", e.fillText(i, o - 10, s - 12);
 		}
-		this.view === "top" && (e.fillStyle = "#cce8d4", e.fillText("TOP · 2 mm 격자 / 0.25 mm 등고선 / 1 mm 굵은 선", 18, 25), e.fillStyle = "#b9cfc8", e.fillText("높이 기준: 정지 상태의 패치 중앙 · 맥동 강조 배율 적용", 18, 45));
+		if (this.view === "top" && (e.fillStyle = "#cce8d4", e.fillText("TOP · 2 mm 격자 / 0.25 mm 등고선 / 1 mm 굵은 선", 18, 25), e.fillStyle = "#b9cfc8", e.fillText("높이 기준: 정지 상태의 패치 중앙 · 맥동 강조 배율 적용", 18, 45)), this.view !== "dermis") {
+			let r = this.view === "top", o = i(a.arteryX, r ? 0 : a.arteryDepth, r ? -a.thickness / 2 : .06), s = a.arteryLabel + (r ? " · 피부 아래" : ""), c = r ? 65 : 18;
+			e.font = "bold 14px sans-serif";
+			let l = Math.min(t - 36, e.measureText(s).width + 24);
+			e.strokeStyle = "#ff8795", e.lineWidth = 1.7, o.every(Number.isFinite) && o[0] >= 0 && o[0] <= t && o[1] >= 0 && o[1] <= n && (e.setLineDash(r ? [4, 3] : []), e.beginPath(), e.moveTo(18 + l / 2, c + 30), e.lineTo(o[0], o[1]), e.stroke(), e.setLineDash([]), e.beginPath(), e.arc(o[0], o[1], 7, 0, Math.PI * 2), e.stroke(), e.fillStyle = "#ff8795", e.beginPath(), e.arc(o[0], o[1], 2.5, 0, Math.PI * 2), e.fill()), e.fillStyle = "#2c1723ed", e.fillRect(18, c, l, 30), e.strokeRect(18, c, l, 30), e.fillStyle = "#ffd8df", e.fillText(s, 30, c + 20), e.font = "12px sans-serif";
+		}
 		let c = i(-3, a.total + .7), l = i(0, a.total + .7), u = Math.hypot(l[0] - c[0], l[1] - c[1]);
 		e.strokeStyle = "#c5d9cf", e.lineWidth = 2, e.beginPath(), e.moveTo(22, n - 25), e.lineTo(22 + Math.min(u, t * .4), n - 25), e.stroke(), e.fillStyle = "#b2c7c2", e.fillText(u < t * .4 ? "3 mm" : "배율 확대", 22, n - 34), e.textAlign = "right", e.fillText("드래그 회전 · 휠 확대 · 우클릭 이동", t - 16, n - 15), e.textAlign = "left";
 	}
@@ -63975,7 +63978,7 @@ var Cm = [
 		let s = this.view, c = s.rig, l = o?.t || 0, u = Math.max(0, Math.min(.1, l - this.lastTime));
 		this.lastTime = l;
 		let d = (1 + Math.sin(l * Math.PI * 2 * (o?.hemo?.resp_bpm || 15) / 60)) / 2, f = 500 * (o?.hemo?.respDepth ?? 1);
-		s.uniforms.uLungInflation.value = d * Math.min(1, f / 1e3), s.uniforms.uResp.value = (d * 2 - 1) * f / 500, s.softBody.update(u, d, f), this.posture === "sitting" ? c.poseTask("stand", 0) : this.posture === "lying" ? c.poseTask("lie", 14) : c.pose(a?.gaitPhase || 0, +!!a?.walking, 0), this.posture !== "lying" && (c.bone("upperArm.r").rotation.set(-e.shoulderAbd * Math.PI / 180, 0, 0), c.bone("forearm.r").rotation.set(-e.elbowFlex * Math.PI / 180, 0, 0), c.bone("hand.r").rotation.set(-e.wristFlex * Math.PI / 180, e.wristPron * Math.PI / 180, 0)), c.bones[0].updateMatrixWorld(!0), c.updatePalette(), s.skinRig.copyPose(c), s.followBed && this.posture === "lying" && (t(c.bone("pelvis"), c.bone("chest"), s.bedViewCurrent), n(s.camera, s.controls.target, s.bedViewAnchor, s.bedViewCurrent)), s.chair.visible = this.posture === "sitting", s.bedGroup.visible = this.posture === "lying", s.uniforms.uBeat.value = r?.heart || 0, s.uniforms.uCardiacCycles.value = (o?.t || 0) * (o?.instantHR || 72) / 60, s.uniforms.uPulseGain.value = 1;
+		s.uniforms.uLungInflation.value = d * Math.min(1, f / 1e3), s.uniforms.uResp.value = (d * 2 - 1) * f / 500, s.softBody.update(u, d, f), this.posture === "sitting" ? c.poseTask("stand", 2.5) : this.posture === "lying" ? c.poseTask("lie", 14) : c.pose(a?.gaitPhase || 0, +!!a?.walking, 0), this.posture !== "lying" && (c.bone("upperArm.r").rotation.set(-e.shoulderAbd * Math.PI / 180, 0, 0), c.bone("forearm.r").rotation.set(-e.elbowFlex * Math.PI / 180, 0, 0), c.bone("hand.r").rotation.set(-e.wristFlex * Math.PI / 180, e.wristPron * Math.PI / 180, 0)), c.bones[0].updateMatrixWorld(!0), c.updatePalette(), s.skinRig.copyPose(c), s.followBed && this.posture === "lying" && (t(c.bone("pelvis"), c.bone("chest"), s.bedViewCurrent), n(s.camera, s.controls.target, s.bedViewAnchor, s.bedViewCurrent)), s.chair.visible = this.posture === "sitting", s.bedGroup.visible = this.posture === "lying", s.uniforms.uBeat.value = r?.heart || 0, s.uniforms.uCardiacCycles.value = (o?.t || 0) * (o?.instantHR || 72) / 60, s.uniforms.uPulseGain.value = 1;
 		let p = JSON.stringify(this.orbit);
 		if (p !== this.lastOrbit) {
 			let e = s.controls.target, t = s.camera.position.distanceTo(e);

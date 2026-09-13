@@ -2,6 +2,29 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {TwinEngine} from '../public/simulators/radial/js/engine.js';
 import {WRIST_MECHANICS,radiusPerPressure,surfaceTransfer,WristRelaxation,surroundingDisplacement} from '../public/simulators/radial/js/wristMechanics.js';
 import {atlasProfile,atlasArteryAt} from '../public/simulators/radial/js/atlasProfile.js';
+import * as T from 'three';
+import {HumanRig,BONE_NAMES} from '../lib/rig.ts';
+import {Avatar} from '../public/simulators/radial/bridge/soma-bridge.js';
+
+test('shipped wrist avatar holds a seated pelvis and bent knees with planted feet, then returns to standing',()=>{
+ const rig=new HumanRig(),skinRig=new HumanRig(),view={rig,skinRig,focus(){},
+  uniforms:Object.fromEntries(['uLungInflation','uResp','uBeat','uCardiacCycles','uPulseGain'].map(k=>[k,{value:0}])),
+  softBody:{update(){}},chair:{visible:false},bedGroup:{visible:false},controls:{update(){}},renderer:{render(){}}};
+ const avatar=Object.create(Avatar.prototype);Object.assign(avatar,{view,lastTime:0,orbit:{},lastOrbit:'{}'});
+ const update=t=>avatar.update({shoulderAbd:30,elbowFlex:95,wristPron:0,wristFlex:0},{heart:.5},null,{walking:false,gaitPhase:0},{t,instantHR:72});
+ avatar.setBodyPosture('standing');update(0);const standing=rig.bones[0].position.y;
+ avatar.setBodyPosture('sitting');
+ for(const t of [1,10,120]){
+  update(t);assert.ok(standing-rig.bones[0].position.y>.25);assert.equal(view.chair.visible,true);assert.equal(view.bedGroup.visible,false);
+  assert.ok(skinRig.bones[0].position.distanceTo(rig.bones[0].position)<1e-9);
+  for(const side of ['l','r']){
+   const p=name=>rig.bone(`${name}.${side}`).getWorldPosition(new T.Vector3()),hip=p('thigh'),knee=p('shin'),foot=p('foot');
+   assert.ok(knee.clone().sub(hip).angleTo(foot.clone().sub(knee))>1.2);
+   assert.ok(foot.distanceTo(rig.bind[BONE_NAMES.indexOf(`foot.${side}`)])<1e-8);
+  }
+ }
+ avatar.setBodyPosture('standing');update(121);assert.ok(Math.abs(rig.bones[0].position.y-standing)<1e-8);assert.equal(view.chair.visible,false);
+});
 
 test('causal wrist relaxation has the analytic step response, no overshoot or repeated-sample drift',()=>{
  const r=new WristRelaxation(),tau=WRIST_MECHANICS.tau_s;

@@ -20,7 +20,9 @@ export class Avatar {
   const v=this.view,r=v.rig,t=state?.t||0,dt=Math.max(0,Math.min(.1,t-this.lastTime));this.lastTime=t;
   const breath=(1+Math.sin(t*Math.PI*2*(state?.hemo?.resp_bpm||15)/60))/2,tidal=500*(state?.hemo?.respDepth??1);
   v.uniforms.uLungInflation.value=breath*Math.min(1,tidal/1000);v.uniforms.uResp.value=(breath*2-1)*tidal/500;v.softBody.update(dt,breath,tidal);
-  if(this.posture==='sitting')r.poseTask('stand',0);
+  // The chair task starts standing and finishes sitting at 2 s. Hold its
+  // seated plateau (2–3 s), rather than replaying its standing first frame.
+  if(this.posture==='sitting')r.poseTask('stand',2.5);
   else if(this.posture==='lying')r.poseTask('lie',14);
   else r.pose(torso?.gaitPhase||0,torso?.walking?1:0,0);
   // Shared kinematics input, fixed bone lengths, no bending bone geometry.
