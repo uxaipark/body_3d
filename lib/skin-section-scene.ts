@@ -3,7 +3,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {makeSectionTexture} from './skin-section-texture';
 import {deformSection,tissueBoundary,sectionDeformationGLSL,type SectionProfile,type TissueDrive} from './skin-section-model';
 import {photonPaths,opticalAbsorption} from './skin-section';
-import {isCenterDrag,rotateCameraAroundAxis} from '../public/simulators/radial/js/viewInteraction.js';
+import {wristDragMode,axialRotationSign,dragWristCamera} from '../public/simulators/radial/js/viewInteraction.js';
 
 export type SectionView='full'|'top'|'dermis'|'vessel';
 const layerColors=['#e6c3a7','#ba827d','#d59b9a','#b9767b','#c7a361','#856c73'];
@@ -27,19 +27,15 @@ export class SkinSectionScene{
    // OrbitControls assumes a fixed world-up and clamps polar angles. That would
    // undo an axial roll. This view owns pointer/zoom gestures while retaining target.
    this.controls.disconnect();this.controls.enabled=false;
-   const el=this.renderer.domElement,options={capture:true,signal:this.pointerAbort.signal};let pointer:number|null=null,lastX=0,lastY=0,mode='orbit';
-   el.addEventListener('pointerdown',e=>{if(e.button!==0&&e.button!==2)return;pointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;mode=e.button===2?'pan':e.altKey||isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect())?'axial':'orbit';el.setPointerCapture(pointer);e.preventDefault();},options);
+   const el=this.renderer.domElement,options={capture:true,signal:this.pointerAbort.signal};let pointer:number|null=null,lastX=0,lastY=0,mode='orbit',axialSign=1;
+   el.addEventListener('pointerdown',e=>{if(e.button!==0&&e.button!==2)return;pointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;mode=e.button===2?'pan':e.altKey?'axial':wristDragMode(e.clientX,e.clientY,el.getBoundingClientRect());axialSign=axialRotationSign(this.camera,{x:0,y:0,z:1});el.setPointerCapture(pointer);e.preventDefault();},options);
    el.addEventListener('pointermove',e=>{
     if(e.pointerId!==pointer)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;
     const camera=this.camera,target=this.controls.target;
-    if(mode==='axial')rotateCameraAroundAxis(camera,target,{x:0,y:0,z:1},-dx*.008);
-    else if(mode==='pan'){
+    if(mode==='pan'){
      camera.updateMatrixWorld();const right=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,0),up=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,1),scale=(camera.top-camera.bottom)/camera.zoom/Math.max(1,el.clientHeight);
      const move=right.multiplyScalar(-dx*scale).addScaledVector(up,dy*scale);camera.position.add(move);target.add(move);
-    }else{
-     rotateCameraAroundAxis(camera,target,camera.up.clone(),dx*.006);camera.updateMatrixWorld();
-     const right=new T.Vector3().setFromMatrixColumn(camera.matrixWorld,0);rotateCameraAroundAxis(camera,target,right,-dy*.006);
-    }
+    }else dragWristCamera(camera,target,{x:0,y:0,z:1},dx,dy,mode,axialSign);
    },options);
    const end=(e:PointerEvent)=>{if(e.pointerId===pointer)pointer=null;};
    el.addEventListener('pointerup',end,options);el.addEventListener('pointercancel',end,options);

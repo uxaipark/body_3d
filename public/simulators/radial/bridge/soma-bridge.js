@@ -63580,19 +63580,40 @@ function Sm(e) {
 function Cm(e, t, n) {
 	return Math.abs(e - n.left - n.width / 2) < n.width * .18 && Math.abs(t - n.top - n.height / 2) < n.height * .18;
 }
-function wm(e, t, n, r) {
-	e.position.sub(t).applyAxisAngle(n, r).add(t), e.up.applyAxisAngle(n, r).normalize(), e.lookAt(t);
+function wm(e, t, n) {
+	if (Cm(e, t, n)) return "axial";
+	let r = (t - n.top) / n.height;
+	return r < .32 ? "twistTop" : r > .68 ? "twistBottom" : "orbit";
+}
+function Tm(e, t, n, r) {
+	e.position.sub(t).applyAxisAngle(n, r).add(t), e.up.applyAxisAngle(n, r).normalize(), e.lookAt(t), e.updateMatrixWorld();
+}
+function Em(e, t) {
+	e.updateMatrixWorld();
+	let n = e.matrixWorld.elements, r = t.x * n[4] + t.y * n[5] + t.z * n[6], i = t.x * n[0] + t.y * n[1] + t.z * n[2];
+	return -Math.sign(Math.abs(r) > .05 ? r : i || 1);
+}
+function Dm(e, t, n, r, i, a, o = Em(e, n)) {
+	if (a === "axial") {
+		Tm(e, t, n, r * .008 * o);
+		return;
+	}
+	if (a === "twistTop" || a === "twistBottom") {
+		Tm(e, t, e.position.clone().sub(t).normalize(), r * .008 * (a === "twistTop" ? -1 : 1));
+		return;
+	}
+	e.updateMatrixWorld(), Tm(e, t, e.up.clone().setFromMatrixColumn(e.matrixWorld, 1), -r * .006), Tm(e, t, e.up.clone().setFromMatrixColumn(e.matrixWorld, 0), -i * .006);
 }
 //#endregion
 //#region lib/skin-section-scene.ts
-var Tm = [
+var Om = [
 	"#e6c3a7",
 	"#ba827d",
 	"#d59b9a",
 	"#b9767b",
 	"#c7a361",
 	"#856c73"
-], Em = class {
+], km = class {
 	constructor(e, t) {
 		this.host = e, this.profile = t, this.scene = new Rn(), this.camera = new es(), this.overlay = document.createElement("canvas"), this.geometries = [], this.materials = [], this.view = "full", this.drive = {
 			distension: 0,
@@ -63624,29 +63645,32 @@ var Tm = [
 			let e = this.renderer.domElement, t = {
 				capture: !0,
 				signal: this.pointerAbort.signal
-			}, n = null, r = 0, i = 0, a = "orbit";
+			}, n = null, r = 0, i = 0, a = "orbit", o = 1;
 			e.addEventListener("pointerdown", (t) => {
-				t.button !== 0 && t.button !== 2 || (n = t.pointerId, r = t.clientX, i = t.clientY, a = t.button === 2 ? "pan" : t.altKey || Cm(t.clientX, t.clientY, e.getBoundingClientRect()) ? "axial" : "orbit", e.setPointerCapture(n), t.preventDefault());
-			}, t), e.addEventListener("pointermove", (t) => {
-				if (t.pointerId !== n) return;
-				let o = t.clientX - r, s = t.clientY - i;
-				r = t.clientX, i = t.clientY;
-				let c = this.camera, l = this.controls.target;
-				if (a === "axial") wm(c, l, {
+				t.button !== 0 && t.button !== 2 || (n = t.pointerId, r = t.clientX, i = t.clientY, a = t.button === 2 ? "pan" : t.altKey ? "axial" : wm(t.clientX, t.clientY, e.getBoundingClientRect()), o = Em(this.camera, {
 					x: 0,
 					y: 0,
 					z: 1
-				}, -o * .008);
-				else if (a === "pan") {
-					c.updateMatrixWorld();
-					let t = new W().setFromMatrixColumn(c.matrixWorld, 0), n = new W().setFromMatrixColumn(c.matrixWorld, 1), r = (c.top - c.bottom) / c.zoom / Math.max(1, e.clientHeight), i = t.multiplyScalar(-o * r).addScaledVector(n, s * r);
-					c.position.add(i), l.add(i);
-				} else wm(c, l, c.up.clone(), o * .006), c.updateMatrixWorld(), wm(c, l, new W().setFromMatrixColumn(c.matrixWorld, 0), -s * .006);
+				}), e.setPointerCapture(n), t.preventDefault());
+			}, t), e.addEventListener("pointermove", (t) => {
+				if (t.pointerId !== n) return;
+				let s = t.clientX - r, c = t.clientY - i;
+				r = t.clientX, i = t.clientY;
+				let l = this.camera, u = this.controls.target;
+				if (a === "pan") {
+					l.updateMatrixWorld();
+					let t = new W().setFromMatrixColumn(l.matrixWorld, 0), n = new W().setFromMatrixColumn(l.matrixWorld, 1), r = (l.top - l.bottom) / l.zoom / Math.max(1, e.clientHeight), i = t.multiplyScalar(-s * r).addScaledVector(n, c * r);
+					l.position.add(i), u.add(i);
+				} else Dm(l, u, {
+					x: 0,
+					y: 0,
+					z: 1
+				}, s, c, a, o);
 			}, t);
-			let o = (e) => {
+			let s = (e) => {
 				e.pointerId === n && (n = null);
 			};
-			e.addEventListener("pointerup", o, t), e.addEventListener("pointercancel", o, t), e.addEventListener("wheel", (e) => {
+			e.addEventListener("pointerup", s, t), e.addEventListener("pointercancel", s, t), e.addEventListener("wheel", (e) => {
 				e.preventDefault(), this.camera.zoom = Math.max(.5, Math.min(5, this.camera.zoom * Math.exp(-e.deltaY * .0015))), this.camera.updateProjectionMatrix();
 			}, {
 				passive: !1,
@@ -63665,7 +63689,7 @@ var Tm = [
 				map: this.texture,
 				roughness: .78
 			}), r = new Xa({
-				color: Tm[e],
+				color: Om[e],
 				roughness: .72
 			});
 			this.deformMaterial(n, !0), this.deformMaterial(r, !0, e === 0), this.materials.push(n, r), this.scene.add(new X(t, [n, r]));
@@ -63988,7 +64012,7 @@ var Tm = [
 	dispose() {
 		this.pointerAbort.abort(), this.controls.dispose(), this.geometries.forEach((e) => e.dispose()), this.materials.forEach((e) => e.dispose()), this.texture.dispose(), this.renderer.dispose(), this.renderer.forceContextLoss(), this.renderer.domElement.remove(), this.overlay.remove();
 	}
-}, Dm = class {
+}, Am = class {
 	constructor(e) {
 		this.container = e, this.posture = "standing", this.orbit = {
 			theta: .3,
@@ -64043,14 +64067,14 @@ var Tm = [
 		this.view.dispose();
 	}
 };
-function Om(e, t = 2.2, n = 3.3, r = 0) {
+function jm(e, t = 2.2, n = 3.3, r = 0) {
 	let i = gm({
 		...zf.find((e) => e.id === "wrist"),
 		arteryDepth: n
 	}, t);
 	i.arteryDepth = n, i.arteryX = r, i.total = Math.max(i.total, n + 9), i.coupledWrist = !0;
 	let a = i.structures.find((e) => e.kind === "bone");
-	return a && (a.depth = Math.max(a.depth, n + 4.5)), new Em(e, i);
+	return a && (a.depth = Math.max(a.depth, n + 4.5)), new km(e, i);
 }
 //#endregion
-export { Dm as Avatar, Om as makeWristSection };
+export { Am as Avatar, jm as makeWristSection };

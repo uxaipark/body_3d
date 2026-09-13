@@ -1,7 +1,7 @@
 import {arteryTether} from './arteryDeformation.js';
 import {atlasArteryAt} from './atlasProfile.js';
 import {rotatePatchPoint,patchAlongHalf,normalizePatchAngle} from './patchGeometry.js';
-import {isCenterDrag,dragWristOrbit,rotateCameraAroundAxis} from './viewInteraction.js';
+import {wristDragMode,axialRotationSign,dragWristCamera} from './viewInteraction.js';
 import {makeWristSection} from '../bridge/soma-bridge.js';
 // 3D wrist close-up: forearm/wrist segment, radial artery (pulsating), FCR & palmaris
 // tendons, radius bone, and the flexible electrode sheet with its pads. The sheet can be
@@ -340,7 +340,8 @@ export class WristView {
       // Left-click ON the sheet/pads → drag the sheet; left-click elsewhere → orbit.
       // Right button → pan the whole view (camera target); Shift-drag → move the sheet.
       const onSheet = this._hitSheet(e);
-      this.orbit.mode = e.button === 2 ? 'pan' : e.altKey ? 'axial' : (e.shiftKey || onSheet) ? 'sheet' : isCenterDrag(e.clientX,e.clientY,el.getBoundingClientRect())?'axial':'orbit';
+      this.orbit.mode = e.button === 2 ? 'pan' : e.altKey ? 'axial' : (e.shiftKey || onSheet) ? 'sheet' : wristDragMode(e.clientX,e.clientY,el.getBoundingClientRect());
+      this.orbit.axialSign=axialRotationSign(this.camera,{x:1,y:0,z:0});
       this.orbit.lastX = e.clientX; this.orbit.lastY = e.clientY;
       el.setPointerCapture(e.pointerId);
       el.focus();
@@ -360,14 +361,14 @@ export class WristView {
       this._moveSheet(lat, along);
     });
     el.addEventListener('contextmenu', (e) => e.preventDefault());
-    el.addEventListener('dblclick', () => { this.target.set(0.04, 0.005, 0.0); this.orbit.roll=0; }); // double-click: re-centre the view
+    el.addEventListener('dblclick', () => { this.resetCamera(); }); // double-click: re-centre the view
     el.addEventListener('pointerup', () => { this.orbit.mode = null; });
     el.addEventListener('pointercancel', () => { this.orbit.mode = null; });
     el.addEventListener('pointermove', (e) => {
       if (!this.orbit.mode) return;
       const dx = e.clientX - this.orbit.lastX, dy = e.clientY - this.orbit.lastY;
       this.orbit.lastX = e.clientX; this.orbit.lastY = e.clientY;
-      if(this.orbit.mode==='axial'||this.orbit.mode==='orbit')dragWristOrbit(this.orbit,dx,dy,this.orbit.mode);
+      if(['axial','orbit','twistTop','twistBottom'].includes(this.orbit.mode))this._dragCamera(dx,dy);
       else if (this.orbit.mode === 'pan') {
         // Pan: translate the camera target in the screen plane (camera right/up), scaled with zoom
         const right = new THREE.Vector3(); const up = new THREE.Vector3();
@@ -466,19 +467,23 @@ export class WristView {
   }
 
   resetCamera(){
-    Object.assign(this.orbit,{theta:Math.PI+Math.atan(1/Math.cos(.75)),phi:.75,radius:.29,roll:0,mode:null});
+    Object.assign(this.orbit,{theta:Math.PI+Math.atan(1/Math.cos(.75)),phi:.75,radius:.29,offset:null,up:null,mode:null});
     this.target.set(.04,.005,0);this.section?.focus('full');this._positionCamera();
   }
 
   _positionCamera(){
     const o=this.orbit;
-    this.camera.position.set(
-      this.target.x+o.radius*Math.sin(o.phi)*Math.sin(o.theta),
-      this.target.y+o.radius*Math.cos(o.phi),
-      this.target.z+o.radius*Math.sin(o.phi)*Math.cos(o.theta)
-    );
-    this.camera.up.set(0,1,0);
-    rotateCameraAroundAxis(this.camera,this.target,{x:1,y:0,z:0},o.roll||0);
+    const offset=o.offset||new THREE.Vector3(Math.sin(o.phi)*Math.sin(o.theta),Math.cos(o.phi),Math.sin(o.phi)*Math.cos(o.theta));
+    this.camera.position.copy(this.target).addScaledVector(offset,o.radius/offset.length());
+    this.camera.up.copy(o.up||new THREE.Vector3(0,1,0));
+    this.camera.lookAt(this.target);this.camera.updateMatrixWorld();
+  }
+
+  _dragCamera(dx,dy){
+    this._positionCamera();
+    dragWristCamera(this.camera,this.target,{x:1,y:0,z:0},dx,dy,this.orbit.mode,this.orbit.axialSign);
+    this.orbit.offset=this.camera.position.clone().sub(this.target);
+    this.orbit.up=this.camera.up.clone();
   }
 
   resize() {
