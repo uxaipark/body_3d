@@ -49,19 +49,30 @@ test('comma and period rotate the patch in 2.5 degree steps; central drag select
  view._hitSheet=()=>true;listeners.pointerdown[0]({button:0,clientX:400,clientY:400,pointerId:1});assert.equal(view.orbit.mode,'sheet');
 });
 
-test('native interleaved GLB keeps unit normals; smooth radial tube expands, moves and returns without drift',async()=>{
+test('native atlas preserves radial–palmar connection, bends between anchors and pulses without drift',async()=>{
  const bytes=fs.readFileSync('public/models/wrist/atlas.glb'),load=GLTFLoader.prototype.loadAsync;
  GLTFLoader.prototype.loadAsync=function(){return this.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');};
  let m;try{m=buildModel0({});await m.ready;}finally{GLTFLoader.prototype.loadAsync=load;}
- let skin,tube,original;m.group.traverse(n=>{if(n.userData?.layer==='skin')skin=n;if(n.name==='요골동맥 · native centreline')tube=n;if(n.userData?.sourceName==='Radial artery.r.001')original=n;});
- assert.equal(original.visible,false);assert.ok(tube);assert.equal(tube.material.color.getHex(),0xff0000);assert.equal(tube.material.metalness,0);assert.equal(tube.material.toneMapped,false);
+ let skin,tube,arch;m.group.traverse(n=>{if(n.userData?.layer==='skin')skin=n;if(n.userData?.sourceName==='Radial artery.r.001')tube=n;if(n.userData?.sourceName==='Deep palmar arch.r.001')arch=n;});
+ assert.equal(tube.visible,true);assert.equal(tube.material.color.getHex(),0xff0000);assert.equal(tube.material.metalness,0);assert.equal(tube.material.toneMapped,false);
  assert.equal(skin.geometry.attributes.position.array.length,skin.geometry.attributes.position.count*3);
- const normals=skin.geometry.attributes.normal.array.slice(),rest=tube.geometry.attributes.position.array.slice();
- m.update({radiusDelta_mm:.06,fat_mm:2.2});const expanded=tube.geometry.attributes.position.array;
- for(let i=0;i<expanded.length;i+=3)assert.ok(Math.abs(Math.hypot(expanded[i]-rest[i],expanded[i+1]-rest[i+1],expanded[i+2]-rest[i+2])-.00006)<1e-8);
+ const normals=skin.geometry.attributes.normal.array.slice(),rest=tube.geometry.attributes.position.array.slice(),expanded=tube.geometry.attributes.position.array,archRest=arch.geometry.attributes.position.array.slice();
+ const nearest=(array,target)=>{let best=Infinity,offset=0;for(let i=0;i<array.length;i+=3){const d=Math.hypot(...target.map((v,k)=>array[i+k]-v));if(d<best){best=d;offset=i;}}return offset;};
+ const end=nearest(rest,[.07550361752510071,-.004710394423455,.010858566500246525]);
+ const joined=nearest(archRest,[.07564688473939896,-.004792043473571539,.010940630920231342]);
+ assert.ok(Math.max(...Array.from({length:rest.length/3},(_,i)=>rest[i*3]*1000-55))>20);
+ const core=nearest(rest,[.025,.002,.01]);
+ for(const lateral of [-6,0,6])for(const depth of [-6,0,6])for(const pulse of [0,.06]){
+  m.update({radiusDelta_mm:pulse,fat_mm:2.2,arteryLateralShift_mm:lateral,arteryDepthShift_mm:depth});
+  const ap=arch.geometry.attributes.position.array;
+  assert.ok(Math.hypot(...[0,1,2].map(k=>expanded[end+k]-ap[joined+k]))<.00025,'hand connection remains within the original junction');
+  assert.ok([...expanded].every(Number.isFinite));
+  for(let i=0;i<rest.length;i+=3)if(rest[i]*1000-55>=20)for(let k=0;k<3;k++)assert.equal(expanded[i+k],rest[i+k],'distal anchor stays fixed');
+  if(pulse===0){assert.ok(Math.abs(expanded[core+1]-rest[core+1]+depth*.001)<1e-8);assert.ok(Math.abs(expanded[core+2]-rest[core+2]-lateral*.001)<1e-8);}
+ }
+ m.update({radiusDelta_mm:.06,fat_mm:2.2});
+ assert.ok(expanded.some((v,i)=>Math.abs(v-rest[i])>.00001),'pulse moves the vascular wall');
  assert.deepEqual(skin.geometry.attributes.normal.array,normals);
- m.update({radiusDelta_mm:0,fat_mm:2.2,arteryLateralShift_mm:3,arteryDepthShift_mm:2});
- assert.ok(Math.abs(expanded[1]-rest[1]+.002)<1e-8);assert.ok(Math.abs(expanded[2]-rest[2]-.003)<1e-8);
  m.update({radiusDelta_mm:0,fat_mm:2.2});assert.deepEqual(expanded,rest);
  const view=Object.create(WristView.prototype);Object.assign(view,{_models:new Map([['0',m]]),sheet:{lateral:12,along:-30,angle:37.5},layout:{},sheetGroup:new T.Group(),_makeLabelSprite(){return new T.Sprite(new T.SpriteMaterial());}});
  view.setLayout(3,3,4);for(const mesh of [view.sheetMesh,...view.pads])assert.ok([...mesh.geometry.attributes.position.array].every(Number.isFinite));

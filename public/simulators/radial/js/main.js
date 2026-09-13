@@ -37,6 +37,15 @@ const $ = (id) => document.getElementById(id);
 // Theme (dark / light / system) — applied before anything is measured so no card is laid out twice.
 // index.html sets data-theme inline to avoid a flash; this re-applies it and wires the OS listener.
 initTheme();
+const twinHeader=$('twinHeader'),twinHeaderToggle=$('twinHeaderToggle');
+function setOverviewCollapsed(collapsed){
+ twinHeader.classList.toggle('collapsed',collapsed);
+ twinHeaderToggle.setAttribute('aria-expanded',String(!collapsed));
+ twinHeaderToggle.textContent=collapsed?'펼치기 ▾':'접기 ▴';
+ try{localStorage.setItem('dt.overviewCollapsed',collapsed?'1':'0');}catch(_){}
+}
+try{setOverviewCollapsed(localStorage.getItem('dt.overviewCollapsed')==='1');}catch(_){}
+twinHeaderToggle.addEventListener('click',()=>setOverviewCollapsed(!twinHeader.classList.contains('collapsed')));
 
 // ---------- Signal-generation engine (Worker-hosted TwinEngine; falls back in-thread) ----------
 // 48채널 16 kHz 생성은 js/engineWorker.js 에서 수행되고, UI 스레드에는 데시메이션된 렌더 버퍼와

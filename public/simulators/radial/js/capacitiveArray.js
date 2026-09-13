@@ -1,3 +1,4 @@
+import {arteryTether} from './arteryDeformation.js';
 import {wristSurface} from './wristSurface.js';
 import {rotatePatchPoint,patchAlongHalf,normalizePatchAngle} from './patchGeometry.js';
 import {atlasArteryAt} from './atlasProfile.js';
@@ -502,7 +503,7 @@ export class CapacitiveArrayModel {
   // Artery centre for a given along position: lateral from anatomy + pronation shift; depth deepens proximally.
   arteryAt(along_mm, arteryOffset) {
     arteryOffset={lateral_mm:arteryOffset.lateral_mm+(this.arteryLateralAdjust_mm||0),depth_mm:arteryOffset.depth_mm+(this.arteryDepthAdjust_mm||0)};
-    if(this.anatomicalMechanics){const a=atlasArteryAt(along_mm);return {lateral:a.lateral_mm+arteryOffset.lateral_mm,depth:Math.max(1.3,a.depth_mm+(this.arteryDepthOffset_mm||0)+(arteryOffset.depth_mm-1))};}
+    if(this.anatomicalMechanics){const a=atlasArteryAt(along_mm),w=arteryTether(along_mm).weight;return {lateral:a.lateral_mm+arteryOffset.lateral_mm*w,depth:Math.max(1.3,a.depth_mm+((this.arteryDepthOffset_mm||0)+(arteryOffset.depth_mm-1))*w)};}
     const lateral = WRIST_ANATOMY.ARTERY_BASE_LATERAL_MM + arteryOffset.lateral_mm;
     const depth = WRIST_ANATOMY.ARTERY_BASE_DEPTH_MM + (this.arteryDepthOffset_mm || 0) + (arteryOffset.depth_mm - 1.0)
       + WRIST_ANATOMY.ARTERY_DEPTH_GRADIENT_MM_PER_MM * Math.max(0, -along_mm);

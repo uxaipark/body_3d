@@ -871,3 +871,20 @@ td:nth-child(n+2) { font-family: ui-monospace, Menlo, monospace; }
 /* `.wf-row { display: flex }` 가 브라우저 기본 `[hidden] { display: none }` 를 이기므로
    푸터 안에서만 hidden 을 되살린다 (E안 저작자 표시 줄을 0/A 에서 숨기는 데 필요). */
 .wrist-foot .wf-row[hidden] { display: none; }
+
+/* A compact, independently collapsible overview leaves more room for signals. */
+.twin-heading{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.twin-heading h1{font-size:16px;margin:0}
+#twinHeaderToggle{padding:4px 10px;white-space:nowrap;cursor:pointer}
+#twinHeader.collapsed{gap:0}
+#twinHeader.collapsed>.brand,#twinHeader.collapsed>.metrics{display:none}
+/* Only the canvas viewport is square; controls use their own natural height. */
+.panel.wrist-card .wrist{height:auto;flex:0 0 auto;min-height:0}
+.panel.wrist-card .wrist-3d{width:100%;height:auto;aspect-ratio:1;flex:0 0 auto;overflow:hidden}
+.panel.wrist-card .wrist-3d canvas{position:absolute;inset:0}
+.artery-controls{gap:6px 14px}
+.artery-control{display:flex;align-items:center;gap:6px;flex:1 1 220px;min-width:0}
+.artery-control label{flex:0 0 auto}
+.artery-control input{width:100px;min-width:50px;flex:1 1 100px}
+.artery-control output{min-width:52px;text-align:right;font-variant-numeric:tabular-nums}
+.artery-controls>.hint{width:100%;margin:0;white-space:normal}

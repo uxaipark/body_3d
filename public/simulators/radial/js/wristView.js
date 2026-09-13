@@ -1,3 +1,4 @@
+import {arteryTether} from './arteryDeformation.js';
 import {atlasArteryAt} from './atlasProfile.js';
 import {rotatePatchPoint,patchAlongHalf,normalizePatchAngle} from './patchGeometry.js';
 import {isCenterDrag,dragWristOrbit} from './viewInteraction.js';
@@ -410,7 +411,7 @@ export class WristView {
     const gain=Number(document.getElementById('tissueGain')?.value||1);
     const meter=document.getElementById('tissueReadout');if(meter)meter.textContent=`반경 변화 ${((tissue?.radiusDelta_mm||0)*1000).toFixed(1)} µm · 표면 ${Math.max(0,...(tissue?.displacement_mm||[]).map(Math.abs)).toFixed(4)} mm · 표시 ×${gain}`;
     if(this._handModel==='S'||this._handModel==='T'){
-      const fat=tissue?.fat_mm||2.2,depth=Math.max(1.3,atlasArteryAt(this.sheet.along).depth_mm+(tissue?.arteryDepthAdjust_mm||0)),lateral=tissue?.arteryLateralAdjust_mm||0;
+      const w=arteryTether(this.sheet.along).weight,fat=tissue?.fat_mm||2.2,depth=Math.max(1.3,atlasArteryAt(this.sheet.along).depth_mm+(tissue?.arteryDepthShift_mm||0)*w),lateral=(tissue?.arteryLateralShift_mm||0)*w;
       if(this.section&&(Math.abs(this.section.profile.fat-fat)>.05||Math.abs(this.section.profile.arteryDepth-depth)>.05||Math.abs(this.section.profile.arteryX-lateral)>.05)){
         this.section.dispose();this.section=makeWristSection(this.sectionHost,fat,depth,lateral);this.section.focus(this._handModel==='T'?'top':'full');
       }

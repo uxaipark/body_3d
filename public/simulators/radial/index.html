@@ -18,13 +18,13 @@
 </script>
 <style>.soma-load{position:absolute;bottom:15px;left:15px;color:#aadac8;font:12px sans-serif}#wrist3d{position:relative}#tissueGain,#tissueFat{width:90px}.wf-row{flex-wrap:wrap}#tissueReadout{width:100%}</style></head>
 <body>
-<header>
-  <div class="brand">
-    <h1>Radial Artery Digital Twin</h1>
+<header id="twinHeader">
+  <div class="twin-heading"><h1>Radial Artery Digital Twin</h1><button id="twinHeaderToggle" type="button" aria-expanded="true" aria-controls="twinDescription twinMetrics">접기 ▴</button></div>
+  <div class="brand" id="twinDescription">
     <p>심장 → 어깨 → 팔 → 손목 → 손바닥 → 손가락 동맥/정맥 · 맥파 · EMG · 정전용량 어레이 · PPG/SpO₂ · IMU · 16 kHz</p>
     <p class="sim-banner" title="이 화면의 모든 수치·파형은 파라메트릭 시뮬레이션이며, 추정기는 시뮬레이터의 생성 관계를 역산합니다(모델 일치 상한). 임상 측정·검증 데이터가 아닙니다.">⚠ 시뮬레이션 값 — 임상 검증 아님</p>
   </div>
-  <div class="metrics">
+  <div class="metrics" id="twinMetrics">
     <div class="m big">
       <div class="col dual">
         <b><span id="m-bp">–</span><em>중심</em></b>
@@ -97,6 +97,11 @@
           <label>피하지방 <input id="tissueFat" type="range" min=".5" max="6" step=".1" value="2.2"><output id="tissueFatOut">2.2 mm</output></label>
           <span id="tissueReadout" class="hint"></span>
         </div>
+        <div class="wf-row artery-controls">
+      <div class="artery-control"><label for="arteryLateral">요골동맥 좌우 이동</label><input id="arteryLateral" type="range" min="-6" max="6" step=".25" value="0"/><output id="arteryLateralOut">0 mm</output></div>
+      <div class="artery-control"><label for="arteryDepth">요골동맥 깊이 조절</label><input id="arteryDepth" type="range" min="-6" max="6" step=".25" value="0"/><output id="arteryDepthOut">0 mm</output></div>
+      <p class="hint">아틀라스 위치 기준 이동량 · 깊이는 +일수록 피부 안쪽</p>
+        </div>
         <div class="wf-row">
           <span class="wf-title">범례</span>
           <span class="wf-legend"><i class="sw art"></i>요골동맥 <i class="sw ten"></i>건 <i class="sw bone"></i>요골 <i class="sw sheet"></i>전극 시트</span>
@@ -132,9 +137,7 @@
       <div class="row"><label>시트 가로 위치 (0=정중선, +엄지쪽)</label><input id="sheetLat" type="range" min="-18" max="24" step="0.5" value="12" /><output id="sheetLatOut"></output></div>
       <div class="row"><label for="sheetAngle">패치 부착 각도</label><input id="sheetAngle" type="range" min="-180" max="180" step="2.5" value="0"/><output id="sheetAngleOut">0.0°</output></div>
       <p class="hint">중앙 빈 공간 좌우 드래그: Y축 회전 · 옆면 보기 · 손목 3D 화면 클릭 후 , / . 키: 패치 회전 −2.5° / +2.5° · 방향키: 이동</p>
-      <div class="row"><label for="arteryLateral">요골동맥 좌우 이동</label><input id="arteryLateral" type="range" min="-6" max="6" step=".25" value="0"/><output id="arteryLateralOut">0 mm</output></div>
-      <div class="row"><label for="arteryDepth">요골동맥 깊이 조절</label><input id="arteryDepth" type="range" min="-6" max="6" step=".25" value="0"/><output id="arteryDepthOut">0 mm</output></div>
-      <p class="hint">아틀라스 위치 기준 이동량 · 깊이는 +일수록 피부 안쪽</p>
+
       <div class="row"><label>시트 세로 위치 (0=손목 시작)</label><input id="sheetAlong" type="range" min="-100" max="0" step="0.5" value="-9" /><output id="sheetAlongOut"></output></div>
       <div class="row"><label title="스트랩/패치의 국소 압착 압력(0–1). 0.5 = 이 트윈의 기준 접촉 상태(= 압착 80 mmHg 가정)이고, 이 값에서만 §6.15 이전 동작과 정확히 같습니다. 압평(P_hold ≈ MAP에서 최적) → 수축기 첨두 감쇠 → 폐색 → 정맥 울혈 — 모두 모델 가정">접촉 압력</label><input id="contact" type="range" min="0" max="1" step="0.01" value="0.5" /><output id="contactOut"></output></div>
       <div class="row"><label title="동맥벽의 지수형 탄성 E(P) = E₀·e^{ζP} (Hughes형). ζ = 0 이면 기존 선형 ΔC ∝ PP (기본값·비트 동일). ζ = 0.012 는 트윈 자신의 PWV 압력 법칙(+0.6 %/mmHg → D ∝ 1/g²)과 정합하는 값이며, 이때 압력 경화가 박동 내부에서 계산되므로 g² 항은 자동으로 빠집니다(이중 계산 없음). 고혈압에서 진폭 포화 + 수축기 첨두 압축(RI 단서 왜곡) — 모델 가정(문헌 보정 필요)">비선형 압력-직경 ζ</label><input id="capNonlin" type="range" min="0" max="0.03" step="0.001" value="0" /><output id="capNonlinOut"></output></div>
