@@ -42,6 +42,7 @@ python3 scripts/demo/archive-demo.py ../demo/soma-demo
 - 손목: 아틀라스 해부학, 곡면 패치, 요골동맥 연결·맥동·주변 변위, 정전용량/PPG 합성 신호와 분석.
 - `/manual`: 설치와 조작을 설명하는 웹 사용자 매뉴얼.
 - [docs 목차](docs/README.md): 현재 구현, 재생성 절차, 과거 자산 기록.
+- [문서 점검 기록](docs/operations/documentation-audit.md): 원본·생성본 분류와 정정 근거. `npm run docs:check`로 상대 파일 링크와 매뉴얼 동기화를 검사합니다.
 - [연구 기록](public/research/hand-wrist/README.md): CBP 확장, MRC/MVDR·ECG-PAT 계획과 검증 범위.
 
 형상·변형·신호에는 대표값과 축약 모델이 포함됩니다. 모든 미세혈관·신경을 재현하거나 환자별 FEM/혈류/광학·임상 정확도를 검증한 모델은 아닙니다. 구현된 기능과 향후 확장 계획은 연구 기록에서 구분합니다.

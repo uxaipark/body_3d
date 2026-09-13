@@ -1,6 +1,20 @@
 # SOMA 문서 안내
 
-갱신: 2026-09-13. 실행 코드는 `scripts`, 설명 문서는 `docs`에 둡니다. 아래 문서는 현재 소스에 맞춰 분류했습니다.
+갱신: 2026-09-13. 실행 코드는 `scripts`, 사용자·개발·운영 문서는 `docs`에 둡니다. 웹에서 직접 제공하는 연구 원본과 자산 출처는 `public`에 유지합니다.
+
+## 문서 위치와 편집 기준
+
+| 위치 | 역할 | 편집 방법 |
+| --- | --- | --- |
+| `docs/manual`, `docs/operations/demo-guide.md` | 사용자 매뉴얼 원본 5개 | 원본 수정 후 `npm run docs:build` |
+| `public/manual`, `app/manual/content.json` | 웹 매뉴얼 자동 생성본 | 직접 수정하지 않음 |
+| `docs/anatomy`, `docs/motion` | 현재 구현과 자산 재생성 | 해당 코드와 함께 갱신 |
+| `docs/operations` | 설치·검증·문서 관리 | 실행 결과와 사용자 보고를 구분 |
+| `public/research/hand-wrist` | 웹 연구 기록 원본 | 현재 구현·연구 계획·과거 측정을 구분 |
+| `docs/research/VALIDATION.md`, `docs/archive` | 검증 이력·이전 구현 | 과거 기록은 보존하고 최신 안내를 연결 |
+| `public/models/ATTRIBUTION.md`, `public/motions/ATTRIBUTION.md` | 자산 출처·라이선스 | 자산 변경 시 함께 갱신 |
+
+데모 폴더의 문서는 패키징 시점의 복사본입니다. 소스에서 수정한 뒤 데모를 다시 패키징해야 반영됩니다. 기존 배포본의 문서만 직접 고치면 무결성 검사와 일치하지 않습니다.
 
 ## 사용자 매뉴얼
 
@@ -32,3 +46,10 @@
 ## 갱신 규칙
 
 기능을 바꾸면 관련 사용자 문서와 구현 문서를 함께 수정합니다. 실제로 실행한 검사와 정적 분석, 계획을 구분합니다. 재생성 명령은 웹 루트에서 실행하며 고비용 Blender 파이프라인을 일반 데모 설치에 포함하지 않습니다.
+
+```sh
+npm run docs:build
+npm run docs:check
+```
+
+`docs:check`는 Markdown의 상대 파일 링크, 매뉴얼 생성본 동기화와 `scripts` 내 Markdown 혼재를 검사합니다. 외부 URL의 응답, 문헌의 최신성, 브라우저 렌더링을 검사하지는 않습니다. 웹 빌드도 매뉴얼을 자동 생성합니다.

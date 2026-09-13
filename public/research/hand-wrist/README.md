@@ -19,9 +19,10 @@ SOMA는 그리스어 σῶμα, ‘몸’을 뜻한다. 별도 약어로 정의�
 7. [문헌과 출처](references.md), [실제 Git 변경 이력](git-history.md).
 8. [취득 프레임 스키마](acquisition-frame.schema.json), [실험 시나리오 예](scenario.example.json).
 
-## 이번 변경에서 실행되는 것
+## 현재 실행되는 것
 
-- `/`는 시뮬레이터 썸네일과 기능 소개, 상단 메뉴는 전신·손목·연구 기록으로 이동한다.
+- `/`는 시뮬레이터 썸네일과 기능 소개, 상단 메뉴는 전신·손목·연구 기록·사용 매뉴얼로 이동한다.
+- `/manual`은 화면 조작과 macOS·Windows·Linux 로컬 데모 설치 안내를 제공한다. 설치·실행 스크립트와 별도 데모 패키징을 지원하며 실제 OS별 검증 범위는 소스의 `docs/operations/demo-validation.md`에 기록한다.
 - 기존 전신 화면은 `/simulators/body`로 이동했다. 기존 해부학·센서·동작 기능을 유지한다.
 - `/simulators/wrist`는 기존 CBP 웹 엔진을 독립 모듈로 연결한다. MRC, 국소 지연, PPG/SpO₂, BP 추정 비교와 패치 배치 UI를 유지했다.
 - 기하 도형으로 구성된 전신 아바타를 SOMA의 실제 전신 메시와 관절 리그로 교체했다.
