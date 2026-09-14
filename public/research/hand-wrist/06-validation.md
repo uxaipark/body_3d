@@ -2,7 +2,7 @@
 
 ## 최신 확인 상태
 
-2026-09-13 문서 점검 기준, 마지막 완료된 전체 회귀 검사는 96개 통과이며 TypeScript 검사와 사이트 빌드도 통과했다. macOS ARM64와 Ubuntu 22.04 Docker ARM64에서 데모 설치·서버·자산 검사를 수행했다. 이후 사용자가 Docker 정상 동작을 보고했으나 환경 상세는 제공하지 않았다. Windows는 스크립트 정적 검사까지이며 실제 Windows 실행은 미검증이다.
+2026-09-13 문서 점검 기준, 마지막 완료된 전체 회귀 검사는 96개 통과이며 TypeScript 검사와 사이트 빌드도 통과했다. macOS ARM64와 Ubuntu 22.04 Docker ARM64에서 데모 설치·서버·자산 검사를 수행했다. Windows는 스크립트 정적 검사까지이며 실제 Windows 실행은 미검증이다.
 
 이 수치는 앞선 구현·데모 검증의 기록이며 이번 문서 점검에서 회귀 검사를 다시 실행했다는 뜻은 아니다. 상세 실행 이력은 소스의 `docs/research/VALIDATION.md`, OS별 결과는 `docs/operations/demo-validation.md`에 보존한다. 아래 검증 행렬과 단계 B–F는 앞으로 수행할 검증 계획이다.
 
@@ -48,6 +48,6 @@ BP ground truth가 바뀌지 않는 상태의 HR/PEP 변화에서 BP가 잘못 �
 | E. 광학 | wrist reflectance/finger transmittance, MCX LUT, calibration | 에너지/mesh/photon 수렴, 부위별 ratio calibration 독립 평가 |
 | F. BP 검증 | calibration protocol, independent cohort/sessions/devices | PEP·운동·자세·재착용·시간 drift에 대한 보고, 실패 시 출력 거부 |
 
-## 승인 없이 구현 가능한 다음 작업과 외부 의존성
+## 다음 작업과 필요한 검증 자료
 
 소프트웨어 schema, tests, adapter, MRC/MVDR 코어 이식, simulation scenario는 현재 코드 기반에서 진행할 수 있다. 환자별 구조·조직 물성과 임상 accuracy의 개선은 실제 US/ECG/전극 기록 및 참조 측정에 의존한다. 이런 자료가 없는 상태에서 정상 인체 전체의 미세 구조나 혈압 정확도를 확정할 수 없다.

@@ -4,25 +4,19 @@
 
 ## 작업 위치
 
-- 사용자 작업 폴더: `/Users/elliotpark/dev/body_3d`
-- 실제 앱·Git 루트: `/Users/elliotpark/dev/body_3d/web` (`main`)
-- 기존 CBP 참고 코드: `/Users/elliotpark/dev/biosignal/cbp_algorithm`
-- 기존 디지털 트윈 참고: `/Users/elliotpark/dev/biosignal/cbp_algorithm/research/digital-twin`
-- 데모 폴더: `/Users/elliotpark/dev/body_3d/demo/soma-demo`
-- 배포 ZIP: `/Users/elliotpark/dev/body_3d/demo/soma-demo.zip` 및 `.zip.sha256`
-- 실제 OS 검증 로그: `/Users/elliotpark/dev/body_3d/demo/qa/results`
+- 사용자 작업 폴더: `.`
+- 실제 앱·Git 루트: `web` (`main`)
+- 데모 폴더: `./demo/soma-demo`
+- 배포 ZIP: `./demo/soma-demo.zip` 및 `.zip.sha256`
+- 실제 OS 검증 로그: `./demo/qa/results`
 
 ## 저장·배포 상태
 
-인계 문서 작성 직전 Git 작업 트리는 깨끗했습니다. 마지막 기능·문서 변경 커밋은 `ec3d735c3dd0ef4d7495c24396fc14bef05b1457`이며 원격 `main`에 push 완료했습니다. 이 인계 문서는 그 다음 문서 전용 커밋으로 저장합니다. 정확한 최종 커밋은 `git log -1`로 확인합니다.
+인계 문서 작성 직전 Git 작업 트리는 깨끗했습니다. 마지막 기능·문서 변경 커밋은 해당 시점 커밋이며 원격 `main`에 push 완료했습니다. 이 인계 문서는 그 다음 문서 전용 커밋으로 저장합니다. 정확한 최종 커밋은 `git log -1`로 확인합니다.
 
 - 공개된 앱 버전: Sites **v40**, 배포 성공 및 변경된 연구 Markdown 3개 HTTP 200·소스 바이트 일치 확인.
-- 앱 URL: https://soma-biosensing-lab.brianpark4142.chatgpt.site
 - 접근 범위: 소유자 전용. 변경하지 않습니다.
-- 프로젝트 ID: `appgprj_6aa49a886844819181b74c42869f2bf1`
-- v40 ID: `appgprj_6aa49a886844819181b74c42869f2bf1~appgver_b4664ae1fc7c8191997e7afb3b66990b`
-- 배포 ID: `appgdep_6aa647fa35048191a785c7ab13607de2`
-- 데모 manifest의 소스: `e067f37a4cf2be630965c133d4b3392a7ee0169c`.
+- 데모 manifest의 소스: 해당 시점 커밋.
 
 데모 ZIP은 직전 설치·매뉴얼 정리 시점의 스냅샷입니다. 이후 문서 감사 수정과 이 인계 문서는 아직 ZIP에 반영하지 않았습니다. 실행 중인 데모의 문서만 직접 수정하면 manifest 무결성 검사와 어긋납니다. 재배포 시 기존 패키징 도구로 전체를 다시 준비합니다.
 
@@ -74,7 +68,7 @@
 앱 루트에서 실행합니다. 의존성이 이미 있으면 무조건 재설치할 필요는 없습니다.
 
 ```sh
-cd /Users/elliotpark/dev/body_3d/web
+cd web
 git status --short
 git log -3 --oneline
 npm run docs:check
@@ -94,7 +88,7 @@ npm run build
 
 ```sh
 curl -I http://127.0.0.1:3000
-bash /Users/elliotpark/dev/body_3d/demo/soma-demo/Start-macOS.command
+bash ../demo/soma-demo/Start-macOS.command
 ```
 
 서버가 이미 응답하면 Start를 중복 실행하지 않습니다. OS별 설치·포트 옵션은 [설치 안내](demo-guide.md)에 있습니다. 데모는 전용 Node 24.21.0·Wrangler 4.92.0을 사용하며 시스템 Node 설정을 바꾸지 않습니다.
@@ -116,4 +110,10 @@ python3 scripts/demo/archive-demo.py ../demo/soma-demo
 3. MVDR 웹 코어, 시간 보존 분석 경로, ECG 취득 프레임·PAT/PTT/PEP 구분을 설계에 따라 단계적으로 연결.
 4. 초음파 기반 개인별 손목 정합, 조직·접촉 및 광학 검증, 독립 혈압·SpO₂ 데이터 평가.
 
-Sites 작업은 `.openai/hosting.json`의 기존 프로젝트를 사용합니다. 다음 게시 때 접근 범위를 다시 읽고 기존 소유자 전용 상태를 유지합니다. 토큰·인증 헤더는 이 문서나 Git에 저장하지 않았으며, 필요한 자격 증명은 도구에서 새로 받습니다. 이번 인계 저장은 웹 기능 변경이나 새 배포 요청이 아닙니다.
+Sites 작업은 `.openai/hosting.json`의 기존 프로젝트를 사용합니다. 다음 게시 때 접근 범위를 다시 읽고 확인된 기존 범위를 유지합니다. 토큰·인증 헤더는 이 문서나 Git에 저장하지 않았으며, 필요한 자격 증명은 도구에서 새로 받습니다.
+
+## 문서 공개 범위 — 2026-09-14
+
+연구 기록·사용 매뉴얼과 배포 문서에는 개인 경로, 내부 저장소/배포 식별자, 내부 하드웨어 매핑·실험 기록을 포함하지 않습니다. 실행 위치는 프로젝트 상대 경로를 사용하며 실제 배포 상태는 설정 파일과 배포 도구에서 확인합니다.
+
+개별 문서는 `/documents/{collection}/{slug}` 웹 뷰어에서 열고 UTF-8로 다운로드합니다. 생성 스크립트는 `scripts/docs/build-reader.mjs`, 응답 검사는 `scripts/docs/check-reader-routes.mjs`입니다. 전체 테스트는 99개 통과했고 로컬 Worker의 문서·다운로드 15쌍을 확인했습니다. 이전 절의 배포 상태는 9월 13일 스냅샷이며 이후 현황은 도구에서 다시 조회합니다.

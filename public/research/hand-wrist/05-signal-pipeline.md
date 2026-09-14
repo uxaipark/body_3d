@@ -32,7 +32,7 @@ y = wᴴ x
 
 이 배열은 초음파 빔포머가 아니다. steering은 혈관 중심선의 전파지연과 조직–패치–전기 전달 `a_i(f)=H_i(f) exp(−j2πfτ_i)`로 정의한다. `H_i`의 위상에는 점탄성과 전자회로 지연이 있다. 저주파 맥파와 수 mm baseline에서는 채널 간 전파 위상이 작아 공간 결합의 많은 이득이 진폭/잡음 가중에서 생긴다. 국소 PTT 분해능 개선은 별도로 입증해야 한다.
 
-웹 이식 대상: Python `advanced_beamforming.py`의 기본 MVDR, shrinkage/diagonal loading, subband 구조. 임의 공간 단위, 복소 공액 convention, filtfilt, 대역별 표준편차 재가중은 직접 복사하지 않는다. 검증된 스펙트럼/복소 선형대수 코어로 Rust/WASM에 단계적으로 옮긴다. 현재 화면의 MRC를 MVDR라고 표기하지 않는다.
+확장 대상은 기본 MVDR, shrinkage/diagonal loading, subband 분석이다. 검증된 스펙트럼·복소 선형대수 연산과 인과적 전처리를 단계적으로 연결한다. 현재 화면의 MRC를 MVDR라고 표기하지 않는다.
 
 ## 4. 지연 측정은 별도 경로
 

@@ -1,5 +1,5 @@
 {
-  "source": "/Users/elliotpark/dev/biosignal/cbp_algorithm/research/digital-twin",
+  "source": "Bundled simulation engine",
   "date": "2026-09-13",
   "scope": "Static research engine; native SOMA views replace avatar and hand. No NC hand asset or participant recordings copied.",
   "sha256": {
@@ -8,7 +8,6 @@
     "js/bpEstimator.js": "b8113442c51d94aecf867e295ce4d408396dff71ea6d1e877403d558667a086b",
     "js/avatar.js": "a672dbc512a056e523509bd7ea77686b2133e846154dba69d525cb56de0e9af7",
     "js/engineWorker.js": "944e3b692104995b0ca457b54b1939978216d1c121a4726c9381f33d33065e70",
-    "js/.DS_Store": "145caf79f83b08edd1a0920c00b47c78f628d28ce7d69e30f30c913250c6ea6c",
     "js/simPresets.js": "82c8c07161533c9e3c0370e92f3d279550ed7b728fb8b3142f2f543b6c1fde17",
     "js/cardiac.js": "966ea97273f8dbf9c4dc63dda08ad6930c4c5d65f083294ffa8d3561851be9d8",
     "js/capacitiveArray.js": "6347af72489e33f66320e291c327efc78147decc7871af31101e21519be0fa73",

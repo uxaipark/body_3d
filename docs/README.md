@@ -9,7 +9,7 @@
 | 위치 | 역할 | 편집 방법 |
 | --- | --- | --- |
 | `docs/manual`, `docs/operations/demo-guide.md` | 사용자 매뉴얼 원본 5개 | 원본 수정 후 `npm run docs:build` |
-| `public/manual`, `app/manual/content.json` | 웹 매뉴얼 자동 생성본 | 직접 수정하지 않음 |
+| `public/manual`, `app/manual/content.json`, `app/documents/content.json` | 웹 매뉴얼·문서 뷰어 자동 생성본 | 직접 수정하지 않음 |
 | `docs/anatomy`, `docs/motion` | 현재 구현과 자산 재생성 | 해당 코드와 함께 갱신 |
 | `docs/operations` | 설치·검증·문서 관리 | 실행 결과와 사용자 보고를 구분 |
 | `public/research/hand-wrist` | 웹 연구 기록 원본 | 현재 구현·연구 계획·과거 측정을 구분 |
@@ -27,6 +27,8 @@
 - [로컬 설치·실행](operations/demo-guide.md)
 
 웹에서는 `/manual`에서 읽습니다. 사용자 문서를 빌드 시 웹 콘텐츠와 다운로드용 Markdown으로 생성합니다. 설치 안내의 단일 원본은 `operations/demo-guide.md`입니다.
+
+연구 문서와 개별 매뉴얼은 `/documents/research/문서명`, `/documents/manual/문서명`에서 웹으로 읽습니다. 원본을 UTF-8로 엄격하게 읽으며, 잘못된 바이트나 대체 문자 발견 시 빌드를 중단합니다. 다운로드는 UTF-8 응답과 BOM을 사용합니다. 개인정보·내부 저장소 경로·배포 식별자·내부 실험 기록은 공개 문서에 넣지 않습니다.
 
 ## 현재 구현·재생성
 
