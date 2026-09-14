@@ -24,7 +24,7 @@
 
 ## 현재 구현
 
-화면은 `/` 소개·썸네일, `/simulators/body` 전신, `/simulators/wrist` 손·손목, `/research` 연구 기록, `/manual` 사용자 매뉴얼입니다. 각 시뮬레이터는 기본 문서 링크로 이동하며 손목 엔진은 독립 iframe 모듈로 연결합니다.
+화면은 `/` 소개·썸네일, `/simulators/body` 전신, `/simulators/wrist` 손목 센싱, `/research` 연구 기록, `/manual` 사용자 매뉴얼입니다. 각 시뮬레이터는 기본 문서 링크로 이동하며 손목 엔진은 독립 iframe 모듈로 연결합니다.
 
 전신은 BodyParts3D 아틀라스 계통과 `skin-atlas-web.glb` 외피, 51개 본 리그, 공통 보행·달리기, 일어서기·반복·손 쥐기·침대 동작을 사용합니다. 피부계 초기 선택은 OFF, 편안 모드는 ON입니다. 이전 MakeHuman 외피는 현재 로드하지 않습니다. 피부계는 국소 단면 관찰 도구를 포함합니다.
 

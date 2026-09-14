@@ -1,6 +1,6 @@
 # SOMA — 바이오센싱 디지털 트윈
 
-전신 해부학과 손·손목 바이오센싱을 탐색하는 React·Three.js 연구 시뮬레이터. 현재 외피는 BodyParts3D 아틀라스의 `skin-atlas-web.glb`입니다. 과거 MakeHuman 외피는 현재 뷰어에서 사용하지 않습니다.
+전신 해부학과 손목 센싱을 탐색하는 React·Three.js 연구 시뮬레이터. 현재 외피는 BodyParts3D 아틀라스의 `skin-atlas-web.glb`입니다. 과거 MakeHuman 외피는 현재 뷰어에서 사용하지 않습니다.
 
 ## 로컬 데모
 

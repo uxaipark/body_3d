@@ -22,7 +22,7 @@
 
 - [시작](manual/start.md)
 - [전신 트윈](manual/body.md)
-- [손·손목 센싱과 회전 조작](manual/wrist.md)
+- [손목 센싱과 회전 조작](manual/wrist.md)
 - [피부 단면 관찰](manual/skin.md)
 - [로컬 설치·실행](operations/demo-guide.md)
 
