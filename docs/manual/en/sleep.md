@@ -8,6 +8,12 @@ Capacitance is the default respiratory input. Allow about 20–32 seconds of cle
 
 Choose Supine, Left side, Right side or Turn in bed. The 3D pose and generated sensor data share a continuously changing orientation. Turning follows a 64-second cycle with two transitions and quiet intervals. Sleep transitions are authored, joint/contact-constrained animations, not captured sleep motions.
 
+## Patch placement
+
+Drag the patch directly, or enable Move patch and click the anterior chest. Camera rotation remains available away from the patch when move mode is off. Touch dragging is supported. Lateral placement ranges from 8 cm right to 8 cm left in the patient's frame; height ranges from 6 cm below to 20 cm above the initial epigastric position. Sliders remain usable when side lying hides the patch. The circular-arrow icon resets only its position.
+
+The curved patch follows the actual fitted skin triangles during breathing and posture changes. Export records patchPlacement in atlas-bind metres (X toward the patient's left, Y upward). Placement is a visualization control; location-dependent electric fields and CAP/ECG sensitivity are not yet coupled to the signal model.
+
 ## Physical and electrical model
 
 The single-compartment lung obeys R·dV/dt + V/C_L = P_mus. V is volume above functional residual capacity (litres), C_L is compliance (L/cmH₂O), and R is airway resistance (cmH₂O·s/L). Integrating this equation produces flow and volume from muscular pressure and passive relaxation. Thoracic excursion follows volume and respiratory effort, with millimetre-scale motion under the default normal conditions.

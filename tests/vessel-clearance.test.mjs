@@ -12,11 +12,11 @@ test('baked costal contacts stay chest-relative while remote abdominal branches 
    if(!p.getAttribute('_RIB_GUARD'))continue;
    const g=new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(p.getAttribute('POSITION').getArray(),3)).setAttribute('_rib_guard',new T.BufferAttribute(p.getAttribute('_RIB_GUARD').getArray(),4)).setAttribute('_rib_chest',new T.BufferAttribute(p.getAttribute('_RIB_CHEST').getArray(),1));
    g.applyMatrix4(new T.Matrix4().fromArray(node.getWorldMatrix()));bindGeometry(g);
-   const oldWeights=g.getAttribute('rigWeight').array.slice(),chest=g.getAttribute('_rib_chest').array.slice();bindVesselClearance(g);
+   const oldWeights=g.getAttribute('rigWeight').array.slice(),chest=g.getAttribute('_rib_chest').array.slice();let first=Infinity;for(let i=0;i<chest.length;i++)if(chest[i]>0)first=Math.min(first,g.getAttribute('position').getY(i));bindVesselClearance(g);
    const pos=g.getAttribute('position'),guard=g.getAttribute('ribGuard'),ix=g.getAttribute('rigIndex'),weight=g.getAttribute('rigWeight');
    for(let i=0;i<pos.count;i++){
     const plane=new T.Vector4().fromBufferAttribute(guard,i),normal=new T.Vector3(plane.x,plane.y,plane.z),point=new T.Vector3().fromBufferAttribute(pos,i);
-    if(normal.lengthSq()<.5){if(chest[i]===0){remoteCount++;for(let j=0;j<4;j++)assert.ok(Math.abs(weight.getComponent(i,j)-oldWeights[i*4+j])<1e-6);}continue;}
+    if(normal.lengthSq()<.5){if(point.y<=first-.14){remoteCount++;for(let j=0;j<4;j++)assert.ok(Math.abs(weight.getComponent(i,j)-oldWeights[i*4+j])<1e-6);}continue;}
     protectedCount++;assert.ok(Math.abs(normal.length()-1)<.001);assert.equal(ix.getX(i),2);assert.ok(weight.getX(i)>.999);
     assert.ok(normal.dot(point)-plane.w>-.00015,'rest vessel crosses its protection plane');
     const challenged=point.clone().addScaledVector(normal,-.03),safe=constrainVessel(challenged,plane);

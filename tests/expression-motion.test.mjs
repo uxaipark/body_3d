@@ -8,7 +8,7 @@ import {defaults,sample} from '../lib/physiology.ts';
 const pos=(rig,name)=>rig.bone(name).getWorldPosition(new T.Vector3());
 
 test('greeting and dance are traceable finite CMU clips with rigid normalized bones',()=>{
- for(const [mode,id] of [['wave','141_16'],['dance','90_28']]){
+ for(const [mode,id] of [['wave','141_16'],['dance','103_03']]){
   const clip=expressionMocapData[mode];assert.equal(clip.source,`CMU ${id}`);assert.match(clip.sha256,/^[a-f0-9]{64}$/);assert.ok(clip.frames.length>100);assert.ok(clip.sourceFrames[0]>0);
   const rig=new HumanRig(),lengths=rig.bones.map(b=>b.position.length());
   for(let i=0;i<clip.frames.length;i++){

@@ -27,3 +27,14 @@ test('volume guard resolves original GLB names and Three sanitized node names id
  const name='Long head of biceps brachii.r.001',a=new T.BoxGeometry(.02,.1,.02),b=a.clone();a.translate(-.19,1.18,0);b.translate(-.19,1.18,0);bindMuscleVolume(a,name);bindMuscleVolume(b,T.PropertyBinding.sanitizeNodeName(name));
  assert.ok(a.getAttribute('muscleAnchor').getW(0)>=0);assert.equal(a.getAttribute('muscleAnchor').getW(0),b.getAttribute('muscleAnchor').getW(0));
 });
+
+test('foot digital muscles never inherit hand bones despite sharing digitorum names',async()=>{
+ const {NodeIO}=await import('@gltf-transform/core'),{ALL_EXTENSIONS}=await import('@gltf-transform/extensions'),draco=(await import('draco3dgltf')).default;
+ const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),doc=await io.read('public/models/muscular-web.glb');let meshes=0,vertices=0;
+ for(const node of doc.getRoot().listNodes()){if(!node.getMesh()||!/digitorum (longus|brevis)/i.test(node.getName()))continue;for(const p of node.getMesh().listPrimitives()){const g=new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(new Float32Array(p.getAttribute('POSITION').getArray()),3)).applyMatrix4(new T.Matrix4().fromArray(node.getWorldMatrix()));bindTissueGeometry(g,node.getName());const ix=g.getAttribute('rigIndex'),w=g.getAttribute('rigWeight');for(let i=0;i<ix.count;i++){for(let j=0;j<4;j++)if(w.getComponent(i,j)>0)assert.match(BONE_NAMES[ix.getComponent(i,j)],/^(pelvis|thigh\.|shin\.|foot\.)/);vertices++;}meshes++;}}
+ assert.equal(meshes,14);assert.ok(vertices>5000);
+});
+test('named arm nerves stay on the arm and maxillary vessels stay on the head',()=>{
+ for(const name of ['Ulnar nerve.r.001','Median nerve.r.001','Radial nerve.r.001','Musculocutaneous nerve.r.001'])for(const y of [.86,.94,1.10,1.21])for(const x of [-.16,-.21]){const w=tissueWeights(name,x,y,.01);w.indices.forEach((id,j)=>{if(w.weights[j]>0)assert.match(BONE_NAMES[id],/^(upperArm|forearm|hand)\.r$/);});}
+ const w=tissueWeights('Maxillary artery.r.001',-.07,1.56,.035);assert.equal(BONE_NAMES[w.indices[0]],'head');assert.equal(w.weights[0],1);
+});

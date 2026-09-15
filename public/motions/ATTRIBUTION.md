@@ -20,9 +20,9 @@ Rebuild with `node --experimental-strip-types scripts/build-mocap.mjs` after dow
 ## Greeting and dance captures
 
 - **Wave hello:** CMU subject 141, trial 16, “Wave Hello”; source frames 3–290, frame interval 0.0083333 s. The calibration frame is excluded. Right-arm greeting, 2.3916571 s loop.
-- **Dance:** CMU subject 90, trial 28, “breakdance”; source frames 338–700, frame interval 0.0083333 s, 3.0166546 s loop. A recurrent pose/velocity pair is selected inside the action.
+- **Dance:** [CMU subject 103, trial 03](https://mocap.cs.cmu.edu/search.php?subjectnumber=103), “charleston_01” (jazz dance); source frames 31–423, frame interval 0.0083333 s, 3.2666536 s loop. A recurrent pose/velocity pair is selected inside the action.
 - Source conversion and trial descriptions: [CMU BVH mirror](https://github.com/una-dinosauria/cmu-mocap), including its motion index and READMEFIRST terms. Original capture: [CMU Graphics Lab](https://mocap.cs.cmu.edu/).
 
-Rebuild these clips with `node --experimental-strip-types scripts/build-expression-mocap.mjs` after placing `141_16.bvh` and `90_28.bvh` in `.asset-cache/mocap/`. Hashes, frame ranges, frame interval, and smoothing are embedded in `lib/expression-mocap-data.js`. The distributed files are short, rig-specific derived poses; the original motion library is not bundled.
+Rebuild these clips with `node --experimental-strip-types scripts/build-expression-mocap.mjs` after placing `141_16.bvh` and `103_03.bvh` in `.asset-cache/mocap/`. Hashes, frame ranges, frame interval, and smoothing are embedded in `lib/expression-mocap-data.js`. The distributed files are short, rig-specific derived poses; the original motion library is not bundled.
 
 Measured joint orientations and directions drive the motion, resampled near 60 Hz with quaternion interpolation and 35 ms offline cyclic smoothing. Loop correction removes endpoint mismatch. The greeting's feet use atlas-length IK and bounded pelvis sway; its palm convention is aligned to the atlas. Dance retains captured torso/knee motion and removes net horizontal travel. The unmeasured CMU finger channels are ignored; digits keep the open atlas pose. Retargeting and signal activity presets are illustrative, not clinical or force-based musculoskeletal validation.

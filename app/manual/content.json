@@ -178,7 +178,7 @@
       },
       {
         "type": "paragraph",
-        "text": "움직임에서 오른손 인사 또는 브레이크댄스를 선택한다. 실제 CMU 모션 캡처를 현재 신체 리그에 맞춰 재생하며 반복과 기존 동작 사이의 전환을 부드럽게 연결한다. 인사에서는 오른손을 들어 흔들고, 춤은 Breakdance 동작이다. 캡처에 없는 손가락 세부 움직임은 합성하지 않는다."
+        "text": "움직임에서 오른손 인사 또는 재즈 댄스를 선택한다. 실제 CMU 모션 캡처를 현재 신체 리그에 맞춰 재생하며 반복과 기존 동작 사이의 전환을 부드럽게 연결한다. 인사에서는 오른손을 들어 흔들고, 춤은 Charleston 재즈 동작이다. 캡처에 없는 손가락 세부 움직임은 합성하지 않는다."
       }
     ],
     "en": {
@@ -240,7 +240,7 @@
         },
         {
           "type": "paragraph",
-          "text": "Choose Wave hello or Dance in the Motion controls. Actual CMU motion captures are retargeted to the body rig, with smooth looping and transitions. The greeting raises and waves the right hand; Dance uses a Breakdance capture. Unmeasured finger articulation is not synthesized."
+          "text": "Choose Wave hello or Dance in the Motion controls. Actual CMU motion captures are retargeted to the body rig, with smooth looping and transitions. The greeting raises and waves the right hand; Jazz dance uses the CMU 103_03 Charleston capture. Unmeasured finger articulation is not synthesized."
         }
       ]
     }
@@ -255,7 +255,7 @@
       },
       {
         "type": "paragraph",
-        "text": "상단 전신 트윈 다음의 수면무호흡 메뉴를 연다. 명치 패치에는 C1·C2·C3 정전용량 전극과 ECG·3축 가속도계가 표시된다. 피부 버튼으로 외피를 확인하고 명치 확대 버튼으로 흉곽과 패치를 자세히 본다. 3D는 기존 전신 해부학 메시를 공유한다."
+        "text": "상단 전신 트윈 다음의 수면무호흡 메뉴를 연다. 명치 패치에는 C1·C2·C3 정전용량 전극과 ECG·3축 가속도계가 표시된다. 피부 버튼으로 외피를 확인하고 패치 확대 버튼으로 흉곽과 패치를 자세히 본다. 3D는 기존 전신 해부학 메시를 공유한다."
       },
       {
         "type": "paragraph",
@@ -264,6 +264,18 @@
       {
         "type": "paragraph",
         "text": "왼쪽 수면, 오른쪽 수면, 뒤척이기, 바로 눕기를 선택할 수 있다. 3D 자세와 합성 센서는 같은 연속 체위 값을 사용한다. 뒤척이기는 64초 주기의 두 번의 전환과 안정 구간으로 구성된다. 수면 체위는 관절과 접촉을 제약한 제작 애니메이션이며, 수면 모션 캡처 자료를 사용했다는 뜻은 아니다."
+      },
+      {
+        "type": "heading",
+        "text": "패치 위치 조절"
+      },
+      {
+        "type": "paragraph",
+        "text": "패치를 직접 드래그하거나 패치 이동 버튼을 켜고 가슴 앞면을 클릭한다. 패치 밖에서는 카메라를 회전할 수 있으며, 이동 모드를 끄면 일반 카메라 조작으로 돌아온다. 터치 드래그도 지원한다. 좌우 슬라이더는 환자 기준 오른쪽 8 cm부터 왼쪽 8 cm까지, 높이는 초기 명치 위치 기준 아래 6 cm부터 위 20 cm까지 조절한다. 옆으로 누워 패치가 가려지면 슬라이더로 조절할 수 있다. 둥근 화살표 아이콘은 패치만 초기 위치로 복원한다."
+      },
+      {
+        "type": "paragraph",
+        "text": "패치의 곡면은 실제 외피 삼각형에 부착되며 호흡과 체위 변화에 따라 같은 피부 위치를 유지한다. 위치는 내보내기 JSON의 patchPlacement에 atlas-bind 좌표(m, X는 환자의 왼쪽, Y는 위쪽)로 기록한다. 이 조절은 부착 위치 시각화이며, 위치별 전기장·CAP·ECG 감도 변화는 아직 신호 모델에 연결하지 않는다."
       },
       {
         "type": "heading",
@@ -380,6 +392,18 @@
         {
           "type": "paragraph",
           "text": "Choose Supine, Left side, Right side or Turn in bed. The 3D pose and generated sensor data share a continuously changing orientation. Turning follows a 64-second cycle with two transitions and quiet intervals. Sleep transitions are authored, joint/contact-constrained animations, not captured sleep motions."
+        },
+        {
+          "type": "heading",
+          "text": "Patch placement"
+        },
+        {
+          "type": "paragraph",
+          "text": "Drag the patch directly, or enable Move patch and click the anterior chest. Camera rotation remains available away from the patch when move mode is off. Touch dragging is supported. Lateral placement ranges from 8 cm right to 8 cm left in the patient's frame; height ranges from 6 cm below to 20 cm above the initial epigastric position. Sliders remain usable when side lying hides the patch. The circular-arrow icon resets only its position."
+        },
+        {
+          "type": "paragraph",
+          "text": "The curved patch follows the actual fitted skin triangles during breathing and posture changes. Export records patchPlacement in atlas-bind metres (X toward the patient's left, Y upward). Placement is a visualization control; location-dependent electric fields and CAP/ECG sensitivity are not yet coupled to the signal model."
         },
         {
           "type": "heading",

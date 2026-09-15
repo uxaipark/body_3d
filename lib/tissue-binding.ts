@@ -12,13 +12,14 @@ export function tissueWeights(name:string,x:number,y:number,z:number):Weights{
  if(/inguinal|iliopectineal|gluteal|gluteus|obturator|gemellus|piriformis|pectineus|adductor minimus|psoas/.test(n))return single('pelvis');
  if(/clavipectoral/.test(n))return single('chest');
  if(/brachiocephalic/.test(n))return weightsAt(0,y,z);
- const arm=/brachi|biceps brachii|triceps|coracobrachialis|deltoid|carpi|palmar|pollicis|digitorum|digiti|indicis|pronator|supinator|anconeus|cephalic vein|basilic vein|cubital|antebrachial|radial (arter|vein|collateral)|ulnar (arter|vein|collateral|recurrent)|interosseous|axillary|circumflex humeral|of (the )?arm|of hand/.test(n)&&!/(foot|plantar|tibial|femor|leg|pedis)/.test(n);
- const leg=/femor|saphenous|poplite|tibial|fibular|plantar|pedis|tarsal|genicular|patellar|quadriceps|vastus|rectus femoris|biceps femoris|semitendinos|semimembranos|sartorius|gracilis|gastrocnemius|soleus|hallucis|of foot|adductor (longus|brevis|magnus)|gluteus|fascia lata|of thigh|of leg/.test(n);
+ const footDigits=/digitorum (longus|brevis)/.test(n);
+ const arm=!footDigits&&/brachi|biceps brachii|triceps|coracobrachialis|deltoid|carpi|palmar|pollicis|digitorum|digiti|indicis|pronator|supinator|anconeus|cephalic vein|basilic vein|cubital|antebrachial|median nerve|musculocutaneous|radial (arter|vein|collateral|nerve)|ulnar (arter|vein|collateral|recurrent|nerve)|interosseous|\baxillary|circumflex humeral|of (the )?arm|of hand/.test(n)&&!/(foot|plantar|tibial|femor|leg|pedis)/.test(n);
+ const leg=footDigits||/femor|saphenous|poplite|tibial|fibular|plantar|pedis|tarsal|genicular|patellar|quadriceps|vastus|rectus femoris|biceps femoris|semitendinos|semimembranos|sartorius|gracilis|gastrocnemius|soleus|hallucis|of foot|adductor (longus|brevis|magnus)|gluteus|fascia lata|crural fascia|iliotibial|calcaneal|sural|sciatic|of thigh|of leg/.test(n);
  if(arm){
   // Muscle bellies stay on their owning segment; tendons/distal attachments
   // share the same continuous joint field as the vascular tree.
   const elbow=1-smooth(1.035,1.145,y),wrist=1-smooth(.825,.905,y);
-  const shoulder=smooth(/deltoid/.test(n)?1.20:1.34,1.43,y)*(/axillary|cephalic|basilic|deltoid|brachial fascia/.test(n)?1:0);
+  const shoulder=smooth(/deltoid/.test(n)?1.20:1.34,1.43,y)*(/\baxillary|cephalic|basilic|deltoid|brachial fascia/.test(n)?1:0);
   return {indices:[id('chest'),id(`upperArm.${side}`),id(`forearm.${side}`),id(`hand.${side}`)],weights:[shoulder,(1-shoulder)*(1-elbow),(1-shoulder)*elbow*(1-wrist),(1-shoulder)*elbow*wrist]};
  }
  if(leg){const hip=smooth(.83,.96,y),knee=1-smooth(.385,.495,y),ankle=1-smooth(.05,.13,y);return {indices:[0,id(`thigh.${side}`),id(`shin.${side}`),id(`foot.${side}`)],weights:[hip,(1-hip)*(1-knee),(1-hip)*knee*(1-ankle),(1-hip)*knee*ankle]};}
