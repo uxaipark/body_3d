@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import '../public/ui/select.css';
 import {LanguageProvider} from './language';
 import {getServerLanguage} from '../lib/i18n/server';
 

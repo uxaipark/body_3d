@@ -62,13 +62,13 @@ export function initMenubar({ actions = {} } = {}) {
   ];
 
   let open = null;
-  const closeAll = () => { if (open) { open.classList.remove('open'); open = null; } };
+  const closeAll = () => { if (open) { open.classList.remove('open'); open.querySelector('.mb-btn').setAttribute('aria-expanded','false'); open = null; } };
   // Main view = close whatever full-page view or dialog is on top (designer, reference, doc viewer, …)
   const goMain = () => { closeAll(); closeReferences(); closeDoc(); if (actions.closeDesigner) actions.closeDesigner(); for (const m of document.querySelectorAll('.modal:not(.hidden)')) if (m.id !== 'calibModal') m.classList.add('hidden'); };
   for (const m of menus) {
     const wrap = el('div', 'mb-menu');
     const btn = el('button', 'mb-btn', m.label); btn.type = 'button';
-    const list = el('div', 'mb-list'); list.setAttribute('role', 'menu');
+    const list = el('div', 'mb-list'); list.setAttribute('role', 'menu');list.id=`soma-menu-${bar.querySelectorAll('.mb-menu').length}`;if(!m.action){btn.setAttribute('aria-haspopup','menu');btn.setAttribute('aria-controls',list.id);btn.setAttribute('aria-expanded','false');}list.setAttribute('aria-label',translateUI(m.label));
     // 동적 메뉴(m.dynamic)는 열릴 때마다 항목을 다시 만든다 — 프리셋 목록처럼 내용이 변하는 메뉴용.
     const renderItems = (items) => {
       list.textContent = translateUI('');
@@ -84,8 +84,13 @@ export function initMenubar({ actions = {} } = {}) {
     };
     renderItems(m.items || []);
     const refreshList = () => { if (m.dynamic) renderItems(m.dynamic()); refreshChecks(list); };
-    btn.addEventListener('click', (ev) => { ev.stopPropagation(); if (m.action) { closeAll(); m.action(btn); return; } const was = open === wrap; closeAll(); if (!was) { refreshList(); wrap.classList.add('open'); open = wrap; } });
-    wrap.addEventListener('mouseenter', () => { if (m.action) return; if (open && open !== wrap) { closeAll(); refreshList(); wrap.classList.add('open'); open = wrap; } });
+    const positionList=()=>{const r=btn.getBoundingClientRect(),width=Math.min(360,innerWidth-16);Object.assign(list.style,{position:'fixed',top:`${r.bottom+4}px`,left:`${Math.max(8,Math.min(r.left,innerWidth-width-8))}px`,width:`${width}px`,maxHeight:`${Math.max(40,innerHeight-r.bottom-12)}px`});};
+    const show=()=>{closeAll();refreshList();wrap.classList.add('open');open=wrap;btn.setAttribute('aria-expanded','true');positionList();};
+    btn.addEventListener('keydown',e=>{if(m.action)return;if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();e.stopPropagation();show();const items=list.querySelectorAll('.mb-item');items[e.key==='ArrowUp'?items.length-1:0]?.focus();}else if(e.key==='Escape'&&open===wrap){e.preventDefault();e.stopPropagation();closeAll();}});
+    list.addEventListener('keydown',e=>{const items=[...list.querySelectorAll('.mb-item')],i=items.indexOf(document.activeElement);if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();e.stopPropagation();items[e.key==='Home'?0:e.key==='End'?items.length-1:(i+(e.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus();}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeAll();btn.focus();}else if(e.key==='Tab')closeAll();else if(['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();e.stopPropagation();const triggers=[...bar.querySelectorAll('.mb-btn[aria-haspopup]')],index=triggers.indexOf(btn),next=triggers[(index+(e.key==='ArrowRight'?1:-1)+triggers.length)%triggers.length];closeAll();next?.focus();next?.click();}});
+    window.addEventListener('resize',()=>{if(open===wrap)positionList();});
+    btn.addEventListener('click', (ev) => { ev.stopPropagation(); if (m.action) { closeAll(); m.action(btn); return; } const was = open === wrap; closeAll(); if (!was) show(); });
+    wrap.addEventListener('mouseenter', () => { if (m.action) return; if (open && open !== wrap) { show(); } });
     wrap.appendChild(btn); wrap.appendChild(list); bar.appendChild(wrap);
   }
   const status = el('span', 'mb-status', ''); status.id = 'mbStatus'; bar.appendChild(status);
@@ -96,11 +101,11 @@ export function initMenubar({ actions = {} } = {}) {
   if (qp.get('modal') === 'refs') openReferences(); // deep link / screenshot hook
   if (qp.get('modal') === 'presets' && actions.openPresets) actions.openPresets(); // 설정 프리셋 딥링크
   if (qp.get('doc')) openDoc(qp.get('doc'), qp.get('doc'));
-  if (qp.get('menu')) { const w = [...bar.querySelectorAll('.mb-menu')].find((m) => m.querySelector('.mb-btn').textContent === translateUI(qp.get('menu'))); if (w) { refreshChecks(w.querySelector('.mb-list')); w.classList.add('open'); open = w; } }
+  if (qp.get('menu')) { const w = [...bar.querySelectorAll('.mb-menu')].find((m) => m.querySelector('.mb-btn').textContent === translateUI(qp.get('menu'))); if (w) w.querySelector('.mb-btn').click(); }
   return { bar, setStatus: (t) => { status.textContent = translateUI(t); } };
 }
 
-function refreshChecks(list) { for (const a of list.querySelectorAll('.mb-item')) { const it = a._it; let on = false; try { on = !!(it && it.check && it.check()); } catch (_) { on = false; } a.querySelector('.mb-check').textContent = translateUI(on ? '✓' : ''); } }
+function refreshChecks(list) { for (const a of list.querySelectorAll('.mb-item')) { const it = a._it; let on = false; try { on = !!(it && it.check && it.check()); } catch (_) { on = false; } a.querySelector('.mb-check').textContent = translateUI(on ? '✓' : '');if(it?.check){a.setAttribute('role','menuitemcheckbox');a.setAttribute('aria-checked',String(on));} } }
 function setParam(k, v) { const u = new URL(location.href); if (v == null) u.searchParams.delete(k); else u.searchParams.set(k, v); location.href = u.toString(); }
 
 // ---------------- Reference modal ----------------

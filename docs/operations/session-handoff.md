@@ -4,6 +4,9 @@
 
 ## 최신 추가 사항
 
+모든 화면의 선택 드롭다운을 공통 자체 구현(public/ui/select.js·select.css)으로 통일했다. React의 SomaSelect와 손목의 숨긴 select 데이터 저장소가 같은 동작을 사용한다. 동적으로 추가되는 시나리오·드리프트·보정 메뉴도 자동 변환한다. 방향키·Home/End·문자 탐색·Enter 확정·Esc 취소·Tab 이동, 비활성 항목 건너뛰기, 프리셋 값 동기화, 화면 경계에서 위로 열기를 지원한다. 손목 상단 메뉴는 자체 구현을 유지하며 키보드 이동과 높이 제한 스크롤을 보완했다. tests/custom-select.test.mjs의 DOM 검사는 실제 브라우저 스크린샷 검사가 아니다.
+
+
 혈관의 열린 끝단 중 일치하는 연결부를 찾아 연결 메시를 추가하고 연결부의 관절 가중치와 맥동·호흡 속성을 공유한다. 반사 변환으로 복제한 우측 조직의 삼각형 면 방향도 수정한다. 원본에 존재하는 연결의 연속성을 보완하며, 근접한 동맥·정맥이나 연결 근거 없는 열린 끝을 임의로 붙이지 않는다. 전체 모세혈관망을 생성했다는 뜻은 아니다. lib/vessel-junctions.ts와 tests/vessel-junctions.test.mjs, scripts/audit-vessel-junctions.mjs 참고. 수면 팔 자세는 공통 지지 표면을 따르며 몸 앞쪽으로 모은다.
 
 위치별 ECG/CAP/ACC 모델의 가정과 수식은 수면 매뉴얼에 기록했다. scripts/build-sleep-anatomy.mjs로 폐 전면 표본과 초기 전극 좌표를 생성한다. 모델 입력 파일을 바꾸면 재생성해야 한다. 데모 게이트웨이는 lib/sleep/model.js뿐 아니라 sensing.js·ecg-derived.js·anatomy-data.js도 함께 복사한다.
