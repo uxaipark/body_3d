@@ -1,14 +1,16 @@
+
+import {t as translateUI,html as localizeHTML,getLanguage} from '../../../i18n/locale.js';
 // Thin top menu bar (28 px) with drop-down menus, including the "Reference" menu that opens a modal
 // listing which papers / standards each feature is based on (data: js/references.js).
 import { REFERENCES, FEATURES, refNumber } from './references.js';
 import { SCENARIOS } from './scenarioPlayer.js';
 import { THEMES, THEME_LABEL, getThemePref, setTheme } from './theme.js';
 
-function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = translateUI(text); return e; }
 
 export function initMenubar({ actions = {} } = {}) {
-  const bar = el('nav', 'menubar'); bar.setAttribute('aria-label', '메뉴');
-  const brand = el('button', 'mb-brand', 'Radial Artery Digital Twin'); brand.type = 'button'; brand.title = '메인 화면으로'; brand.addEventListener('click', () => goMain()); bar.appendChild(brand);
+  const bar = el('nav', 'menubar'); bar.setAttribute('aria-label', translateUI('메뉴'));
+  const brand = el('button', 'mb-brand', 'Radial Artery Digital Twin'); brand.type = 'button'; brand.title = translateUI('메인 화면으로'); brand.addEventListener('click', () => goMain()); bar.appendChild(brand);
 
   const menus = [
     { label: '보기', items: [
@@ -69,12 +71,12 @@ export function initMenubar({ actions = {} } = {}) {
     const list = el('div', 'mb-list'); list.setAttribute('role', 'menu');
     // 동적 메뉴(m.dynamic)는 열릴 때마다 항목을 다시 만든다 — 프리셋 목록처럼 내용이 변하는 메뉴용.
     const renderItems = (items) => {
-      list.textContent = '';
+      list.textContent = translateUI('');
       for (const it of items) {
         if (it.sep) { list.appendChild(el('div', 'mb-sep')); continue; }
         const a = el(it.href ? 'a' : 'button', 'mb-item'); a.setAttribute('role', 'menuitem');
         if (it.href) { a.href = it.href; a.target = '_blank'; a.rel = 'noopener'; } else a.type = 'button';
-        if (it.title) a.title = it.title;
+        if (it.title) a.title = translateUI(it.title);
         const chk = el('span', 'mb-check', ''); a.appendChild(chk); a.appendChild(el('span', 'mb-label', it.label));
         a.addEventListener('click', () => { closeAll(); if (it.run) it.run(); });
         a._it = it; list.appendChild(a);
@@ -94,11 +96,11 @@ export function initMenubar({ actions = {} } = {}) {
   if (qp.get('modal') === 'refs') openReferences(); // deep link / screenshot hook
   if (qp.get('modal') === 'presets' && actions.openPresets) actions.openPresets(); // 설정 프리셋 딥링크
   if (qp.get('doc')) openDoc(qp.get('doc'), qp.get('doc'));
-  if (qp.get('menu')) { const w = [...bar.querySelectorAll('.mb-menu')].find((m) => m.querySelector('.mb-btn').textContent === qp.get('menu')); if (w) { refreshChecks(w.querySelector('.mb-list')); w.classList.add('open'); open = w; } }
-  return { bar, setStatus: (t) => { status.textContent = t; } };
+  if (qp.get('menu')) { const w = [...bar.querySelectorAll('.mb-menu')].find((m) => m.querySelector('.mb-btn').textContent === translateUI(qp.get('menu'))); if (w) { refreshChecks(w.querySelector('.mb-list')); w.classList.add('open'); open = w; } }
+  return { bar, setStatus: (t) => { status.textContent = translateUI(t); } };
 }
 
-function refreshChecks(list) { for (const a of list.querySelectorAll('.mb-item')) { const it = a._it; let on = false; try { on = !!(it && it.check && it.check()); } catch (_) { on = false; } a.querySelector('.mb-check').textContent = on ? '✓' : ''; } }
+function refreshChecks(list) { for (const a of list.querySelectorAll('.mb-item')) { const it = a._it; let on = false; try { on = !!(it && it.check && it.check()); } catch (_) { on = false; } a.querySelector('.mb-check').textContent = translateUI(on ? '✓' : ''); } }
 function setParam(k, v) { const u = new URL(location.href); if (v == null) u.searchParams.delete(k); else u.searchParams.set(k, v); location.href = u.toString(); }
 
 // ---------------- Reference modal ----------------
@@ -123,7 +125,7 @@ function buildReferences() {
       r.appendChild(el('td', null, it.feature));
       r.appendChild(el('td', 'mono', it.where || ''));
       const tdRefs = el('td');
-      it.refs.forEach((id, i) => { const n = refNumber(id); const a = el('a', 'refnum', `[${n}]`); a.href = `#ref-${n}`; a.title = (REFERENCES[n - 1] || {}).cite || ''; a.addEventListener('click', (e) => { e.preventDefault(); const t = box.querySelector(`#ref-${n}`); if (t) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.add('hl'); setTimeout(() => t.classList.remove('hl'), 1200); } }); tdRefs.appendChild(a); if (i < it.refs.length - 1) tdRefs.appendChild(document.createTextNode(' ')); });
+      it.refs.forEach((id, i) => { const n = refNumber(id); const a = el('a', 'refnum', `[${n}]`); a.href = `#ref-${n}`; a.title = translateUI((REFERENCES[n - 1] || {}).cite || ''); a.addEventListener('click', (e) => { e.preventDefault(); const t = box.querySelector(`#ref-${n}`); if (t) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.add('hl'); setTimeout(() => t.classList.remove('hl'), 1200); } }); tdRefs.appendChild(a); if (i < it.refs.length - 1) tdRefs.appendChild(document.createTextNode(translateUI(' '))); });
       r.appendChild(tdRefs);
       r.appendChild(el('td', 'muted', it.note || ''));
       tbody.appendChild(r);
@@ -183,6 +185,7 @@ export function markdownToHtml(md) {
   return out.join('\n');
 }
 export async function openDoc(path, title) {
+  if(getLanguage()==='en')path=path.replace(/^\/research\/hand-wrist\/(?!en\/)([^/]+\.md)$/, '/research/hand-wrist/en/$1');
   if (!docModal) {
     docModal = el('div', 'modal hidden docview'); docModal.setAttribute('role', 'dialog'); docModal.setAttribute('aria-modal', 'true');
     const box = el('div', 'modal-box wide');
@@ -194,12 +197,12 @@ export async function openDoc(path, title) {
     docBody.addEventListener('click', (e) => { const a = e.target.closest('a[data-doc]'); if (a) { e.preventDefault(); openDoc(a.getAttribute('data-doc'), a.textContent); } });
     document.body.appendChild(docModal);
   }
-  docTitle.textContent = title || path; docModal.querySelector('#docRaw').href = path;
-  docBody.innerHTML = '<p class="refs-intro">불러오는 중…</p>'; docModal.classList.remove('hidden');
+  docTitle.textContent = translateUI(title || path); docModal.querySelector('#docRaw').href = path;
+  docBody.innerHTML = localizeHTML('<p class="refs-intro">불러오는 중…</p>'); docModal.classList.remove('hidden');
   try {
     const resp = await fetch(path, { cache: 'no-store' }); if (!resp.ok) throw new Error(`${resp.status}`);
     const buf = await resp.arrayBuffer(); const text = new TextDecoder('utf-8').decode(buf); // decode as UTF-8 regardless of server charset
-    docBody.innerHTML = markdownToHtml(text);
-  } catch (e) { docBody.innerHTML = `<p class="refs-intro">문서를 불러올 수 없습니다: ${escapeHtml(String(e))}</p>`; }
+    docBody.innerHTML = localizeHTML(markdownToHtml(text));
+  } catch (e) { docBody.innerHTML = localizeHTML(`<p class="refs-intro">문서를 불러올 수 없습니다: ${escapeHtml(String(e))}</p>`); }
 }
 export function closeDoc() { if (docModal) docModal.classList.add('hidden'); }

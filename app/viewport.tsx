@@ -1,4 +1,6 @@
 'use client';
+import {L} from './language';
+
 import {useEffect,useRef,useState,type MutableRefObject}from'react';
 import type {AnatomyScene,Layers}from'@/lib/anatomy';
 import type{SkinRegion}from'@/lib/skin-section';
@@ -25,5 +27,5 @@ export default function Viewport({comfortMode,params,layers,selectedSites,skinIn
  useEffect(()=>{sceneRef.current?.setSkinInspection(skinInspection)},[skinInspection]);
  useEffect(()=>{sceneRef.current?.setSensors(selectedSites)},[selectedSites]);
  useEffect(()=>{sceneRef.current?.setParameters(params)},[params]);useEffect(()=>{sceneRef.current?.setLayers(layers)},[layers]);
- return <><div ref={host} className="anatomy-canvas" aria-label="전신 3D 해부학 모델. 드래그로 회전, 스크롤로 확대, 점을 눌러 센서 선택."/>{(progress<100||error)&&<div className="model-loading" role="status">{error||`해부학 레이어 불러오는 중 · ${progress}%`}{!error&&<div style={{width:`${progress}%`}}/>}</div>}</>;
+ return <><L as="div" ref={host} className="anatomy-canvas" aria-label="전신 3D 해부학 모델. 드래그로 회전, 스크롤로 확대, 점을 눌러 센서 선택."/>{(progress<100||error)&&<L as="div" className="model-loading" role="status">{error||`해부학 레이어 불러오는 중 · ${progress}%`}{!error&&<L as="div" style={{width:`${progress}%`}}/>}</L>}</>;
 }

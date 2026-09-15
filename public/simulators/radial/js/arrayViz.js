@@ -1,3 +1,5 @@
+
+import {t as translateUI} from '../../../i18n/locale.js';
 import {clipPatchPath} from './patchGeometry.js';
 // Capacitive array snapshot visualizer with three modes:
 //   'heatmap' — 2D colour grid (canvas 2D)
@@ -101,8 +103,8 @@ export class ArrayViz {
     const ctx = cv.getContext('2d');
     if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, 128, 64); }
     ctx.font = `500 ${size}px ui-monospace, Menlo, monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(11,16,32,0.9)'; ctx.strokeText(text, 64, 34);
-    ctx.fillStyle = color; ctx.fillText(text, 64, 34);
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(11,16,32,0.9)'; ctx.strokeText(translateUI(text), 64, 34);
+    ctx.fillStyle = color; ctx.fillText(translateUI(text), 64, 34);
     const tex = new THREE.CanvasTexture(cv);
     // Depth-tested so the bars / surface occlude the floor numbers (they live on the floor plane)
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false }));

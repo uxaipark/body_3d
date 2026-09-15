@@ -1,3 +1,5 @@
+
+import {t as translateUI} from '../../../i18n/locale.js';
 // 시뮬레이션 설정 프리셋 — 저장 / 불러오기 / 삭제 / 초기화 (2026-08-25 사용자 요청)
 //
 // 설계 원칙: 엔진 상태를 직접 직렬화하지 않고 **UI 컨트롤의 값**을 저장한다.
@@ -115,7 +117,7 @@ export function presetInfo(name) { return readAll()[name] || null; }
 
 // ---- 설정 모달 (톱 메뉴 "설정" 클릭 시) ----------------------------------------------------
 // prompt/confirm 대신 앱 내부 모달로 목록·이름 입력·저장/불러오기/삭제/초기화를 한 화면에서 처리한다.
-const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = translateUI(text); return e; };
 let modal = null, refresh = null, nameInput = null, nameTimer = null, nameDirty = false;
 
 // 기본 프리셋 이름 = 날짜 - 시분초 (2026-08-25 사용자 요청)
@@ -149,7 +151,7 @@ export function openPresetDialog(anchor = null) {
     box.appendChild(listWrap);
 
     const nameRow = el('div', 'preset-name');
-    const input = el('input'); input.type = 'text'; input.placeholder = '프리셋 이름'; input.maxLength = 60; nameInput = input;
+    const input = el('input'); input.type = 'text'; input.placeholder = translateUI('프리셋 이름'); input.maxLength = 60; nameInput = input;
     const bSave = el('button', 'btn primary', '현재 설정 저장');
     nameRow.appendChild(input); nameRow.appendChild(bSave); box.appendChild(nameRow);
 
@@ -165,9 +167,9 @@ export function openPresetDialog(anchor = null) {
     modal.appendChild(box); document.body.appendChild(modal);
 
     let sel = null;
-    const say = (t, bad = false) => { status.textContent = t; status.className = 'preset-status' + (bad ? ' bad' : ''); };
+    const say = (t, bad = false) => { status.textContent = translateUI(t); status.className = 'preset-status' + (bad ? ' bad' : ''); };
     refresh = () => {
-      listWrap.textContent = '';
+      listWrap.textContent = translateUI('');
       const names = listPresets();
       if (!names.length) { listWrap.appendChild(el('div', 'preset-empty', '저장된 프리셋이 없습니다 — 아래에 이름을 입력하고 저장하세요.')); sel = null; }
       for (const n of names) {
@@ -201,7 +203,7 @@ export function openPresetDialog(anchor = null) {
   startNameClock();                              // 그리고 매 초 갱신
   modal.classList.remove('hidden');
   // 화면 한가운데가 아니라 "설정" 메뉴 버튼 바로 아래에 띄운다(2026-08-25 사용자 요청).
-  const btn = anchor || [...document.querySelectorAll('.mb-btn')].find((b) => b.textContent.trim() === '설정');
+  const btn = anchor || [...document.querySelectorAll('.mb-btn')].find((b) => b.textContent.trim() === translateUI('설정'));
   const box = modal.querySelector('.modal-box');
   if (btn && box) {
     const r = btn.getBoundingClientRect(), bw = box.offsetWidth || 440, bh = box.offsetHeight || 260;

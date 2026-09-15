@@ -57,8 +57,6 @@ export const REFERENCES = [
   { id: 'deluca1997', cite: 'De Luca, C. J. (1997). The use of surface electromyography in biomechanics. Journal of Applied Biomechanics, 13(2), 135–163.' },
   { id: 'inan2015', cite: 'Inan, O. T., Migeotte, P.-F., Park, K.-S., et al. (2015). Ballistocardiography and seismocardiography: a review of recent advances. IEEE Journal of Biomedical and Health Informatics, 19(4), 1414–1427.' },
   // ---- Project documents --------------------------------------------------------------------------
-  { id: 'skylabs2026', cite: 'SkyLabs CART(PTT/PAT/PPG) 및 정전용량 요골 혈압 리뷰 (2026-08-22). 프로젝트 내부 문서 docs/SkyLabs_PTT_PAT_PPG_Capacitive_Radial_BP_Review_20260822.md.' },
-  { id: 'patent2026', cite: '차세대 연속혈압 기기 특허 기회 분석 (2026). 프로젝트 내부 문서 patent/01_SkyLabs_Review_분석_및_특허기회.md.' },
 ];
 
 export const FEATURES = [
@@ -128,12 +126,6 @@ export const FEATURES = [
       { feature: 'EMG: 정적(중력 토크) + 동적(각속도) 활성 → 간섭패턴 합성, 근육별 진폭', where: 'emg.js', refs: ['deluca1997'] },
       { feature: 'IMU: 중력·몸통 가속·관절 접선가속·각속도 벡터 결합, 미세 BCG 성분', where: 'imu.js', refs: ['inan2015'] },
       { feature: '누운 자세에서 정수압 0·몸통 sway 없음, 앉기/서기 팔 위치 프리셋', where: 'kinematics.js BODY_POSTURES/ARM_POSITIONS', refs: ['netea2003', 'winter1995'] },
-    ],
-  },
-  {
-    group: '내부 문서 (참고문헌 아님)',
-    items: [
-      { feature: '링형 PPG(SkyLabs CART) 대비 손목 정전용량 어레이의 차세대 연속혈압 기기 방향', where: 'patent/, docs/', refs: ['skylabs2026', 'patent2026', 'mukkamala2015', 'sola2019'] },
     ],
   },
 ];

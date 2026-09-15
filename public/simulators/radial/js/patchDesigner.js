@@ -1,3 +1,5 @@
+
+import {t as translateUI,html as localizeHTML} from '../../../i18n/locale.js';
 // Patch electrode design tool — modal with a 0.1 mm grid canvas: drag-and-drop electrodes, set each
 // pad's size/shape/position, generate regular grids, save named layouts (localStorage) and apply them
 // to the simulator (model + analysis core + 3D wrist view + snapshot/Δt views).
@@ -7,7 +9,7 @@ import { normalizeLayout, gridLayout, saveLayout, deleteLayout, loadLayouts, get
 import { WRIST_ANATOMY } from './capacitiveArray.js';
 import { WRIST_WIDTH_REF_MM } from './anthropometry.js';
 
-function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = translateUI(text); return e; }
 function num(id, label, value, { min = 0, max = 100, step = 0.1, w = 64 } = {}) {
   const wrap = el('label', 'pd-field'); wrap.appendChild(el('span', null, label));
   const i = el('input'); i.type = 'number'; i.id = id; i.min = min; i.max = max; i.step = step; i.value = value; i.style.width = `${w}px`; wrap.appendChild(i);
@@ -67,22 +69,22 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
     let anatEdit = new URLSearchParams(location.search).has('anatedit');
     const seg = el('div', 'pd-seg');
     // ⚙ control icon: toggles the guide-line adjustment inputs (PL / FCR / radial artery / photo rotation)
-    const gear = el('button', 'btn pd-gear', ''); gear.type = 'button'; gear.title = '가이드 선(요골동맥·FCR·PL)·사진 회전 조정';
-    gear.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.5-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.6h-4l-.4 2.5a7.6 7.6 0 0 0-2.6 1.5l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 3l-2 1.5 2 3.4 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.4-2-1.5z"/></svg>';
+    const gear = el('button', 'btn pd-gear', ''); gear.type = 'button'; gear.title = translateUI('가이드 선(요골동맥·FCR·PL)·사진 회전 조정');
+    gear.innerHTML = localizeHTML('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"/><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.5-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.6h-4l-.4 2.5a7.6 7.6 0 0 0-2.6 1.5l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 3l-2 1.5 2 3.4 2.4-1a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.4 1 2-3.4-2-1.5z"/></svg>');
     gear.addEventListener('click', () => { anatEdit = !anatEdit; gear.classList.toggle('primary', anatEdit); const adjEl = document.getElementById('pdAnatAdj'); if (adjEl) adjEl.style.display = anatEdit && wristSide !== 'none' ? 'inline-flex' : 'none'; if (anatEdit && wristSide === 'none' && ui.wristBtns.right) ui.wristBtns.right.click(); });
     seg.appendChild(gear);
     const segLabel = el('span', 'pd-seg-label', '손목 아웃라인'); seg.appendChild(segLabel);
     // The fine-tune inputs are hidden by default (the saved/measured values are the defaults); reveal with
     // Alt+click on the label or ?anatedit=1 when the overlay needs re-registration.
-    segLabel.title = '⚙ 아이콘: 가이드 선 조정 메뉴 표시/숨김';
+    segLabel.title = translateUI('⚙ 아이콘: 가이드 선 조정 메뉴 표시/숨김');
     segLabel.addEventListener('click', (e) => { if (!e.altKey) return; anatEdit = !anatEdit; const adjEl = document.getElementById('pdAnatAdj'); if (adjEl) adjEl.style.display = anatEdit && wristSide !== 'none' ? 'inline-flex' : 'none'; });
     ui.wristBtns = {};
-    for (const [v, t] of [['none', '없음'], ['right', '오른손'], ['left', '왼손']]) { const b = el('button', 'btn' + (v === wristSide ? ' primary' : ''), t); b.type = 'button'; b.addEventListener('click', () => { wristSide = v; for (const [k, bb] of Object.entries(ui.wristBtns)) bb.classList.toggle('primary', k === v); applyOverlayDefaults(v); const prefs = loadOverlayPrefs(); prefs.side = v; saveOverlayPrefs(prefs); const adjEl = document.getElementById('pdAnatAdj'); if (adjEl) adjEl.style.display = anatEdit && v !== 'none' ? 'inline-flex' : 'none'; b.title = v === 'none' ? '' : `오버레이 PL ${anat.pl} / FCR ${anat.fcr} / 동맥 ${anat.artery} mm · 회전 ${anat.rot}°`; fitView(); draw(); }); ui.wristBtns[v] = b; seg.appendChild(b); }
+    for (const [v, t] of [['none', '없음'], ['right', '오른손'], ['left', '왼손']]) { const b = el('button', 'btn' + (v === wristSide ? ' primary' : ''), t); b.type = 'button'; b.addEventListener('click', () => { wristSide = v; for (const [k, bb] of Object.entries(ui.wristBtns)) bb.classList.toggle('primary', k === v); applyOverlayDefaults(v); const prefs = loadOverlayPrefs(); prefs.side = v; saveOverlayPrefs(prefs); const adjEl = document.getElementById('pdAnatAdj'); if (adjEl) adjEl.style.display = anatEdit && v !== 'none' ? 'inline-flex' : 'none'; b.title = translateUI(v === 'none' ? '' : `오버레이 PL ${anat.pl} / FCR ${anat.fcr} / 동맥 ${anat.artery} mm · 회전 ${anat.rot}°`); fitView(); draw(); }); ui.wristBtns[v] = b; seg.appendChild(b); }
     // fine-tune the anatomy overlay against the photo (mm from the wrist midline, + thumb side)
     const adj = el('div', 'pd-seg'); adj.id = 'pdAnatAdj'; adj.style.display = 'none';
     const mk = (label, key, val) => { const wrap = el('label', 'pd-field'); wrap.style.width = 'auto'; wrap.appendChild(el('span', null, label)); const i = el('input'); i.type = 'number'; i.step = 0.5; i.min = -30; i.max = 30; i.value = val; i.style.width = '58px'; i.addEventListener('input', () => { anat[key] = +i.value; if (key === 'artery') anat.arteryManual = true; if (key === 'fcr' && !anat.arteryManual) { anat.artery = anat.fcr + rescale(ARTERY_FCR_GAP_MM, widthScale()); if (ui.anatArt) ui.anatArt.value = anat.artery; } persistOverlay(); draw(); }); wrap.appendChild(i); adj.appendChild(wrap); return i; };
     ui.anatPl = mk('PL', 'pl', anat.pl); ui.anatFcr = mk('FCR', 'fcr', anat.fcr); ui.anatArt = mk('요골동맥', 'artery', anat.artery); ui.anatRot = mk('사진 회전°', 'rot', anat.rot); ui.anatRot.step = 0.2; ui.anatRot.min = -30; ui.anatRot.max = 30;
-    const resetA = el('button', 'btn', '기본값'); resetA.type = 'button'; resetA.title = '이 손의 오버레이 위치/회전을 측정 기본값으로 되돌리기';
+    const resetA = el('button', 'btn', '기본값'); resetA.type = 'button'; resetA.title = translateUI('이 손의 오버레이 위치/회전을 측정 기본값으로 되돌리기');
     resetA.addEventListener('click', () => { const prefs = loadOverlayPrefs(); delete prefs[wristSide]; saveOverlayPrefs(prefs); anat.arteryManual = false; applyOverlayDefaults(wristSide); draw(); });
     adj.appendChild(resetA);
     // 손목 폭 가정 read-out (사진 정합의 스케일 근거) — 체형 슬라이더가 바꾼다
@@ -136,7 +138,7 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
     right.appendChild(g3);
     // save / load / apply
     const g4 = el('fieldset', 'pd-group'); g4.appendChild(el('legend', null, '저장 · 불러오기 · 적용'));
-    const nameWrap = el('label', 'pd-field'); nameWrap.appendChild(el('span', null, '이름')); ui.name = el('input'); ui.name.type = 'text'; ui.name.style.width = '150px'; ui.name.placeholder = '레이아웃 이름'; nameWrap.appendChild(ui.name); g4.appendChild(nameWrap);
+    const nameWrap = el('label', 'pd-field'); nameWrap.appendChild(el('span', null, '이름')); ui.name = el('input'); ui.name.type = 'text'; ui.name.style.width = '150px'; ui.name.placeholder = translateUI('레이아웃 이름'); nameWrap.appendChild(ui.name); g4.appendChild(nameWrap);
     const row2 = el('div', 'pd-row');
     const saveB = el('button', 'btn primary', '저장'); saveB.type = 'button'; saveB.addEventListener('click', () => { if (!layout) return; const name = (ui.name.value || '').trim(); if (!name) return flash('이름을 입력하세요'); const L = saveLayout({ ...layout, name }); setLayout(L, sel); refreshSaved(); flash(`저장됨: ${name}`); if (onApply) onApply(null, { savedOnly: true }); });
     const applyB = el('button', 'btn primary', '시뮬레이터에 적용'); applyB.type = 'button'; applyB.addEventListener('click', () => { if (!layout) return; if (minGap(layout) < 0) return flash('전극이 겹칩니다 — 간격을 확인하세요'); if (onApply) onApply(layout); flash('적용됨'); });
@@ -209,11 +211,11 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
       if (ui.anatPl) { ui.anatPl.value = anat.pl; ui.anatFcr.value = anat.fcr; ui.anatArt.value = anat.artery; }
     }
     if (ui.widthNote) {
-      ui.widthNote.textContent = `손목 폭 가정 ${wristWidth_mm.toFixed(1)} mm — 체형 슬라이더로 변경`;
-      ui.widthNote.title = `손 사진의 px/mm 정합과 가이드 선(요골동맥·FCR·PL)이 이 폭을 기준으로 그려진다. 값은 자세/움직임 카드의 신장·체중(체형 프리셋)에서 유도 — js/anthropometry.js deriveWristCrossSection (모델 가정, docs/CLINICAL_AUDIT.md §6.16). 기준 체형 170 cm/70 kg → 정확히 58.0 mm.`;
+      ui.widthNote.textContent = translateUI(`손목 폭 가정 ${wristWidth_mm.toFixed(1)} mm — 체형 슬라이더로 변경`);
+      ui.widthNote.title = translateUI(`손 사진의 px/mm 정합과 가이드 선(요골동맥·FCR·PL)이 이 폭을 기준으로 그려진다. 값은 자세/움직임 카드의 신장·체중(체형 프리셋)에서 유도 — js/anthropometry.js deriveWristCrossSection (모델 가정, docs/CLINICAL_AUDIT.md §6.16). 기준 체형 170 cm/70 kg → 정확히 58.0 mm.`);
     }
   }
-  function flash(t) { ui.status.textContent = t; ui.status.classList.add('on'); setTimeout(() => ui.status.classList.remove('on'), 1500); }
+  function flash(t) { ui.status.textContent = translateUI(t); ui.status.classList.add('on'); setTimeout(() => ui.status.classList.remove('on'), 1500); }
   // Seed the library with a few ready-made patches the first time (users can edit/delete them)
   function seedLibrary() {
     const have = loadLayouts();
@@ -235,7 +237,7 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
   }
   function refreshThumbs() {
     if (!ui.thumbs) return;
-    ui.thumbs.innerHTML = '';
+    ui.thumbs.innerHTML = localizeHTML('');
     ui.thumbs.appendChild(el('div', 'pd-thumbs-title', '저장된 패치'));
     const saved = loadLayouts();
     const items = [...Object.keys(saved).map((n) => ({ name: n, get: () => getLayout(n), kind: 'saved' })), ...Object.keys(PRESETS).map((n) => ({ name: n, get: () => PRESETS[n](), kind: 'preset' }))];
@@ -243,7 +245,7 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
       const L = it.get(); if (!L) continue;
       const card = el('div', 'pd-thumb' + (layout && ((it.kind === 'saved' && ui.name.value === it.name) || (it.kind === 'preset' && layout.name === it.name)) ? ' active' : ''));
       card.appendChild(thumbCanvas(L));
-      const cap = el('div', 'pd-thumb-cap', (it.kind === 'preset' ? '[프리셋] ' : '') + it.name); cap.title = it.name; card.appendChild(cap);
+      const cap = el('div', 'pd-thumb-cap', (it.kind === 'preset' ? '[프리셋] ' : '') + it.name); cap.title = translateUI(it.name); card.appendChild(cap);
       card.appendChild(el('div', 'pd-thumb-sub', `${L.electrodes.length}전극 · ${L.rows}행 · ${L.sheetW}×${L.sheetH} mm`));
       card.addEventListener('click', () => { setLayout(L, -1); ui.name.value = it.kind === 'saved' ? it.name : ''; refreshThumbs(); });
       ui.thumbs.appendChild(card);
@@ -251,7 +253,7 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
   }
   function refreshSaved() {
     refreshThumbs();
-    const cur = ui.saved.value; ui.saved.innerHTML = '';
+    const cur = ui.saved.value; ui.saved.innerHTML = localizeHTML('');
     const o0 = el('option', null, '— 저장된 레이아웃 / 프리셋 —'); o0.value = ''; ui.saved.appendChild(o0);
     for (const n of Object.keys(loadLayouts())) { const o = el('option', null, n); o.value = n; ui.saved.appendChild(o); }
     for (const n of Object.keys(PRESETS)) { const o = el('option', null, n); o.value = n; ui.saved.appendChild(o); }
@@ -271,10 +273,10 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
   function syncSelUi() {
     const e = sel >= 0 ? layout.electrodes[sel] : null;
     for (const k of ['ex', 'ey', 'ew', 'eh', 'eshape']) ui[k].disabled = !e;
-    if (e) { ui.ex.value = e.x; ui.ey.value = e.y; ui.ew.value = e.w; ui.eh.value = e.h; ui.eshape.value = e.shape; ui.selTitle.textContent = `#${sel + 1} (행 ${e.r + 1}, 열 ${e.c + 1}) — 드래그로 이동 · 방향키 0.1 mm · Shift+방향키 1 mm · Delete 삭제`; }
-    else ui.selTitle.textContent = '전극을 클릭해 선택 · 드래그로 이동(0.1 mm 스냅) · 방향키 0.1 mm, Shift+방향키 1 mm';
+    if (e) { ui.ex.value = e.x; ui.ey.value = e.y; ui.ew.value = e.w; ui.eh.value = e.h; ui.eshape.value = e.shape; ui.selTitle.textContent = translateUI(`#${sel + 1} (행 ${e.r + 1}, 열 ${e.c + 1}) — 드래그로 이동 · 방향키 0.1 mm · Shift+방향키 1 mm · Delete 삭제`); }
+    else ui.selTitle.textContent = translateUI('전극을 클릭해 선택 · 드래그로 이동(0.1 mm 스냅) · 방향키 0.1 mm, Shift+방향키 1 mm');
     const gap = layout.electrodes.length >= 2 ? minGap(layout) : null;
-    ui.info.innerHTML = `전극 ${layout.electrodes.length} / ${MAX_ELECTRODES} · 행 ${layout.rows} · 최대 열 ${layout.cols}` + (gap != null ? ` · 최소 간격 ${gap.toFixed(1)} mm${gap < 0 ? ' <b style="color:#f87171">(겹침!)</b>' : ''}` : '');
+    ui.info.innerHTML = localizeHTML(`전극 ${layout.electrodes.length} / ${MAX_ELECTRODES} · 행 ${layout.rows} · 최대 열 ${layout.cols}` + (gap != null ? ` · 최소 간격 ${gap.toFixed(1)} mm${gap < 0 ? ' <b style="color:#f87171">(겹침!)</b>' : ''}` : ''));
   }
 
   // ---- canvas mapping: origin at sheet centre, x → right (+thumb), y → up (+distal)
@@ -316,15 +318,15 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
       ctx.fillStyle = i === sel ? 'rgba(251,191,36,1)' : 'rgba(245,180,30,0.92)'; ctx.fill();
       ctx.strokeStyle = i === sel ? '#fff' : 'rgba(255,255,255,0.5)'; ctx.lineWidth = (i === sel ? 2 : 1) * dpr; ctx.stroke();
       ctx.fillStyle = '#0b1020'; ctx.font = font(Math.max(8, Math.min(14, Math.min(pw, ph) / dpr * 0.35))); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(`${i + 1}`, x0 + pw / 2, y0 + ph / 2 - (e.label ? ph * 0.2 : 0));
-      if (e.label) { ctx.font = font(Math.max(7, Math.min(11, Math.min(pw, ph) / dpr * 0.24))); ctx.fillStyle = 'rgba(11,16,32,0.85)'; ctx.fillText(e.label, x0 + pw / 2, y0 + ph / 2 + ph * 0.24); }
+      ctx.fillText(translateUI(`${i + 1}`), x0 + pw / 2, y0 + ph / 2 - (e.label ? ph * 0.2 : 0));
+      if (e.label) { ctx.font = font(Math.max(7, Math.min(11, Math.min(pw, ph) / dpr * 0.24))); ctx.fillStyle = 'rgba(11,16,32,0.85)'; ctx.fillText(translateUI(e.label), x0 + pw / 2, y0 + ph / 2 + ph * 0.24); }
       ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     });
     // axes labels + cursor readout
     ctx.fillStyle = 'rgba(226,232,240,0.85)'; ctx.font = font(10.5);
-    ctx.fillText('+y 손가락 (distal)', 8 * dpr, 14 * dpr); ctx.fillText('−y 몸통 (proximal)', 8 * dpr, h - 8 * dpr);
-    ctx.textAlign = 'right'; ctx.fillText('+x 엄지 →', w - 8 * dpr, h / 2 - 4 * dpr); ctx.textAlign = 'left'; ctx.fillText('← −x 새끼', 8 * dpr, h / 2 - 4 * dpr);
-    ctx.fillStyle = 'rgba(148,163,184,0.95)'; ctx.textAlign = 'right'; ctx.fillText(`커서 x ${hover.x.toFixed(1)}  y ${hover.y.toFixed(1)} mm · 줌 ${view.pxPerMm.toFixed(0)} px/mm (휠)`, w - 8 * dpr, 14 * dpr); ctx.textAlign = 'left';
+    ctx.fillText(translateUI('+y 손가락 (distal)'), 8 * dpr, 14 * dpr); ctx.fillText(translateUI('−y 몸통 (proximal)'), 8 * dpr, h - 8 * dpr);
+    ctx.textAlign = 'right'; ctx.fillText(translateUI('+x 엄지 →'), w - 8 * dpr, h / 2 - 4 * dpr); ctx.textAlign = 'left'; ctx.fillText(translateUI('← −x 새끼'), 8 * dpr, h / 2 - 4 * dpr);
+    ctx.fillStyle = 'rgba(148,163,184,0.95)'; ctx.textAlign = 'right'; ctx.fillText(translateUI(`커서 x ${hover.x.toFixed(1)}  y ${hover.y.toFixed(1)} mm · 줌 ${view.pxPerMm.toFixed(0)} px/mm (휠)`), w - 8 * dpr, 14 * dpr); ctx.textAlign = 'left';
   }
 
   // Volar wrist outline (mm, wrist frame: u = lateral, + thumb; v = along, 0 = wrist crease, − proximal),
@@ -399,11 +401,11 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
     // labels
     const font = (p) => `${p * dpr}px ui-monospace, Menlo, monospace`;
     ctx.font = font(10); ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(248,113,113,0.95)'; ctx.fillText('요골동맥', X(artU), Y(12));
-    ctx.fillStyle = 'rgba(226,232,240,0.75)'; ctx.fillText('FCR', X(fcrU), Y(10)); ctx.fillText('PL', X(plU), Y(10));
-    ctx.fillStyle = 'rgba(148,163,184,0.85)'; ctx.fillText('요골', X(boneU), Y(6)); ctx.fillText('척골', X(ulnaU), Y(6));
-    ctx.fillStyle = 'rgba(251,191,36,0.9)'; ctx.fillText(`${wristSide === 'left' ? '왼손' : '오른손'} 손목 (손바닥 쪽) · 손목 주름`, X(0), Y(-3));
-    ctx.fillText(wristSide === 'left' ? '← 엄지' : '엄지 →', X(sgn * 26 * kW), Y(-10));
+    ctx.fillStyle = 'rgba(248,113,113,0.95)'; ctx.fillText(translateUI('요골동맥'), X(artU), Y(12));
+    ctx.fillStyle = 'rgba(226,232,240,0.75)'; ctx.fillText(translateUI('FCR'), X(fcrU), Y(10)); ctx.fillText(translateUI('PL'), X(plU), Y(10));
+    ctx.fillStyle = 'rgba(148,163,184,0.85)'; ctx.fillText(translateUI('요골'), X(boneU), Y(6)); ctx.fillText(translateUI('척골'), X(ulnaU), Y(6));
+    ctx.fillStyle = 'rgba(251,191,36,0.9)'; ctx.fillText(translateUI(`${wristSide === 'left' ? '왼손' : '오른손'} 손목 (손바닥 쪽) · 손목 주름`), X(0), Y(-3));
+    ctx.fillText(translateUI(wristSide === 'left' ? '← 엄지' : '엄지 →'), X(sgn * 26 * kW), Y(-10));
     ctx.textAlign = 'left'; ctx.restore();
   }
 

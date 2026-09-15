@@ -1,3 +1,5 @@
+
+import {t as translateUI} from '../../../i18n/locale.js';
 // Scenario presets + timeline scrubber (ROADMAP §2.3-13).
 //
 // A scenario is a TIMELINE OF KEYFRAMES over the twin's own setters — nothing new is
@@ -176,35 +178,35 @@ export class ScenarioPlayer {
 
 // ---------------------------------------------------------------------------
 // Timeline scrubber UI — a full-width bar directly under the menubar.
-const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = translateUI(text); return e; };
 const fmt = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
 
 export function buildScenarioBar({ player, speeds, getSpeed, setSpeed, enhance }) {
   const bar = el('div', 'scen-bar hidden'); bar.id = 'scenarioBar';
 
   const selWrap = el('span', 'scen-sel');
-  const sel = document.createElement('select'); sel.id = 'scenarioSel'; sel.title = '시나리오 프리셋 — 트윈의 기존 노브를 시간축으로 구동하는 키프레임 대본';
-  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = '시나리오 없음 (수동 조작)'; sel.appendChild(o0);
-  for (const [k, v] of Object.entries(SCENARIOS)) { const o = document.createElement('option'); o.value = k; o.textContent = v.label; sel.appendChild(o); }
+  const sel = document.createElement('select'); sel.id = 'scenarioSel'; sel.title = translateUI('시나리오 프리셋 — 트윈의 기존 노브를 시간축으로 구동하는 키프레임 대본');
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = translateUI('시나리오 없음 (수동 조작)'); sel.appendChild(o0);
+  for (const [k, v] of Object.entries(SCENARIOS)) { const o = document.createElement('option'); o.value = k; o.textContent = translateUI(v.label); sel.appendChild(o); }
   selWrap.appendChild(sel);
 
   const play = el('button', 'btn play', '▶ 재생'); play.type = 'button';
   const time = el('span', 'scen-time', '0:00.0 / 0:00.0');
   const track = el('div', 'scen-track'); track.setAttribute('role', 'slider'); track.tabIndex = 0;
-  track.title = '타임라인 스크러버 — 클릭/드래그로 시각 이동. 점프는 재시드입니다(아래 칩 설명 참고).';
+  track.title = translateUI('타임라인 스크러버 — 클릭/드래그로 시각 이동. 점프는 재시드입니다(아래 칩 설명 참고).');
   const rail = el('div', 'rail'), fill = el('div', 'fill'), head = el('div', 'head');
   track.append(rail, fill, head);
   const ticks = [];
 
   const spdWrap = el('span', 'scen-sel'); spdWrap.style.minWidth = '108px'; spdWrap.style.maxWidth = '132px';
-  const spd = document.createElement('select'); spd.id = 'scenarioSpeed'; spd.title = '재생 속도 — 어레이 카드의 재생 속도와 같은 SIM_SPEED 집합(시뮬레이션 시간 자체가 느려짐)';
-  for (const [k, v] of Object.entries(speeds)) { const o = document.createElement('option'); o.value = k; o.textContent = `속도 ×${v}`; spd.appendChild(o); }
+  const spd = document.createElement('select'); spd.id = 'scenarioSpeed'; spd.title = translateUI('재생 속도 — 어레이 카드의 재생 속도와 같은 SIM_SPEED 집합(시뮬레이션 시간 자체가 느려짐)');
+  for (const [k, v] of Object.entries(speeds)) { const o = document.createElement('option'); o.value = k; o.textContent = translateUI(`속도 ×${v}`); spd.appendChild(o); }
   spdWrap.appendChild(spd);
 
   const chip = el('span', 'scen-chip warn', '스크럽 = 재시드');
-  chip.title = '이 트윈은 실시간 시뮬레이터이고 링버퍼에 4 s 이력만 남습니다 — 되감기도, 수 분치 16 kHz 신호를 즉석에서 다시 만드는 것도 하지 않습니다. 스크러버로 점프하면 그 시각의 시나리오 상태를 즉시 적용하고 신호 이력·분석 창을 리셋(재시드)합니다. 커프 캘리브레이션은 유지되지만 추정 창은 다시 쌓입니다.';
+  chip.title = translateUI('이 트윈은 실시간 시뮬레이터이고 링버퍼에 4 s 이력만 남습니다 — 되감기도, 수 분치 16 kHz 신호를 즉석에서 다시 만드는 것도 하지 않습니다. 스크러버로 점프하면 그 시각의 시나리오 상태를 즉시 적용하고 신호 이력·분석 창을 리셋(재시드)합니다. 커프 캘리브레이션은 유지되지만 추정 창은 다시 쌓입니다.');
   const state = el('span', 'scen-state', '');
-  const close = el('button', 'btn', '종료'); close.type = 'button'; close.title = '시나리오 종료 — 현재 값 그대로 두고 수동 조작으로 복귀';
+  const close = el('button', 'btn', '종료'); close.type = 'button'; close.title = translateUI('시나리오 종료 — 현재 값 그대로 두고 수동 조작으로 복귀');
   const note = el('span', 'scen-note', '');
 
   bar.append(selWrap, play, time, track, spdWrap, chip, close, state, note);
@@ -236,29 +238,29 @@ export function buildScenarioBar({ player, speeds, getSpeed, setSpeed, enhance }
     for (const t of ticks) t.remove(); ticks.length = 0;
     if (!player.active) return;
     for (const kt of player.keyTimes()) {
-      const d = el('div', 'tick'); d.style.left = `${(kt / Math.max(1e-6, player.duration)) * 100}%`; d.title = `키프레임 t = ${kt.toFixed(0)} s`;
+      const d = el('div', 'tick'); d.style.left = `${(kt / Math.max(1e-6, player.duration)) * 100}%`; d.title = translateUI(`키프레임 t = ${kt.toFixed(0)} s`);
       d._t = kt; track.appendChild(d); ticks.push(d);
     }
   }
   function refresh() {
     const on = player.active;
     bar.classList.toggle('hidden', !on && bar.dataset.forceShow !== '1');
-    play.textContent = player.playing ? '⏸ 일시정지' : '▶ 재생';
+    play.textContent = translateUI(player.playing ? '⏸ 일시정지' : '▶ 재생');
     play.disabled = !on; track.classList.toggle('disabled', !on);
-    time.textContent = `${fmt(player.t)} / ${fmt(player.duration)}`;
+    time.textContent = translateUI(`${fmt(player.t)} / ${fmt(player.duration)}`);
     const u = on && player.duration > 0 ? player.t / player.duration : 0;
     fill.style.width = `${u * 100}%`; head.style.left = `${u * 100}%`;
     for (const t of ticks) t.classList.toggle('on', player.t >= t._t - 0.01);
-    note.textContent = on ? player.sc.note : '시나리오를 선택하면 트윈의 기존 노브를 대본대로 구동합니다.';
-    note.title = note.textContent;
+    note.textContent = translateUI(on ? player.sc.note : '시나리오를 선택하면 트윈의 기존 노브를 대본대로 구동합니다.');
+    note.title = translateUI(note.textContent);
     if (sel.value !== (player.name || '')) { sel.value = player.name || ''; sel._dd?.refresh(); }
   }
-  function setState(text) { state.textContent = text; state.title = text; }
+  function setState(text) { state.textContent = translateUI(text); state.title = translateUI(text); }
   function tick() { // cheap per-frame update (progress only)
     if (!player.active) return;
     const u = player.duration > 0 ? player.t / player.duration : 0;
     fill.style.width = `${u * 100}%`; head.style.left = `${u * 100}%`;
-    time.textContent = `${fmt(player.t)} / ${fmt(player.duration)}`;
+    time.textContent = translateUI(`${fmt(player.t)} / ${fmt(player.duration)}`);
     for (const t of ticks) t.classList.toggle('on', player.t >= t._t - 0.01);
   }
   function show(on) { bar.dataset.forceShow = on ? '1' : '0'; bar.classList.toggle('hidden', !on && !player.active); }

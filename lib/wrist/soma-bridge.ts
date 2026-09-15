@@ -1,3 +1,5 @@
+
+import {t as translateUI} from '../../public/i18n/locale.js';
 import {bedViewPoint,followBedView} from '../rig-view';
 import * as T from 'three';
 import {AnatomyScene} from '../anatomy';
@@ -11,8 +13,8 @@ export class Avatar {
  constructor(public container:HTMLDivElement){
   this.view=new AnatomyScene(container,{...defaults},{skin:14,dermis:0,adipose:0,skeleton:90,muscular:60,cardiovascular:100,nervous:55,visceral:70},{stats:()=>{},pick:()=>{},time:()=>{},site:()=>{},skin:()=>{}});
   cancelAnimationFrame(this.view.frame);this.view.controls.minDistance=.15;this.view.setComfortMode(true);
-  const label=document.createElement('div');label.className='soma-load';label.textContent='SOMA 해부학 메시 불러오는 중…';container.appendChild(label);
-  this.view.load(n=>{label.textContent=`전신 해부학 ${n}%`;}).then(()=>label.remove()).catch(()=>{label.textContent='해부학 모델을 불러오지 못했습니다. 새로고침해 주세요.';});
+  const label=document.createElement('div');label.className='soma-load';label.textContent=translateUI('SOMA 해부학 메시 불러오는 중…');container.appendChild(label);
+  this.view.load(n=>{label.textContent=translateUI(`전신 해부학 ${n}%`);}).then(()=>label.remove()).catch(()=>{label.textContent=translateUI('해부학 모델을 불러오지 못했습니다. 새로고침해 주세요.');});
  }
  setBodyPosture(name:string){this.posture=name;this.view.focus(name==='lying'?'bed':'body');}
  setElectrodeLayout(){/* Sensor markers are anatomical surface sites, independent of grid tessellation. */}

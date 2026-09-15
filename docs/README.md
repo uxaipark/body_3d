@@ -57,3 +57,7 @@ npm run docs:check
 ```
 
 `docs:check`는 Markdown의 상대 파일 링크, 매뉴얼 생성본 동기화와 `scripts` 내 Markdown 혼재를 검사합니다. 외부 URL의 응답, 문헌의 최신성, 브라우저 렌더링을 검사하지는 않습니다. 웹 빌드도 매뉴얼을 자동 생성합니다.
+
+## 다국어
+
+[한국어·영어 구현과 유지보수](operations/localization.md). 사용자 문서의 영어 원본은 manual/en 및 public/research/hand-wrist/en에 있으며 웹 메뉴에서 언어를 전환할 수 있다.

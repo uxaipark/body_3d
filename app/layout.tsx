@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import {LanguageProvider} from './language';
+import {getServerLanguage} from '../lib/i18n/server';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -12,23 +14,25 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export const metadata: Metadata = {
-  title: 'SOMA | 바이오센싱 디지털 트윈',
+export async function generateMetadata(): Promise<Metadata> {
+ const language=await getServerLanguage();return {
+  title: language==='en'?'SOMA | Biosensing Digital Twin':'SOMA | 바이오센싱 디지털 트윈',
   icons: { icon: '/favicon.svg' },
-  description: '전신 해부학과 가상 센서의 실시간 생체신호 실험실',
-};
+  description: language==='en'?'A real-time biosignal laboratory for whole-body anatomy and virtual sensors':'전신 해부학과 가상 센서의 실시간 생체신호 실험실',
+};}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const language=await getServerLanguage();
   return (
-    <html lang="ko">
+    <html lang={language}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <LanguageProvider language={language}>{children}</LanguageProvider>
       </body>
     </html>
   );

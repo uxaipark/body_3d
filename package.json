@@ -8,8 +8,8 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "npm run docs:build && vinext build",
-    "docs:build": "node scripts/docs/build-manual.mjs && node scripts/docs/build-reader.mjs",
-    "docs:check": "node scripts/docs/check-docs.mjs && node scripts/docs/build-manual.mjs --check && node scripts/docs/build-reader.mjs --check",
+    "docs:build": "node scripts/docs/build-i18n.mjs && node scripts/docs/build-manual.mjs && node scripts/docs/build-reader.mjs",
+    "docs:check": "node scripts/docs/build-i18n.mjs --check && node scripts/docs/check-docs.mjs && node scripts/docs/build-manual.mjs --check && node scripts/docs/build-reader.mjs --check",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt",

@@ -1,3 +1,5 @@
+
+import {t as translateUI,html as localizeHTML} from '../../../i18n/locale.js';
 function drawArteryPath(ctx,path,X,Y,bounds,dpr){
   ctx.save();ctx.beginPath();ctx.rect(...bounds);ctx.clip();ctx.strokeStyle='rgba(255,255,255,0.95)';ctx.setLineDash([]);ctx.lineWidth=2*dpr;ctx.beginPath();
   path.forEach((p,i)=>{const x=X(p.lateral_mm),y=Y(p.along_mm);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.stroke();ctx.restore();
@@ -109,8 +111,8 @@ export class Scope {
     // labels
     ctx.fillStyle = 'rgba(226,232,240,0.85)';
     ctx.font = `${11 * dpr}px ui-monospace, Menlo, monospace`;
-    ctx.fillText(`${yMax.toFixed(1)} ${this.unit}`, 6 * dpr, 13 * dpr);
-    ctx.fillText(`${yMin.toFixed(1)} ${this.unit}`, 6 * dpr, h - 6 * dpr);
+    ctx.fillText(translateUI(`${yMax.toFixed(1)} ${this.unit}`), 6 * dpr, 13 * dpr);
+    ctx.fillText(translateUI(`${yMin.toFixed(1)} ${this.unit}`), 6 * dpr, h - 6 * dpr);
     let lx = w - 8 * dpr;
     for (let i = this.traces.length - 1; i >= 0; i--) {
       const tr = this.traces[i];
@@ -119,7 +121,7 @@ export class Scope {
       ctx.fillStyle = tr.color;
       ctx.fillRect(lx, 6 * dpr, 10 * dpr, 10 * dpr);
       ctx.fillStyle = 'rgba(226,232,240,0.9)';
-      ctx.fillText(tr.name, lx + 14 * dpr, 15 * dpr);
+      ctx.fillText(translateUI(tr.name), lx + 14 * dpr, 15 * dpr);
     }
   }
 }
@@ -210,7 +212,7 @@ export class MultiChannelScope {
       const top = 14 * dpr, labelW = 34 * dpr;
       const stripH = (h - top - 2 * dpr) / n;
       ctx.fillStyle = 'rgba(226,232,240,0.7)'; ctx.font = font(9.5);
-      ctx.fillText(`${n}ch  #번호 · SNR(dB, 진값 대비) · 색=SNR`, 4 * dpr, 10 * dpr);
+      ctx.fillText(translateUI(`${n}ch  #번호 · SNR(dB, 진값 대비) · 색=SNR`), 4 * dpr, 10 * dpr);
       for (let k = 0; k < n; k++) {
         const arr = channels[k]; if (!arr) continue;
         const y0 = top + k * stripH, sh = Math.max(2 * dpr, stripH - 1.5 * dpr);
@@ -226,7 +228,7 @@ export class MultiChannelScope {
         if (stripH >= 7 * dpr) {
           const r = cols ? Math.floor(k / cols) : 0, c = cols ? k % cols : k;
           ctx.fillStyle = 'rgba(203,213,225,0.85)'; ctx.font = font(Math.min(9, Math.max(6.5, stripH / dpr * 0.6)));
-          ctx.fillText(`#${k + 1}${snrDb ? ` ${snrDb[k].toFixed(0)}` : ''}`, 2 * dpr, y0 + sh * 0.5 + 3 * dpr);
+          ctx.fillText(translateUI(`#${k + 1}${snrDb ? ` ${snrDb[k].toFixed(0)}` : ''}`), 2 * dpr, y0 + sh * 0.5 + 3 * dpr);
         }
       }
     }
@@ -274,7 +276,7 @@ export class MultiChannelScope {
       const html = lines.map((l) => (l.swatch
         ? `<span class="ci lg"><i style="background:${l.swatch}"></i>${esc(l.text)}</span>`
         : `<span class="ci">${esc(l.text)}</span>`)).join('');
-      if (infoTo.__html !== html) { infoTo.innerHTML = html; infoTo.__html = html; }
+      if (infoTo.__html !== html) { infoTo.innerHTML = localizeHTML(html); infoTo.__html = html; }
     } else {
     const lh = Math.max(12, Math.min(17, (h - 8 * dpr) / Math.max(1, lines.length) / dpr)) * dpr; // fit all lines
     let fs = Math.min(12.5, lh / dpr * 0.8); ctx.font = font(12.5);
@@ -287,7 +289,7 @@ export class MultiChannelScope {
     for (const l of lines) {
       let x = ix + 2 * dpr;
       if (l.swatch) { ctx.fillStyle = l.swatch; ctx.fillRect(x, y - fs * dpr * 0.8, 10 * dpr, 10 * dpr); x += 15 * dpr; }
-      ctx.fillStyle = 'rgba(226,232,240,0.92)'; ctx.fillText(l.text, x, y);
+      ctx.fillStyle = 'rgba(226,232,240,0.92)'; ctx.fillText(translateUI(l.text), x, y);
       y += lh;
     }
     ctx.restore();
@@ -308,7 +310,7 @@ export class TimingGrid {
     const font = (px) => `${px * dpr}px ui-monospace, Menlo, monospace`;
     const top = 16 * dpr, bottom = 16 * dpr;
     ctx.fillStyle = 'rgba(226,232,240,0.8)'; ctx.font = font(10);
-    ctx.fillText(`셀: 추정 Δt(위) / m=모델 진값 Δt(아래) · 색 = 지연`, 4 * dpr, 11 * dpr);
+    ctx.fillText(translateUI(`셀: 추정 Δt(위) / m=모델 진값 Δt(아래) · 색 = 지연`), 4 * dpr, 11 * dpr);
     if (custom) return this._drawCustom(ctx, w, h, dpr, top, bottom, font, { measured, model, pwv, capFs, arteryLateral_mm, arteryPath, estLateral_mm, custom });
     if (!rows || !cols) return;
     // Same physical layout as the heatmap: square cells at the electrode pitch, centred
@@ -332,12 +334,12 @@ export class TimingGrid {
       const cx = x0 + cwi / 2;
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(11,16,32,0.8)'; ctx.font = font(fNum);
-      ctx.fillText(`#${k + 1}`, cx, y0 + fNum * dpr + 3 * dpr);
+      ctx.fillText(translateUI(`#${k + 1}`), cx, y0 + fNum * dpr + 3 * dpr);
       ctx.fillStyle = '#0b1020'; ctx.font = font(fMain);
       const t1 = mv != null ? `${mv >= 0 ? '+' : ''}${mv.toFixed(2)} ms` : '– ms';
-      ctx.fillText(t1, cx, y0 + chi * 0.55);
+      ctx.fillText(translateUI(t1), cx, y0 + chi * 0.55);
       ctx.fillStyle = 'rgba(11,16,32,0.85)'; ctx.font = font(fSub);
-      ctx.fillText(`모델 ${md.toFixed(2)}`, cx, y0 + chi * 0.55 + (fMain * 0.75 + 4) * dpr);
+      ctx.fillText(translateUI(`모델 ${md.toFixed(2)}`), cx, y0 + chi * 0.55 + (fMain * 0.75 + 4) * dpr);
       ctx.textAlign = 'left';
     }
     // Same overlays as the heatmap so the two panels read as one physical layout
@@ -354,10 +356,10 @@ export class TimingGrid {
       ctx.beginPath(); ctx.moveTo(ex, gy - 3 * dpr); ctx.lineTo(ex, gy + cell * rows + 3 * dpr); ctx.stroke();
     }
     ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = font(9.5);
-    ctx.fillText('distal', 4 * dpr, gy + 9 * dpr);
-    ctx.fillText('proximal (#1)', 4 * dpr, gy + cell * rows - 3 * dpr);
+    ctx.fillText(translateUI('distal'), 4 * dpr, gy + 9 * dpr);
+    ctx.fillText(translateUI('proximal (#1)'), 4 * dpr, gy + cell * rows - 3 * dpr);
     ctx.fillStyle = 'rgba(148,163,184,0.9)'; ctx.font = font(9.5);
-    ctx.fillText(`행 간격 ${spacingMm} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s → 행당 ${(spacingMm / 1000 / pwv * 1000).toFixed(2)} ms · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`, 4 * dpr, h - 5 * dpr);
+    ctx.fillText(translateUI(`행 간격 ${spacingMm} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s → 행당 ${(spacingMm / 1000 / pwv * 1000).toFixed(2)} ms · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`), 4 * dpr, h - 5 * dpr);
   }
 
   // Custom (designed) layout: pads drawn at their true positions on the sheet, distal at the top.
@@ -381,9 +383,9 @@ export class TimingGrid {
       ctx.fill();
       const fMain = Math.max(7, Math.min(18, Math.min(pw, ph) / dpr * 0.28)), fNum = Math.max(6, fMain * 0.6);
       ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(11,16,32,0.85)'; ctx.font = font(fNum); ctx.fillText(`#${k + 1}`, x0 + pw / 2, y0 + fNum * dpr + 1 * dpr);
-      ctx.fillStyle = '#0b1020'; ctx.font = font(fMain); ctx.fillText(mv != null ? `${mv >= 0 ? '+' : ''}${mv.toFixed(2)}` : '–', x0 + pw / 2, y0 + ph * 0.62);
-      if (ph / dpr > 26) { ctx.fillStyle = 'rgba(11,16,32,0.85)'; ctx.font = font(Math.max(6, fMain * 0.6)); ctx.fillText(`m ${md.toFixed(2)}`, x0 + pw / 2, y0 + ph * 0.62 + fMain * 0.75 * dpr); }
+      ctx.fillStyle = 'rgba(11,16,32,0.85)'; ctx.font = font(fNum); ctx.fillText(translateUI(`#${k + 1}`), x0 + pw / 2, y0 + fNum * dpr + 1 * dpr);
+      ctx.fillStyle = '#0b1020'; ctx.font = font(fMain); ctx.fillText(translateUI(mv != null ? `${mv >= 0 ? '+' : ''}${mv.toFixed(2)}` : '–'), x0 + pw / 2, y0 + ph * 0.62);
+      if (ph / dpr > 26) { ctx.fillStyle = 'rgba(11,16,32,0.85)'; ctx.font = font(Math.max(6, fMain * 0.6)); ctx.fillText(translateUI(`m ${md.toFixed(2)}`), x0 + pw / 2, y0 + ph * 0.62 + fMain * 0.75 * dpr); }
       ctx.textAlign = 'left';
     });
     const ax = X(arteryLateral_mm);
@@ -391,10 +393,10 @@ export class TimingGrid {
     else if (ax >= gx - 10 * dpr && ax <= gx + sheetW * s + 10 * dpr) { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.setLineDash([6 * dpr, 4 * dpr]); ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.moveTo(ax, gy - 3 * dpr); ctx.lineTo(ax, gy + sheetH * s + 3 * dpr); ctx.stroke(); ctx.setLineDash([]); }
     if (estLateral_mm != null) { const ex = X(estLateral_mm); ctx.strokeStyle = 'rgba(251,191,36,0.95)'; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(ex, gy - 3 * dpr); ctx.lineTo(ex, gy + sheetH * s + 3 * dpr); ctx.stroke(); }
     ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = font(9.5);
-    ctx.fillText('distal', 4 * dpr, gy + 9 * dpr);
-    ctx.fillText('proximal (#1)', 4 * dpr, gy + sheetH * s - 3 * dpr);
+    ctx.fillText(translateUI('distal'), 4 * dpr, gy + 9 * dpr);
+    ctx.fillText(translateUI('proximal (#1)'), 4 * dpr, gy + sheetH * s - 3 * dpr);
     ctx.fillStyle = 'rgba(148,163,184,0.9)';
-    ctx.fillText(`사용자 레이아웃 ${electrodes.length}전극 · 시트 ${sheetW}×${sheetH} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`, 4 * dpr, h - 5 * dpr);
+    ctx.fillText(translateUI(`사용자 레이아웃 ${electrodes.length}전극 · 시트 ${sheetW}×${sheetH} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`), 4 * dpr, h - 5 * dpr);
   }
 }
 
@@ -485,18 +487,18 @@ export class ContourMap {
       const cx = gx + (c + 0.5) * cell, cy = gy + (rows - 1 - r + 0.5) * cell;
       ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(cx, cy, 2.2 * dpr, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = 'rgba(11,16,32,0.85)'; ctx.font = font(Math.min(10, Math.max(7, cell / dpr * 0.2)));
-      ctx.fillText(`#${r * cols + c + 1}`, cx + 4 * dpr, cy - 4 * dpr);
+      ctx.fillText(translateUI(`#${r * cols + c + 1}`), cx + 4 * dpr, cy - 4 * dpr);
     }
     const centerCol = (cols - 1) / 2 + arteryLateral_mm / spacingMm, ax = gx + (centerCol + 0.5) * cell;
     if(arteryPath)drawArteryPath(ctx,arteryPath,x=>gx+cell*cols/2+x/spacingMm*cell,y=>gy+cell*rows/2-y/spacingMm*cell,[gx,gy,cell*cols,cell*rows],dpr);
     else if (ax >= gx - cell && ax <= gx + cell * (cols + 1)) { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.setLineDash([6 * dpr, 4 * dpr]); ctx.lineWidth = 1.5 * dpr; ctx.beginPath(); ctx.moveTo(ax, gy - 4 * dpr); ctx.lineTo(ax, gy + cell * rows + 4 * dpr); ctx.stroke(); ctx.setLineDash([]); }
     if (estLateral_mm != null) { const ex = gx + ((cols - 1) / 2 + estLateral_mm / spacingMm + 0.5) * cell; ctx.strokeStyle = 'rgba(251,191,36,0.95)'; ctx.lineWidth = 2 * dpr; ctx.beginPath(); ctx.moveTo(ex, gy - 4 * dpr); ctx.lineTo(ex, gy + cell * rows + 4 * dpr); ctx.stroke(); }
     ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.font = font(10);
-    ctx.fillText('distal (손가락)', 4 * dpr, 11 * dpr);
-    ctx.fillText('proximal (#1 행)', 4 * dpr, h - 4 * dpr);
+    ctx.fillText(translateUI('distal (손가락)'), 4 * dpr, 11 * dpr);
+    ctx.fillText(translateUI('proximal (#1 행)'), 4 * dpr, h - 4 * dpr);
     ctx.fillStyle = 'rgba(203,213,225,0.8)';
     const tag = custom ? `등고선 ${levels}단계 · 사용자 레이아웃 ${custom.electrodes.length}전극 (IDW 보간)` : `등고선 ${levels}단계 · ${cols}×${rows} @ ${spacingMm} mm`;
-    ctx.fillText(tag, w - 4 * dpr - ctx.measureText(tag).width, h - 4 * dpr);
+    ctx.fillText(translateUI(tag), w - 4 * dpr - ctx.measureText(tag).width, h - 4 * dpr);
   }
 }
 
@@ -517,7 +519,7 @@ function drawCustomPads(ctx, custom, gx, gy, pxPerMm, dpr, font, colorOf = null,
     if (values && colorOf && norm && values[k] != null) { ctx.fillStyle = colorOf(norm(values[k])); ctx.fill(); }
     ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.2 * dpr; ctx.stroke();
     ctx.fillStyle = 'rgba(11,16,32,0.85)'; ctx.font = font(Math.max(6, Math.min(10, Math.min(pw, ph) / dpr * 0.3)));
-    ctx.textAlign = 'center'; ctx.fillText(`#${k + 1}`, x0 + pw / 2, y0 + ph / 2 + 3 * dpr); ctx.textAlign = 'left';
+    ctx.textAlign = 'center'; ctx.fillText(translateUI(`#${k + 1}`), x0 + pw / 2, y0 + ph / 2 + 3 * dpr); ctx.textAlign = 'left';
   });
 }
 
@@ -562,7 +564,7 @@ export class Heatmap {
         ctx.fillRect(gx + c * cell + 1, gy + yr * cell + 1, Math.ceil(cell) - 2, Math.ceil(cell) - 2);
         // Electrode number (#k, k = r·cols + c) — same numbering as the channels / Δt table / wrist pads
         ctx.fillStyle = 'rgba(11,16,32,0.8)'; ctx.font = `${Math.min(10, Math.max(7, cell / dpr * 0.2)) * dpr}px ui-monospace, Menlo, monospace`;
-        ctx.fillText(`#${r * cols + c + 1}`, gx + c * cell + 4 * dpr, gy + yr * cell + 10 * dpr);
+        ctx.fillText(translateUI(`#${r * cols + c + 1}`), gx + c * cell + 4 * dpr, gy + yr * cell + 10 * dpr);
       }
     }
     if (custom) drawCustomPads(ctx, custom, gx, gy, cell / spacingMm, dpr, (p) => `${p * dpr}px ui-monospace, Menlo, monospace`, (t) => this._colormap(t), (v) => Math.max(0, Math.min(1, (v - lo) / span)));
@@ -584,15 +586,15 @@ export class Heatmap {
       ctx.strokeStyle = 'rgba(251,191,36,0.95)'; ctx.lineWidth = 2 * dpr;
       ctx.beginPath(); ctx.moveTo(ex, gy - 4 * dpr); ctx.lineTo(ex, gy + cell * rows + 4 * dpr); ctx.stroke();
       ctx.fillStyle = 'rgba(251,191,36,0.95)'; ctx.font = `${9 * dpr}px ui-monospace, Menlo, monospace`;
-      ctx.fillText('x̂', ex + 3 * dpr, gy + 10 * dpr);
+      ctx.fillText(translateUI('x̂'), ex + 3 * dpr, gy + 10 * dpr);
     }
 
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.font = `${10 * dpr}px ui-monospace, Menlo, monospace`;
-    ctx.fillText('distal (손가락)', 4 * dpr, 11 * dpr);
-    ctx.fillText('proximal (#1 행)', 4 * dpr, h - 4 * dpr);
+    ctx.fillText(translateUI('distal (손가락)'), 4 * dpr, 11 * dpr);
+    ctx.fillText(translateUI('proximal (#1 행)'), 4 * dpr, h - 4 * dpr);
     ctx.fillStyle = 'rgba(203,213,225,0.8)';
-    { const tag = custom ? `사용자 레이아웃 ${custom.electrodes.length}전극 · ${custom.sheetW}×${custom.sheetH} mm (IDW 보간)` : `${cols}×${rows} @ ${spacingMm} mm`; ctx.fillText(tag, w - 4 * dpr - ctx.measureText(tag).width, h - 4 * dpr); }
+    { const tag = custom ? `사용자 레이아웃 ${custom.electrodes.length}전극 · ${custom.sheetW}×${custom.sheetH} mm (IDW 보간)` : `${cols}×${rows} @ ${spacingMm} mm`; ctx.fillText(translateUI(tag), w - 4 * dpr - ctx.measureText(tag).width, h - 4 * dpr); }
     // Pulse propagation direction marker (proximal → distal = bottom → top) in the left margin
     if (gx > 14 * dpr) {
       const ax = gx - 8 * dpr, y1 = gy + cell * rows - 6 * dpr, y2 = gy + 6 * dpr;
@@ -600,7 +602,7 @@ export class Heatmap {
       ctx.beginPath(); ctx.moveTo(ax, y1); ctx.lineTo(ax, y2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(ax, y2 - 2 * dpr); ctx.lineTo(ax - 4 * dpr, y2 + 6 * dpr); ctx.lineTo(ax + 4 * dpr, y2 + 6 * dpr); ctx.closePath(); ctx.fill();
       ctx.save(); ctx.translate(ax - 5 * dpr, (y1 + y2) / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center';
-      ctx.font = `${9 * dpr}px ui-monospace, Menlo, monospace`; ctx.fillText('맥파 진행 방향', 0, 0); ctx.restore();
+      ctx.font = `${9 * dpr}px ui-monospace, Menlo, monospace`; ctx.fillText(translateUI('맥파 진행 방향'), 0, 0); ctx.restore();
     }
   }
 

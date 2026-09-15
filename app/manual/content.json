@@ -48,8 +48,75 @@
       {
         "type": "paragraph",
         "text": "혈압·SpO₂ 등의 표시값과 추정 결과는 합성 모델 또는 불러온 기록에 따라 해석해야 합니다. 화면의 정밀한 해부학 형태가 환자별 생리 모델이나 임상 정확도를 보장하지 않습니다. MRC 등 현재 분석 기능과 MVDR·ECG-PAT 연속 혈압계의 향후 연구 설계는 연구 기록에서 구분합니다."
+      },
+      {
+        "type": "heading",
+        "text": "언어 선택"
+      },
+      {
+        "type": "paragraph",
+        "text": "상단의 한국어 / EN 버튼으로 언어를 바꿉니다. 선택은 같은 브라우저에 저장되어 다른 화면과 문서에도 적용됩니다. 언어를 바꾸면 페이지를 다시 불러오므로 진행 중인 실험은 필요한 데이터를 먼저 저장하세요. 웹 문서와 Markdown 다운로드도 선택한 언어를 따릅니다."
       }
-    ]
+    ],
+    "en": {
+      "title": "User Guide",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Updated: 2026-09-15. SOMA is a research simulator for whole-body anatomy and synthetic wrist biosignals."
+        },
+        {
+          "type": "heading",
+          "text": "Getting started"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Open Whole-body Twin or Wrist Sensing from the top navigation.",
+            "Select anatomical systems, motion and sensor sites in the whole-body view; adjust posture and electrode placement in the wrist workspace.",
+            "Compare waveforms with tissue displacement. Distinguish display magnification from actual model values.",
+            "Record the experimental settings and export the required data."
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Workspaces"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Whole-body Twin: explore anatomical systems, locomotion, clinical task animations, local skin sections and sensor sites.",
+            "Wrist Sensing: compare the atlas wrist, flexible electrode arrays, capacitance/PPG waveforms and analytical results.",
+            "Research: review implemented scope, continuous-BP designs, references and validation plans.",
+            "User Guide: installation, operation, controls and troubleshooting."
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Reading documents"
+        },
+        {
+          "type": "paragraph",
+          "text": "Research cards and guide document icons open the web reader. Use its contents list, tables and code blocks. Choose Download Markdown for a UTF-8 copy in the selected language."
+        },
+        {
+          "type": "heading",
+          "text": "Interpreting results"
+        },
+        {
+          "type": "paragraph",
+          "text": "BP, SpO₂ and other displayed estimates must be interpreted in the context of the synthetic model or loaded recording. Detailed anatomical appearance does not establish patient-specific physiology or clinical accuracy. The research documents distinguish current MRC analysis from planned MVDR and ECG-PAT continuous-BP extensions."
+        },
+        {
+          "type": "heading",
+          "text": "Language"
+        },
+        {
+          "type": "paragraph",
+          "text": "Use 한국어 / EN in the header. The choice is saved in the same browser and applies to other workspaces and documents. Changing language reloads the page, so export any required experimental data first. Web documents and Markdown downloads follow the selected language."
+        }
+      ]
+    }
   },
   {
     "id": "body",
@@ -105,7 +172,62 @@
         "type": "paragraph",
         "text": "순환계의 동맥 팽창 1×/8×는 시각적 변형 배율입니다. 호흡에 따른 폐·간·복부 변형과 심장 수축은 공통 신체 동작과 연결된 근사입니다. 일부 장기 경계는 렌더링·기하 제약으로 보정되며 환자별 접촉 해석 결과는 아닙니다."
       }
-    ]
+    ],
+    "en": {
+      "title": "Whole-body Twin",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Open Whole-body Twin from the top navigation."
+        },
+        {
+          "type": "heading",
+          "text": "Anatomy and skin"
+        },
+        {
+          "type": "paragraph",
+          "text": "Toggle circulation, organs/respiration, nerves, bones and muscles, and adjust their opacity. The muscular system shows bilateral muscles, tendons and fascia. The integumentary layer starts off; enabling it exposes skin opacity and regional section selection."
+        },
+        {
+          "type": "paragraph",
+          "text": "Comfort mode starts on. Its circular header switch hides external genital anatomy without changing sensors or physiological signals."
+        },
+        {
+          "type": "heading",
+          "text": "Motion"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Walk and run: shared motion capture and joint rigging.",
+            "Stand up: rise from a prepared seated pose and remain standing.",
+            "Repeated sit-to-stand: inspect task phase and repetition count.",
+            "Hand grip: repeat preparation, grip, hold and relaxation. This does not measure grip force.",
+            "Bed transfer: sit on the bed behind the standing body, lower sideways, extend the legs and roll supine."
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Clinical tasks are authored kinematic sequences, not clinical predictions of strength, blood-pressure response or balance. Pause and play to compare the same phases."
+        },
+        {
+          "type": "heading",
+          "text": "Sensors and workspace"
+        },
+        {
+          "type": "paragraph",
+          "text": "Select multiple sensor sites or clear all. Settings and waveforms follow the chosen modality. Both side panels collapse; the Active Sensor tip has a close button. Select at least one sensor before exporting data."
+        },
+        {
+          "type": "heading",
+          "text": "Pulsation and breathing"
+        },
+        {
+          "type": "paragraph",
+          "text": "The arterial 1×/8× setting magnifies visual deformation only. Lung, liver, abdominal and cardiac motion are approximations coupled to body movement. Some organ boundaries use geometric/rendering constraints, not patient-specific contact analysis."
+        }
+      ]
+    }
   },
   {
     "id": "wrist",
@@ -180,7 +302,81 @@
         "type": "paragraph",
         "text": "손목 단면 제목 옆 ↺ 아이콘은 해부학 레이어, 표시 변위 1×, 피하지방 2.2 mm, 수동 혈관 이동 0, 패치 기본 위치·각도와 카메라를 복원합니다. 전극 배열 구성과 전체 신체 시뮬레이션 설정은 유지합니다."
       }
-    ]
+    ],
+    "en": {
+      "title": "Wrist Sensing",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Collapse the Radial Artery Digital Twin overview to free space for the experiment below."
+        },
+        {
+          "type": "heading",
+          "text": "Wrist views"
+        },
+        {
+          "type": "paragraph",
+          "text": "The anatomy dropdown, displacement gain and fat thickness share one row below the square 3D viewport."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Anatomical layers: original hand/wrist bones, muscles, tendons, vessels, nerves and translucent skin.",
+            "Skin surface: focus on the exterior.",
+            "3D tissue section: a representative block of skin, fat, vessels and supporting structures.",
+            "Surface contours: view deformed tissue heights using contours and a grid."
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "S/T sections are representative anatomical tissue windows, not Boolean cuts of the original wrist mesh."
+        },
+        {
+          "type": "heading",
+          "text": "Rotation and zoom"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Horizontal drag in the empty center: roll around the artery's longitudinal axis.",
+            "Option/Alt + horizontal drag: use vessel-axis rotation even over the patch.",
+            "Drag right at the top: clockwise rotation; left reverses it.",
+            "Drag right at the bottom: counterclockwise rotation; left reverses it.",
+            "Vertical drag at the top or bottom: tilt around the current screen-horizontal axis.",
+            "Drag at the side edges: general rotation following the drag direction.",
+            "Right-drag: pan. Wheel: zoom. Double-click: restore camera."
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "The starting region determines the gesture for its entire duration. Crossing into another region does not switch modes. Clicking the patch prioritizes patch movement."
+        },
+        {
+          "type": "heading",
+          "text": "Patch and radial artery"
+        },
+        {
+          "type": "paragraph",
+          "text": "Drag the patch directly or with Shift. Arrow keys move by 0.5 mm; Shift+arrow moves by 2 mm. With keyboard focus in the 3D viewport, comma and period rotate the patch by 2.5° per keystroke."
+        },
+        {
+          "type": "paragraph",
+          "text": "Pads follow wrist curvature. Lateral and depth sliders sit directly below the 3D view; positive depth moves inward. The red radial artery bends while preserving its connection to the hand-side course."
+        },
+        {
+          "type": "paragraph",
+          "text": "The white snapshot line is the current artery projected into patch coordinates. The yellow line is an algorithm estimate and may differ. Body and arm positions affect geometry, contact and signals together."
+        },
+        {
+          "type": "heading",
+          "text": "Reset"
+        },
+        {
+          "type": "paragraph",
+          "text": "The ↺ icon restores anatomical view, displacement gain 1×, fat 2.2 mm, manual artery offset zero, default patch position/angle and camera. Electrode-array configuration and whole-body settings remain unchanged."
+        }
+      ]
+    }
   },
   {
     "id": "skin",
@@ -222,7 +418,48 @@
         "type": "paragraph",
         "text": "별도의 WebGL 장면이 열리며 모달을 닫으면 그 장면의 자원을 해제합니다. 손목 페이지에서는 화면 밖의 3D 렌더링을 줄이지만, 고해상도 전신과 손목을 함께 표시하면 장치의 GPU에 따라 속도가 달라질 수 있습니다. 데모 서버 검증은 브라우저 FPS 측정을 포함하지 않습니다."
       }
-    ]
+    ],
+    "en": {
+      "title": "Skin Cross-sections",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Enable the integumentary layer in Whole-body Twin and select skin or a marked region to open the central 3D section dialog."
+        },
+        {
+          "type": "heading",
+          "text": "Structures"
+        },
+        {
+          "type": "paragraph",
+          "text": "Twelve regions have representative skin, dermis and fat thicknesses and curvature. The wrist illustrates artery–tendon–bone relationships, the fingertip has thick epidermis and a fat pad, and the earlobe contains fibrofatty tissue."
+        },
+        {
+          "type": "paragraph",
+          "text": "Fine keratin, cell, collagen, fat-lobule and gland patterns are mostly procedural section textures, not segmented patient-cell images. Switch between full block, contours, dermis and vessel views."
+        },
+        {
+          "type": "heading",
+          "text": "Elastic response and optics"
+        },
+        {
+          "type": "paragraph",
+          "text": "Adjust fat thickness and pulsation display gain to compare arterial expansion and surrounding displacement. Bone and tendon neighborhoods constrain deformation. Whole-body skin dialogs and dedicated wrist sections use different reduced deformation paths and must not be interpreted as the same material solver."
+        },
+        {
+          "type": "paragraph",
+          "text": "Compare wavelength and reflectance/transmittance arrangements. Paths and exit energy visualize representative scattering/attenuation; they are not detector collection efficiency, patient-specific optical properties or validated SpO₂ inversion."
+        },
+        {
+          "type": "heading",
+          "text": "Performance"
+        },
+        {
+          "type": "paragraph",
+          "text": "The dialog opens a separate WebGL scene and releases it when closed. Offscreen wrist rendering is reduced, but simultaneous detailed body and wrist views still depend on GPU capability. Demo server validation does not measure browser FPS."
+        }
+      ]
+    }
   },
   {
     "id": "install",
@@ -331,6 +568,114 @@
         "type": "paragraph",
         "text": "[Node.js 24 공식 배포](https://nodejs.org/download/release/v24.21.0/)와 [Wrangler 지원 환경](https://developers.cloudflare.com/workers/wrangler/install-and-update/)을 기준으로 작성했습니다."
       }
-    ]
+    ],
+    "en": {
+      "title": "SOMA Local Demo: Installation and Run",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "The distribution includes the built whole-body/wrist simulators and guides. Running it does not require the source project, Blender, Python or a hosting account."
+        },
+        {
+          "type": "heading",
+          "text": "Supported systems"
+        },
+        {
+          "type": "list",
+          "items": [
+            "macOS 13.5 or later: Apple Silicon or Intel.",
+            "Windows 11 or later: x64. ARM64 uses x64 execution and requires separate device validation.",
+            "Linux: glibc 2.35 or later, x64 or ARM64. Ubuntu 22.04 or later is recommended. Alpine/musl is unsupported."
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Node.js 24.21.0 and Wrangler 4.92.0 are pinned. Official Node binaries are verified by SHA-256 and installed in the demo's `.runtime` directory. Global Node and system PATH are unchanged. Initial installation requires internet access; no external account is required afterward."
+        },
+        {
+          "type": "heading",
+          "text": "macOS"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Fully extract the ZIP to a writable folder.",
+            "Run `Install-macOS.command`.",
+            "Run `Start-macOS.command` and open the printed local URL.",
+            "Optionally run `Verify-macOS.command` to start a separate verification server and check pages, scripts and model assets."
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Terminal equivalents are `bash Install-macOS.command`, `bash Start-macOS.command --port 3000` and `bash Verify-macOS.command --port 3001`. If macOS blocks a downloaded launcher, review its contents and use these terminal commands."
+        },
+        {
+          "type": "heading",
+          "text": "Windows"
+        },
+        {
+          "type": "paragraph",
+          "text": "Use `Install-Windows.cmd`, `Start-Windows.cmd` and `Verify-Windows.cmd`. Set another port with `Start-Windows.cmd -Port 3001`."
+        },
+        {
+          "type": "paragraph",
+          "text": "The launchers use PowerShell 5.1 or later. The execution-policy exception affects that process only, not system policy. Node is extracted locally without an administrator-level MSI installation."
+        },
+        {
+          "type": "heading",
+          "text": "Linux"
+        },
+        {
+          "type": "paragraph",
+          "text": "Run `bash Install-Linux.sh`, `bash Start-Linux.sh` and `bash Verify-Linux.sh --port 3001`. Bash is required. Missing curl, tar or gzip are installed using apt/dnf/zypper/pacman; only that step requires root or sudo."
+        },
+        {
+          "type": "heading",
+          "text": "Address, stop and restart"
+        },
+        {
+          "type": "paragraph",
+          "text": "The default URL is `http://127.0.0.1:3000`. Wait for the server-ready message. Stop with Ctrl+C. Subsequent runs need only Start. Reinstallation reuses packages when versions and lockfiles match."
+        },
+        {
+          "type": "paragraph",
+          "text": "For access from another device, use `--host 0.0.0.0` on macOS/Linux or `-BindHost 0.0.0.0` on Windows, then use the computer's LAN IP and port. Defaults allow local access only. Configure the OS firewall as needed."
+        },
+        {
+          "type": "heading",
+          "text": "Verification and troubleshooting"
+        },
+        {
+          "type": "paragraph",
+          "text": "Verify starts a server, checks the home/body/wrist/research/guide/original experiment pages, scripts and GLB assets, then stops it. Results are in `.runtime/verification.json` and `.runtime/verification-server.log`. It does not test browser WebGL rendering or FPS."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Port occupied: choose another port. Existing servers are not terminated.",
+            "Integrity failure: extract a fresh ZIP into a new folder.",
+            "Installation failure: check connectivity, disk space and write access, then rerun Install.",
+            "Missing models: check WebGL and hardware acceleration in a current browser.",
+            "Moving between operating systems: use the original ZIP; do not copy installed `node_modules` or `.runtime` across systems."
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Attribution"
+        },
+        {
+          "type": "paragraph",
+          "text": "Model sources and terms are preserved in `dist/client/models/ATTRIBUTION.md` and the motion attribution document. This research demo does not establish clinical accuracy or guarantee commercial-use rights for every asset."
+        },
+        {
+          "type": "heading",
+          "text": "Environment references"
+        },
+        {
+          "type": "paragraph",
+          "text": "Based on the [official Node.js 24 distribution](https://nodejs.org/download/release/v24.21.0/) and [Wrangler supported environments](https://developers.cloudflare.com/workers/wrangler/install-and-update/)."
+        }
+      ]
+    }
   }
 ]

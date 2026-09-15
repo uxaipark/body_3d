@@ -1,3 +1,5 @@
+
+import {html,t} from '../../../i18n/locale.js';
 // Custom vertical scrollbars for the two scrolling columns (left controls / right charts).
 //  • The native scrollbar of each column is hidden; a thick track (.vsb) is drawn next to it.
 //  • Every top-level card/panel in the column gets a small shortcut icon on the track at the position
@@ -94,13 +96,13 @@ export function attachScrollbar(scroller, opts = {}) {
     const key = els.map((e) => e.className + '|' + (e.id || '')).join(';');
     if (key === lastKey && iconEls.length === els.length) { highlight(); return; }
     lastKey = key;
-    icons.innerHTML = ''; iconEls = [];
+    icons.innerHTML = localizeHTML(''); iconEls = [];
     // Icons are a FIXED, evenly spaced stack at the top of the track (they never move with the
     // layout or the scroll position) — each is just a shortcut: click → scroll that card to centre.
     const PITCH = Math.min(26, Math.max(18, (bar.clientHeight - 2 * PAD - 12) / Math.max(1, els.length)));
     for (const [i, el] of els.entries()) {
       const { ic, lb } = iconFor(el);
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'vsb-ic'; b.innerHTML = ic; b.title = lb; b.setAttribute('aria-label', lb);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'vsb-ic'; b.innerHTML = localizeHTML(ic); b.title = translateUI(lb); b.setAttribute('aria-label', translateUI(lb));
       const y = PAD + 12 + i * PITCH;
       b.style.top = `${Math.min(bar.clientHeight - PAD, y)}px`;
       b.addEventListener('click', (ev) => { ev.preventDefault(); ev.stopPropagation(); centreOn(el); });
@@ -138,7 +140,7 @@ export function attachScrollbar(scroller, opts = {}) {
       const col = it.el.classList.contains('collapsed');
       it.b.classList.toggle('is-collapsed', col);
       const base = it.b.dataset.baseTitle || (it.b.dataset.baseTitle = it.b.title.replace(/ — (열림|접힘)$/, ''));
-      it.b.title = `${base} — ${col ? '접힘' : '열림'}`;
+      it.b.title = translateUI(`${base} — ${col ? '접힘' : '열림'}`);
       it.b.setAttribute('aria-expanded', col ? 'false' : 'true');
     }
   }

@@ -1,3 +1,9 @@
+import {getLanguage,localizeDOM} from '../../../i18n/locale.js';
+document.documentElement.lang=getLanguage();
+localizeDOM(document.body);
+document.title=translateUI(document.title);
+
+import {t as translateUI,html as localizeHTML} from '../../../i18n/locale.js';
 import { SAMPLE_RATE } from './engine.js';
 import { EngineClient, RENDER_WINDOWS, CHAN_WINDOW } from './engineClient.js';
 // 렌더 창의 실제 샘플 간격(초) — 스캔바 x 매핑에 쓴다(배열 길이에서 유도하면 초기에 늘어난다).
@@ -41,7 +47,7 @@ const twinHeader=$('twinHeader'),twinHeaderToggle=$('twinHeaderToggle');
 function setOverviewCollapsed(collapsed){
  twinHeader.classList.toggle('collapsed',collapsed);
  twinHeaderToggle.setAttribute('aria-expanded',String(!collapsed));
- twinHeaderToggle.textContent=collapsed?'펼치기 ▾':'접기 ▴';
+ twinHeaderToggle.textContent=translateUI(collapsed?'펼치기 ▾':'접기 ▴');
  try{localStorage.setItem('dt.overviewCollapsed',collapsed?'1':'0');}catch(_){}
 }
 try{setOverviewCollapsed(localStorage.getItem('dt.overviewCollapsed')==='1');}catch(_){}
@@ -66,7 +72,7 @@ try {
   avatar = new Avatar($('avatar'));
 } catch (err) {
   console.warn('3D avatar disabled (WebGL unavailable):', err);
-  $('avatar').innerHTML = '<div class="avatar-fallback">WebGL을 사용할 수 없어 3D 아바타를 표시할 수 없습니다.<br/>신호 시뮬레이션은 계속 동작합니다.</div>';
+  $('avatar').innerHTML = localizeHTML('<div class="avatar-fallback">WebGL을 사용할 수 없어 3D 아바타를 표시할 수 없습니다.<br/>신호 시뮬레이션은 계속 동작합니다.</div>');
 }
 let wristView = null;
 try {
@@ -95,7 +101,7 @@ if (wristView && $('handModel')) {
     sel.value = active;                        // 실패해 0안으로 되돌아갔으면 선택기도 따라간다
     if (sel._dd) sel._dd.refresh();            // js/dropdown.js 로 갈아 끼운 라벨/비활성 상태 동기화
     if (creditRow) creditRow.hidden = active !== 'E';
-    if (note) note.textContent = wristView.handModelError || '';
+    if (note) note.textContent = translateUI(wristView.handModelError || '');
     try { localStorage.setItem('dt.wrist3d', active); } catch (_) { /* private mode */ }
   };
   sel.value = mode;
@@ -115,9 +121,9 @@ analysis.configure(analysisCfg());
 
 // ---------- Populate selects ----------
 function fillSelect(sel, obj) {
-  sel.innerHTML = '';
+  sel.innerHTML = localizeHTML('');
   for (const [k, v] of Object.entries(obj)) {
-    const o = document.createElement('option'); o.value = k; o.textContent = v.label; sel.appendChild(o);
+    const o = document.createElement('option'); o.value = k; o.textContent = translateUI(v.label); sel.appendChild(o);
   }
 }
 fillSelect($('rhythm'), RHYTHMS);
@@ -132,7 +138,7 @@ const menubar = initMenubar({ actions: {
   presetTitle: (n) => { const it = simPresets.presetInfo(n); return it ? `저장 ${new Date(it.at).toLocaleString()} · 항목 ${Object.keys(it.v).length}개` : ''; },
   savePreset: () => {
     const suggested = new Date().toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-    const name = window.prompt('프리셋 이름을 입력하세요 (같은 이름이면 덮어씁니다)', `설정 ${suggested}`);
+    const name = window.prompt(translateUI('프리셋 이름을 입력하세요 (같은 이름이면 덮어씁니다)'), `설정 ${suggested}`);
     if (name == null) return;
     const r = simPresets.savePreset(name);
     menubar.setStatus(r.ok ? `프리셋 저장: ${r.name} (${r.count}개 항목)` : `저장 실패 — ${r.error}`);
@@ -140,13 +146,13 @@ const menubar = initMenubar({ actions: {
   loadPreset: (n) => { const r = simPresets.loadPreset(n); menubar.setStatus(r.ok ? `프리셋 적용: ${n} (${r.applied}개 변경)` : `불러오기 실패 — ${r.error}`); },
   deletePreset: () => {
     const names = simPresets.listPresets();
-    const name = window.prompt(`삭제할 프리셋 이름:\n\n${names.join('\n')}`, names[0] || '');
+    const name = window.prompt(translateUI(`삭제할 프리셋 이름:\n\n${names.join('\n')}`), names[0] || '');
     if (name == null) return;
     const r = simPresets.deletePreset(name.trim());
     menubar.setStatus(r.ok ? `프리셋 삭제: ${name}` : `삭제 실패 — ${r.error}`);
   },
   resetSettings: () => {
-    if (!window.confirm('모든 시뮬레이션 설정을 문서 기본값으로 되돌립니다. 계속할까요?\n(카드 접힘·순서·테마와 커프 캘리브레이션 결과는 그대로입니다)')) return;
+    if (!window.confirm(translateUI('모든 시뮬레이션 설정을 문서 기본값으로 되돌립니다. 계속할까요?\n(카드 접힘·순서·테마와 커프 캘리브레이션 결과는 그대로입니다)'))) return;
     const n = simPresets.resetToDocumentDefaults();
     menubar.setStatus(`설정 초기화 — ${n}개 항목 복원`);
   },
@@ -292,11 +298,11 @@ function snapshotScale(grid) {
 // ---------- Controls ----------
 function bindRange(id, outId, fmt, onChange) {
   const el = $(id), out = $(outId);
-  const apply = () => { const v = parseFloat(el.value); out.textContent = fmt(v); onChange(v); };
+  const apply = () => { const v = parseFloat(el.value); out.textContent = translateUI(fmt(v)); onChange(v); };
   el.addEventListener('input', apply); apply();
 }
 
-$('rhythm').addEventListener('change', (e) => { engine.call('cardiac.setRhythm', e.target.value); $('hr').value = engine.cardiac.hr; $('hrOut').textContent = engine.cardiac.hr + ' bpm'; syncHemoUi(); });
+$('rhythm').addEventListener('change', (e) => { engine.call('cardiac.setRhythm', e.target.value); $('hr').value = engine.cardiac.hr; $('hrOut').textContent = translateUI(engine.cardiac.hr + ' bpm'); syncHemoUi(); });
 bindRange('hr', 'hrOut', (v) => v + ' bpm', (v) => { engine.call('cardiac.setHR', v); syncHemoUi(); });
 bindRange('sbp', 'sbpOut', (v) => v + ' mmHg', (v) => { engine.call('cardiac.setBP', v, engine.cardiac.dbp); syncHemoUi(); });
 bindRange('dbp', 'dbpOut', (v) => v + ' mmHg', (v) => { engine.call('cardiac.setBP', engine.cardiac.sbp, v); syncHemoUi(); });
@@ -309,18 +315,18 @@ function syncHemoUi() {
   const c = engine.cardiac, h = c.hemodynamics(), hemo = h.drive === 'hemo';
   for (const el of document.querySelectorAll('.row.bp-drive')) el.classList.toggle('disabled', hemo);
   for (const el of document.querySelectorAll('.row.hemo-drive')) el.classList.toggle('disabled', !hemo);
-  if (!hemo) { $('sv').value = h.sv_mL.toFixed(0); $('svOut').textContent = `${h.sv_mL.toFixed(0)} mL (역산)`; $('tpr').value = h.tpr.toFixed(2); $('tprOut').textContent = `${h.tpr.toFixed(2)} (역산)`; }
+  if (!hemo) { $('sv').value = h.sv_mL.toFixed(0); $('svOut').textContent = translateUI(`${h.sv_mL.toFixed(0)} mL (역산)`); $('tpr').value = h.tpr.toFixed(2); $('tprOut').textContent = translateUI(`${h.tpr.toFixed(2)} (역산)`); }
   else {
-    $('sbp').value = Math.round(h.sbp); $('sbpOut').textContent = `${h.sbp.toFixed(0)} mmHg (유도)`;
-    $('dbp').value = Math.round(h.dbp); $('dbpOut').textContent = `${h.dbp.toFixed(0)} mmHg (유도)`;
-    $('svOut').textContent = `${h.sv_mL.toFixed(0)} mL`; $('tprOut').textContent = h.tpr.toFixed(2);
+    $('sbp').value = Math.round(h.sbp); $('sbpOut').textContent = translateUI(`${h.sbp.toFixed(0)} mmHg (유도)`);
+    $('dbp').value = Math.round(h.dbp); $('dbpOut').textContent = translateUI(`${h.dbp.toFixed(0)} mmHg (유도)`);
+    $('svOut').textContent = translateUI(`${h.sv_mL.toFixed(0)} mL`); $('tprOut').textContent = translateUI(h.tpr.toFixed(2));
   }
-  $('hemoDerived').textContent = `윈드케셀(모델 가정): CO ${h.co_L_min.toFixed(2)} L/min · SV ${h.sv_mL.toFixed(1)} mL · TPR ${h.tpr.toFixed(2)} mmHg·s/mL · 동맥 유순도 C ${h.compliance_mL_mmHg.toFixed(3)} mL/mmHg · MAP ${h.map_mmHg.toFixed(1)} · PP ${h.pp_mmHg.toFixed(1)} mmHg`;
+  $('hemoDerived').textContent = translateUI(`윈드케셀(모델 가정): CO ${h.co_L_min.toFixed(2)} L/min · SV ${h.sv_mL.toFixed(1)} mL · TPR ${h.tpr.toFixed(2)} mmHg·s/mL · 동맥 유순도 C ${h.compliance_mL_mmHg.toFixed(3)} mL/mmHg · MAP ${h.map_mmHg.toFixed(1)} · PP ${h.pp_mmHg.toFixed(1)} mmHg`);
 }
 $('hemoDrive').addEventListener('change', (e) => {
   if (e.target.value === 'hemo') { engine.call('cardiac.useSolvedHemodynamics'); $('sv').value = engine.cardiac.sv_mL.toFixed(0); $('tpr').value = engine.cardiac.tpr.toFixed(2); }
   else engine.call('cardiac.setBP', Math.round(engine.cardiac.sbp), Math.round(engine.cardiac.dbp));
-  $('hemoDriveOut').textContent = e.target.value === 'hemo' ? 'HR이 혈압을 움직임' : '';
+  $('hemoDriveOut').textContent = translateUI(e.target.value === 'hemo' ? 'HR이 혈압을 움직임' : '');
   syncHemoUi();
 });
 bindRange('sv', 'svOut', (v) => v + ' mL', (v) => { if (engine.cardiac.drive === 'hemo') { engine.call('cardiac.setHemodynamics', { sv: v }); syncHemoUi(); } });
@@ -345,35 +351,35 @@ const driftUi = (() => {
   const card = $('pulsus').closest('.panel');
   const row = document.createElement('div');
   row.className = 'row';
-  row.innerHTML = '<label title="혈관 긴장도·경직도·(결합된) 참 혈압·스트랩 접촉압이 시간~주 규모로 표류하는 확률과정. 가속 배율은 드리프트 과정에만 적용되고 박동·호흡·잡음 시계는 실시간 그대로다. 계수는 전부 모델 가정(문헌 보정 필요) — docs/CLINICAL_AUDIT.md §6.20">혈관 드리프트 시계</label><select id="driftClock"></select><output id="driftClockOut"></output>';
+  row.innerHTML = localizeHTML('<label title="혈관 긴장도·경직도·(결합된) 참 혈압·스트랩 접촉압이 시간~주 규모로 표류하는 확률과정. 가속 배율은 드리프트 과정에만 적용되고 박동·호흡·잡음 시계는 실시간 그대로다. 계수는 전부 모델 가정(문헌 보정 필요) — docs/CLINICAL_AUDIT.md §6.20">혈관 드리프트 시계</label><select id="driftClock"></select><output id="driftClockOut"></output>');
   const hint = document.createElement('p');
   hint.className = 'hint'; hint.id = 'driftHint';
-  hint.title = '일주기(24 h + 12 h 조화, 야간 하강) + 혈관운동 OU(τ 36 h) + 경직도 추세/OU(τ 14 d) + 스트랩 크리프(τ 5 d) + 패치 측방 이동 OU(τ 7 d). 모든 계수는 모델 가정 — docs/CLINICAL_AUDIT.md §6.20';
+  hint.title = translateUI('일주기(24 h + 12 h 조화, 야간 하강) + 혈관운동 OU(τ 36 h) + 경직도 추세/OU(τ 14 d) + 스트랩 크리프(τ 5 d) + 패치 측방 이동 OU(τ 7 d). 모든 계수는 모델 가정 — docs/CLINICAL_AUDIT.md §6.20');
   const anchor = $('hemoDerived');
   anchor.parentNode.insertBefore(row, anchor);
   anchor.parentNode.insertBefore(hint, anchor);
   const sel = row.querySelector('#driftClock');
-  for (const [v, label] of DRIFT_SPEEDS) { const o = document.createElement('option'); o.value = v; o.textContent = label; sel.appendChild(o); }
+  for (const [v, label] of DRIFT_SPEEDS) { const o = document.createElement('option'); o.value = v; o.textContent = translateUI(label); sel.appendChild(o); }
   sel.value = '0';
   sel._dd?.refresh?.();
   return { sel, out: row.querySelector('#driftClockOut'), hint, card };
 })();
 driftUi.sel.addEventListener('change', (ev) => {
   const n = parseFloat(ev.target.value);
-  if (!(n > 0)) { engine.call('disableDrift'); driftUi.out.textContent = ''; driftUi.hint.textContent = ''; return; }
+  if (!(n > 0)) { engine.call('disableDrift'); driftUi.out.textContent = translateUI(''); driftUi.hint.textContent = translateUI(''); return; }
   // Starting the clock at the CURRENT state: every drift factor is exactly 1 at that instant, so nothing jumps.
   if (!engine.latest.drift) engine.call('enableDrift', { scale: n, epochHours: 9 });
   else engine.call('setDriftScale', n);
-  driftUi.out.textContent = `1 s = ${n >= 604800 ? '1 주' : n >= 86400 ? '1 일' : n >= 3600 ? '1 시간' : '1 분'} 생리 시간`;
+  driftUi.out.textContent = translateUI(`1 s = ${n >= 604800 ? '1 주' : n >= 86400 ? '1 일' : n >= 3600 ? '1 시간' : '1 분'} 생리 시간`);
 });
 function updateDriftUi() {
   const d = engine.latest && engine.latest.drift;
-  if (!d) { if (driftUi.hint.textContent) driftUi.hint.textContent = ''; return; }
+  if (!d) { if (driftUi.hint.textContent) driftUi.hint.textContent = translateUI(''); return; }
   const el = d.elapsed_h;
   const t = el >= 48 ? `${(el / 24).toFixed(2)} 일` : el >= 1 ? `${el.toFixed(2)} 시간` : `${(el * 60).toFixed(1)} 분`;
-  driftUi.hint.textContent = `드리프트(모델 가정): 경과 생리 시간 ${t} · 벽시계 ${String(Math.floor(d.clockHour)).padStart(2, '0')}:${String(Math.floor((d.clockHour % 1) * 60)).padStart(2, '0')}`
+  driftUi.hint.textContent = translateUI(`드리프트(모델 가정): 경과 생리 시간 ${t} · 벽시계 ${String(Math.floor(d.clockHour)).padStart(2, '0')}:${String(Math.floor((d.clockHour % 1) * 60)).padStart(2, '0')}`
     + ` · 긴장도 ×${d.tone.toFixed(3)} · 경직도 ×${d.stiff.toFixed(3)} · MAP ×${d.mapF.toFixed(3)} · PP ×${d.ppF.toFixed(3)}`
-    + ` · 접촉압 ${d.contactDelta >= 0 ? '+' : ''}${d.contactDelta.toFixed(3)} · 시트 Δx ${d.sheetDelta_mm >= 0 ? '+' : ''}${d.sheetDelta_mm.toFixed(2)} mm`;
+    + ` · 접촉압 ${d.contactDelta >= 0 ? '+' : ''}${d.contactDelta.toFixed(3)} · 시트 Δx ${d.sheetDelta_mm >= 0 ? '+' : ''}${d.sheetDelta_mm.toFixed(2)} mm`);
 }
 function applyPostureUi(name) {
   const def = BODY_POSTURES[name] || {};
@@ -420,10 +426,10 @@ function applyBody() {
   const h = parseFloat($('height').value), w = parseFloat($('weight').value);
   const b = engine.setBody(h, w);
   const effDepth = WRIST_ANATOMY.ARTERY_BASE_DEPTH_MM + engine.capArray.arteryDepthOffset_mm;
-  $('bodyDerived').textContent = `체형 유도(모델 가정): BMI ${b.bmi.toFixed(1)} · 피하지방 ${b.skinFat_mm.toFixed(2)} mm · 동맥 깊이 ${effDepth.toFixed(2)} mm · 맥파 결합 ×${engine.capArray.arterialAttenGain.toFixed(3)}`;
+  $('bodyDerived').textContent = translateUI(`체형 유도(모델 가정): BMI ${b.bmi.toFixed(1)} · 피하지방 ${b.skinFat_mm.toFixed(2)} mm · 동맥 깊이 ${effDepth.toFixed(2)} mm · 맥파 결합 ×${engine.capArray.arterialAttenGain.toFixed(3)}`);
   wristGeom = deriveWristCrossSection({ height_cm: h, weight_kg: w });
   const g = wristGeom;
-  if ($('bodyGeom')) $('bodyGeom').textContent = `손목 단면(모델 가정): 폭 ${g.width_mm.toFixed(1)} mm × 깊이 ${g.depth_mm.toFixed(1)} mm (종횡비 ${WRIST_ASPECT.toFixed(2)} 고정) · 볼라 곡률반지름 ${g.volarRadius_mm.toFixed(1)} mm · 둘레 ${g.wristCirc_mm.toFixed(0)} mm · 기준 대비 ×${g.widthScale.toFixed(3)}`;
+  if ($('bodyGeom')) $('bodyGeom').textContent = translateUI(`손목 단면(모델 가정): 폭 ${g.width_mm.toFixed(1)} mm × 깊이 ${g.depth_mm.toFixed(1)} mm (종횡비 ${WRIST_ASPECT.toFixed(2)} 고정) · 볼라 곡률반지름 ${g.volarRadius_mm.toFixed(1)} mm · 둘레 ${g.wristCirc_mm.toFixed(0)} mm · 기준 대비 ×${g.widthScale.toFixed(3)}`);
   wristView?.setWristGeometry(g);
   // 체형 프리셋 버튼 하이라이트: 현재 슬라이더 값과 정확히 일치하는 프리셋만 활성
   for (const [key, btn] of Object.entries(bodyPresetBtns)) {
@@ -435,9 +441,9 @@ const bodyPresetBtns = {};
 {
   const host = $('bodyPresets');
   if (host) for (const p of BODY_PRESETS) {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = p.label;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = translateUI(p.label);
     const g = deriveWristCrossSection(p);
-    b.title = `${p.height_cm} cm / ${p.weight_kg} kg — ${p.hint} · 손목 폭 ${g.width_mm.toFixed(1)} mm · 깊이 ${g.depth_mm.toFixed(1)} mm · 볼라 곡률 ${g.volarRadius_mm.toFixed(1)} mm (모델 가정)`;
+    b.title = translateUI(`${p.height_cm} cm / ${p.weight_kg} kg — ${p.hint} · 손목 폭 ${g.width_mm.toFixed(1)} mm · 깊이 ${g.depth_mm.toFixed(1)} mm · 볼라 곡률 ${g.volarRadius_mm.toFixed(1)} mm (모델 가정)`);
     b.addEventListener('click', () => {
       $('height').value = p.height_cm; $('weight').value = p.weight_kg;
       $('height').dispatchEvent(new Event('input')); $('weight').dispatchEvent(new Event('input'));
@@ -469,14 +475,14 @@ function updateCapPhysics() {
   const gapEdge = ca.padGap_mm(half), gEdge = ca.padStandoffGain(half);
   const zeta = ca.nonlinZeta_perMmHg;
   const nl = zeta > 0 ? `비선형 ζ ${zeta.toFixed(3)} → 맥압당 진폭 ×${(ca.distendingPulse_mmHg(engine.cardiac.sbp, engine.cardiac.dbp) / Math.max(1, engine.cardiac.sbp - engine.cardiac.dbp)).toFixed(3)} (선형 대비 고압일수록 감소)` : '비선형 ζ 0 (선형 — 기존 동작)';
-  el.textContent = `유도값(모델 가정 ⚠): 압착 ${c.hold_mmHg.toFixed(0)} mmHg · 압평 이득 ×${c.app.toFixed(2)} · 폐색 ×${c.occ.toFixed(2)} · 수축기 첨두 ×${(c.gain * peak).toFixed(2)} · 정맥 울혈 구동 ${(100 * c.venDrive).toFixed(0)} % · 볼라 곡률반지름 ${R.toFixed(1)} mm → 최외곽 패드(${half.toFixed(1)} mm) 간극 ${gapEdge.toFixed(2)} mm → 결합 ×${gEdge.toFixed(2)} · ${nl}`;
+  el.textContent = translateUI(`유도값(모델 가정 ⚠): 압착 ${c.hold_mmHg.toFixed(0)} mmHg · 압평 이득 ×${c.app.toFixed(2)} · 폐색 ×${c.occ.toFixed(2)} · 수축기 첨두 ×${(c.gain * peak).toFixed(2)} · 정맥 울혈 구동 ${(100 * c.venDrive).toFixed(0)} % · 볼라 곡률반지름 ${R.toFixed(1)} mm → 최외곽 패드(${half.toFixed(1)} mm) 간극 ${gapEdge.toFixed(2)} mm → 결합 ×${gEdge.toFixed(2)} · ${nl}`);
 }
 bindRange('contact', 'contactOut', (v) => v.toFixed(2) + (v === 0.5 ? ' (기준)' : ''), (v) => { engine.call('capArray.setContactPressure', v); updateCapPhysics(); });
 bindRange('capNonlin', 'capNonlinOut', (v) => (v === 0 ? '0 (선형·기존)' : v.toFixed(3) + ' /mmHg' + (Math.abs(v - 0.012) < 1e-9 ? ' (PWV 법칙 정합)' : '')), (v) => { engine.set('capArray.nonlinZeta_perMmHg', v); updateCapPhysics(); });
 bindRange('patchConform', 'patchConformOut', (v) => v.toFixed(2) + (v === 1 ? ' (완전 순응·기존)' : ''), (v) => { engine.set('capArray.curvatureConformity', v); updateCapPhysics(); });
 // Noise/artefact model of the capacitive front-end: synthetic (default) | measured (fitted from the real v1 patch recordings)
 if ($('capNoiseModel')) {
-  const applyNoiseModel = () => { engine.set('capArray.noiseModel', $('capNoiseModel').value === 'measured' ? 'measured' : 'synthetic'); if ($('capNoiseModelOut')) $('capNoiseModelOut').textContent = engine.capArray.noiseModel === 'measured' ? '실측 피팅' : ''; };
+  const applyNoiseModel = () => { engine.set('capArray.noiseModel', $('capNoiseModel').value === 'measured' ? 'measured' : 'synthetic'); if ($('capNoiseModelOut')) $('capNoiseModelOut').textContent = translateUI(engine.capArray.noiseModel === 'measured' ? '실측 피팅' : ''); };
   $('capNoiseModel').addEventListener('change', applyNoiseModel);
   applyNoiseModel();
 }
@@ -485,9 +491,9 @@ const MAX_ELECTRODES = 20;
 function setArray(rows, cols) {
   engine.call('capArray.configure', { rows, cols });
   // reflect any auto-adjustment back into the sliders
-  $('rows').value = engine.capArray.rows; $('rowsOut').textContent = engine.capArray.rows + '';
-  $('cols').value = engine.capArray.cols; $('colsOut').textContent = engine.capArray.cols + '';
-  $('arrayCount') && ($('arrayCount').textContent = `${engine.capArray.rows}×${engine.capArray.cols} = ${engine.capArray.channelCount()} / ${MAX_ELECTRODES}`);
+  $('rows').value = engine.capArray.rows; $('rowsOut').textContent = translateUI(engine.capArray.rows + '');
+  $('cols').value = engine.capArray.cols; $('colsOut').textContent = translateUI(engine.capArray.cols + '');
+  $('arrayCount') && ($('arrayCount').textContent = translateUI(`${engine.capArray.rows}×${engine.capArray.cols} = ${engine.capArray.channelCount()} / ${MAX_ELECTRODES}`));
   syncSheetUi(); structuralReset();
 }
 bindRange('rows', 'rowsOut', (v) => v + '', (v) => {
@@ -510,13 +516,13 @@ function applyLayout(layout, name) {
   activeLayoutName = layout ? (name || layout.name) : 'grid';
   const custom = !!engine.capArray.layout;
   for (const id of ['rows', 'cols', 'spacing']) { const row = $(id).closest('.row'); if (row) row.classList.toggle('disabled', custom); }
-  $('arrayCount') && ($('arrayCount').textContent = custom ? `사용자 레이아웃 ${engine.capArray.channelCount()} / ${MAX_ELECTRODES} (행 ${engine.capArray.rowCount()})` : `${engine.capArray.rows}×${engine.capArray.cols} = ${engine.capArray.channelCount()} / ${MAX_ELECTRODES}`);
+  $('arrayCount') && ($('arrayCount').textContent = translateUI(custom ? `사용자 레이아웃 ${engine.capArray.channelCount()} / ${MAX_ELECTRODES} (행 ${engine.capArray.rowCount()})` : `${engine.capArray.rows}×${engine.capArray.cols} = ${engine.capArray.channelCount()} / ${MAX_ELECTRODES}`));
   if ($('layoutSel').value !== activeLayoutName) { $('layoutSel').value = activeLayoutName; enhanceSelect($('layoutSel')); }
   syncSheetUi(); structuralReset();
 }
 function refreshLayoutOptions() {
-  const sel = $('layoutSel'); const cur = activeLayoutName; sel.innerHTML = '';
-  const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
+  const sel = $('layoutSel'); const cur = activeLayoutName; sel.innerHTML = localizeHTML('');
+  const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = translateUI(t); sel.appendChild(o); };
   add('grid', '규칙 격자 (슬라이더)');
   for (const n of Object.keys(loadLayouts())) add(n, n);
   for (const n of Object.keys(PRESETS)) add(n, n);
@@ -577,14 +583,14 @@ function updatePpgOptics() {
   // 설명(라벨)과 측정값을 분리해 표시한다 — 값은 고정 폭 칩 6개(3열 × 2행)라 숫자가 바뀌어도
   // 줄 수·카드 폭이 흔들리지 않는다(2026-08-25 사용자 요청).
   const chip = (k, v) => `<span class="kvp"><i>${k}</i><b>${v}</b></span>`;
-  el.innerHTML = [
+  el.innerHTML = localizeHTML([
     chip('PI', `${r.perfusionIndex.toFixed(2)} %`),
     chip('관류', `×${r.perfusionFactor.toFixed(2)}`),
     chip('긴장도', `×${r.localToneFactor.toFixed(2)}`),
     chip('DC R/IR', `×${r.dcRed.toFixed(2)} / ×${r.dcIr.toFixed(2)}`),
     chip('광자예산', `${sg(r.snrPenalty_db, 1)} dB`),
     chip('SpO₂ 편향', `${sg(r.spo2Bias_pp)} %p`),
-  ].join('');
+  ].join(''));
 }
 // Fitzpatrick I–VI 를 슬라이더 색으로 보여 준다 — 트랙은 전체 램프, 썸은 현재 톤.
 // ⚠ 예시 색이지 보정된 피부 반사율이 아니다(모델 가정과 같은 수준의 표시용 값).
@@ -620,15 +626,15 @@ function applySheet(lat, along, fromView) {
   const L = engine.capArray.sheetLateral_mm, A = engine.capArray.sheetAlong_mm;
   const rng = engine.capArray.alongRange_mm();
   $('sheetAlong').min = rng.min; $('sheetAlong').max = rng.max;
-  $('sheetLat').value = L; $('sheetLatOut').textContent = L.toFixed(1) + ' mm';
-  $('sheetAlong').value = A; $('sheetAlongOut').textContent = A.toFixed(1) + ' mm';
-  $('w-lat').textContent = L.toFixed(1); $('w-along').textContent = A.toFixed(1);
+  $('sheetLat').value = L; $('sheetLatOut').textContent = translateUI(L.toFixed(1) + ' mm');
+  $('sheetAlong').value = A; $('sheetAlongOut').textContent = translateUI(A.toFixed(1) + ' mm');
+  $('w-lat').textContent = translateUI(L.toFixed(1)); $('w-along').textContent = translateUI(A.toFixed(1));
   if (!fromView && wristView) wristView.setSheetOffset(L, A, true);
 }
 function applySheetAngle(degrees){
   engine.call('capArray.setSheetAngle',degrees);
   const angle=engine.capArray.sheetAngle_deg;
-  $('sheetAngle').value=angle;$('sheetAngleOut').textContent=angle.toFixed(1)+'°';
+  $('sheetAngle').value=angle;$('sheetAngleOut').textContent=translateUI(angle.toFixed(1)+'°');
   wristView?.setSheetAngle(angle,true);applySheet(engine.capArray.sheetLateral_mm,engine.capArray.sheetAlong_mm,false);
 }
 $('sheetAngle').addEventListener('input',e=>applySheetAngle(Number(e.target.value)));
@@ -641,22 +647,22 @@ wristView?.onSheetMove((lat, along) => applySheet(lat, along, true));
 applySheet(engine.capArray.sheetLateral_mm, engine.capArray.sheetAlong_mm, false); // sync UI to model (URL preset may have set it)
 
 let paused = false;
-$('pause').addEventListener('click', () => { paused = !paused; engine.setRun({ paused }); $('pause').textContent = paused ? '▶ 재개' : '⏸ 일시정지'; });
+$('pause').addEventListener('click', () => { paused = !paused; engine.setRun({ paused }); $('pause').textContent = translateUI(paused ? '▶ 재개' : '⏸ 일시정지'); });
 
 // Anatomy tables
 function renderAnatomy() {
   const { arterial, venous } = engine.describeAnatomy();
-  const a = $('anatomy-art'); a.innerHTML = '';
+  const a = $('anatomy-art'); a.innerHTML = localizeHTML('');
   arterial.forEach((s, i) => {
     const tr = document.createElement('tr');
     const d = (engine.latest.t != null) ? (i === 0 ? 0 : 0) : 0; // delay filled live below
-    tr.innerHTML = `<td>${s.label}</td><td>${s.distanceFromHeart_cm}</td><td>${s.refDiameter_mm}</td><td id="del-${s.name}">–</td>`;
+    tr.innerHTML = localizeHTML(`<td>${s.label}</td><td>${s.distanceFromHeart_cm}</td><td>${s.refDiameter_mm}</td><td id="del-${s.name}">–</td>`);
     a.appendChild(tr);
   });
-  const v = $('anatomy-ven'); v.innerHTML = '';
+  const v = $('anatomy-ven'); v.innerHTML = localizeHTML('');
   venous.forEach((s) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${s.label}</td><td>${s.distanceFromHeart_cm}</td><td>${s.refDiameter_mm}</td><td>${s.hasValves ? '있음' : '없음'}</td>`;
+    tr.innerHTML = localizeHTML(`<td>${s.label}</td><td>${s.distanceFromHeart_cm}</td><td>${s.refDiameter_mm}</td><td>${s.hasValves ? '있음' : '없음'}</td>`);
     v.appendChild(tr);
   });
 }
@@ -708,18 +714,18 @@ function pushExportRow(r) {
 // 색은 기존 부착 칩과 같은 계열(bad = 붉은 알약, warn = 노란 테두리)이고, 툴팁에 z-점수를 그대로 싣는다.
 const zTxt = (v) => (v == null || !isFinite(v) ? '–' : (v >= 0 ? '+' : '') + v.toFixed(2));
 const FAULT_NOTE = '⚠ 이 시뮬레이션 안에서의 교차모달·PPG 내부 일관성 위반 검출기(캘리브레이션 시점 대비 z-점수)이며 임상 고장/진단 판정이 아닙니다. 임계·모델 바닥은 전부 모델 가정이고 실측 보정이 없습니다(측정 데이터셋에 PPG 채널 자체가 없습니다). 플래그가 서면 해당 추정기 신뢰도는 코어가 이미 낮춥니다 (docs/CLINICAL_AUDIT.md §6.17 · §6.24).';
-function faultChip(text, cls, why) { const e = document.createElement('em'); e.className = 'att ' + cls; e.textContent = text; e.title = `${why}\n${FAULT_NOTE}`; return e; }
+function faultChip(text, cls, why) { const e = document.createElement('em'); e.className = 'att ' + cls; e.textContent = translateUI(text); e.title = translateUI(`${why}\n${FAULT_NOTE}`); return e; }
 function renderFaultChips() {
   const d = lastEstimatorDiag || {};
   const z = `γ(결합) z ${zTxt(d.xmodGammaZ)} · 반사시간 z ${zTxt(d.xmodReflZ)} · π(맥압) z ${zTxt(d.xmodPiZ)} · RI z ${zTxt(d.xmodRiZ)} · PPG DC비 z ${zTxt(d.dcRelZ)} · PPG 내부 π z ${zTxt(d.ppgPiZ)} (나머지 단서 이탈 ${zTxt(d.ppgStillZ)}, σ_관류 ×${d.ppgPerfSigma != null && isFinite(d.ppgPerfSigma) ? d.ppgPerfSigma.toFixed(2) : '–'})`;
   const cap = $('m-capfault'), ppg = $('m-ppgfault');
   if (cap) {
-    cap.textContent = '';
+    cap.textContent = translateUI('');
     if (lastEstCap && lastEstCap.couplingFault) cap.appendChild(faultChip('접촉 이상', 'bad', `어레이 결합/접촉이 캘리브레이션 시점과 달라졌다고 판정 (couplingFault). ${z}`));
     if (lastEstCap && lastEstCap.riLawFault) cap.appendChild(faultChip('ΔC 형상 불일치', 'warn', `어레이 RI 와 PPG RI 가 서로 다른 방향으로 움직임 — ΔC 형상 법칙 위반 (riLawFault). ${z}`));
   }
   if (ppg) {
-    ppg.textContent = '';
+    ppg.textContent = translateUI('');
     if (lastEstPpg && lastEstPpg.opticsFault) ppg.appendChild(faultChip('광학 변화', 'bad', `PPG 광경로/DC 가 캘리브레이션 시점과 달라졌다고 판정 — AC/DC 단서는 게이트됨 (opticsFault). ${z}`));
     // 7차(§6.24): PPG 내부만으로 본 광학 모호성. 어레이가 없어도 뜨지만 **귀속이 불가능**하므로 단서를 게이팅하지
     // 않는다 — 신뢰도만 내리고 재캘리브레이션을 요구한다. 진짜 맥압 변화와 구별되지 않는다는 점을 툴팁에 명시.
@@ -739,7 +745,7 @@ const CUFF = { biasS: 0, biasD: 0, sdS: 3.5, sdD: 2.5 };
   const randn = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
   CUFF.biasS = 1.5 * randn(); CUFF.biasD = 1.5 * randn();
   const ids = [1, 2, 3];
-  const fill = (sel, lo, hi) => { sel.innerHTML = ''; for (let v = lo; v <= hi; v++) { const o = document.createElement('option'); o.value = v; o.textContent = `${v}`; sel.appendChild(o); } };
+  const fill = (sel, lo, hi) => { sel.innerHTML = localizeHTML(''); for (let v = lo; v <= hi; v++) { const o = document.createElement('option'); o.value = v; o.textContent = translateUI(`${v}`); sel.appendChild(o); } };
   for (const i of ids) { fill($(`calSbp${i}`), 80, 200); fill($(`calDbp${i}`), 40, 120); }
   enhanceAllSelects($('calibModal'));
   const readings = () => ids.map((i) => ({ s: parseInt($(`calSbp${i}`).value, 10), d: parseInt($(`calDbp${i}`).value, 10) }));
@@ -748,7 +754,7 @@ const CUFF = { biasS: 0, biasD: 0, sdS: 3.5, sdD: 2.5 };
   const simulate = () => { for (const i of ids) { setSel(`calSbp${i}`, engine.cardiac.sbp + CUFF.biasS + CUFF.sdS * randn()); setSel(`calDbp${i}`, engine.cardiac.dbp + CUFF.biasD + CUFF.sdD * randn()); } };
   const updateStats = () => {
     const r = readings(); const S = stats(r.map((x) => x.s)), D = stats(r.map((x) => x.d));
-    $('calStats').innerHTML = `모사 커프 3회 평균 <b>${S.m.toFixed(1)}/${D.m.toFixed(1)}</b> mmHg · SD ${S.sd.toFixed(1)}/${D.sd.toFixed(1)} · 95 % CI(t, n=3) ±${S.ci.toFixed(1)}/±${D.ci.toFixed(1)} mmHg → 캘리브레이션 입력 <b>${Math.round(S.m)}/${Math.round(D.m)}</b> <span class="hint">(모사 커프 = 중심 BP + 기기 편향·잡음 모델; 실제 커프는 상완압)</span>`;
+    $('calStats').innerHTML = localizeHTML(`모사 커프 3회 평균 <b>${S.m.toFixed(1)}/${D.m.toFixed(1)}</b> mmHg · SD ${S.sd.toFixed(1)}/${D.sd.toFixed(1)} · 95 % CI(t, n=3) ±${S.ci.toFixed(1)}/±${D.ci.toFixed(1)} mmHg → 캘리브레이션 입력 <b>${Math.round(S.m)}/${Math.round(D.m)}</b> <span class="hint">(모사 커프 = 중심 BP + 기기 편향·잡음 모델; 실제 커프는 상완압)</span>`);
     return { sbp: S.m, dbp: D.m, S, D };
   };
   const syncMode = () => {
@@ -764,11 +770,11 @@ const CUFF = { biasS: 0, biasD: 0, sdS: 3.5, sdD: 2.5 };
     if (noTruth()) {
       // Real recording / live device: the simulated cuff (drawn around the twin's set-point) would be a
       // fabricated truth → manual entry only. ⑥ 라이브 스트림도 같은 규칙 (실제 커프값을 사람이 입력).
-      $('calNow').textContent = liveSource
+      $('calNow').textContent = translateUI(liveSource
         ? '라이브 센서 스트림: 이 스트림에는 기준 BP(커프)가 없습니다. 실제로 측정한 커프값 3회를 직접 입력하세요 — 입력값이 없으면 추정치는 그 자리의 플레이스홀더 기준 상대 변화일 뿐 정확도를 말하지 않습니다.'
-        : '실측 기록 재생 중: 이 기록에는 기준 BP(커프)가 없습니다. 입력하는 값은 플레이스홀더이며 추정치는 그 값 기준 상대 변화일 뿐 정확도를 말하지 않습니다.';
+        : '실측 기록 재생 중: 이 기록에는 기준 BP(커프)가 없습니다. 입력하는 값은 플레이스홀더이며 추정치는 그 값 기준 상대 변화일 뿐 정확도를 말하지 않습니다.');
       $('calSource').value = 'manual'; $('calSource')._dd?.refresh();
-    } else $('calNow').textContent = `참고: 현재 시뮬레이션 중심 BP ${engine.cardiac.sbp}/${engine.cardiac.dbp} mmHg (커프 기기 편향 ${CUFF.biasS >= 0 ? '+' : ''}${CUFF.biasS.toFixed(1)}/${CUFF.biasD >= 0 ? '+' : ''}${CUFF.biasD.toFixed(1)} mmHg, 측정 SD ${CUFF.sdS}/${CUFF.sdD} mmHg 모사)`;
+    } else $('calNow').textContent = translateUI(`참고: 현재 시뮬레이션 중심 BP ${engine.cardiac.sbp}/${engine.cardiac.dbp} mmHg (커프 기기 편향 ${CUFF.biasS >= 0 ? '+' : ''}${CUFF.biasS.toFixed(1)}/${CUFF.biasD >= 0 ? '+' : ''}${CUFF.biasD.toFixed(1)} mmHg, 측정 SD ${CUFF.sdS}/${CUFF.sdD} mmHg 모사)`);
     syncMode(); $('calibModal').classList.remove('hidden');
   };
   const close = () => $('calibModal').classList.add('hidden');
@@ -852,7 +858,7 @@ function updatePwvChips() {
     const errStr = (err >= 0 ? '+' : '−') + Math.abs(err).toFixed(0).padStart(3, ' ');
     chips.push({ cls: cls + ' w2', text: `추정 PWV ${pwvStr} m/s · 오차 ${errStr} %`, title: `추정 PTT ${lastFeat.pttLocal_ms.toFixed(2)} ms vs 모델 진값 ${tau.toFixed(2)} ms` });
   }
-  el.innerHTML = chips.map((c) => `<span class="chip ${c.cls}" title="${c.title || ''}">${c.text.replace(/ /g, '&nbsp;')}</span>`).join('');
+  el.innerHTML = localizeHTML(chips.map((c) => `<span class="chip ${c.cls}" title="${c.title || ''}">${c.text.replace(/ /g, '&nbsp;')}</span>`).join(''));
 }
 
 // ---------- ⑤ Recording (export) & replay ----------
@@ -915,11 +921,11 @@ window.__engine = engine; // debug / headless harnesses: mode, mirror state, per
 // 라이브에는 커프 기준값이 없으므로 `noTruth()` 가 켜지고, 실측 기록 재생과 동일한 "진값 없음" 처리를 받는다.
 const liveBar = (() => {
   const el = document.createElement('div'); el.className = 'livebar hidden'; el.id = 'liveBar';
-  el.innerHTML = '<span class="lv-dot"></span><span class="lv-state">–</span><span class="lv-url mono"></span>'
+  el.innerHTML = localizeHTML('<span class="lv-dot"></span><span class="lv-state">–</span><span class="lv-url mono"></span>'
     + '<span class="lv-kv" title="스트림이 선언한 채널 수 · 정전용량 샘플레이트 · 단위"><span>스트림</span><b class="lv-fmt">–</b></span>'
     + '<span class="lv-kv" title="브리지 송신 시각 → 브라우저 디코드 (전송 지연; 같은 시계일 때만 유효) / 브리지 송신 → 분석 결과 (종단 지연)"><span>지연</span><b class="lv-lat">–</b></span>'
     + '<span class="lv-kv" title="seq 간격으로 센 전송 손실 · 큐 넘침으로 버린 프레임 · 늦게/중복 도착해 버린 프레임 · 샘플레이트 불일치로 버린 프레임 (어느 것도 보간하지 않음)"><span>손실</span><b class="lv-loss">–</b></span>'
-    + '<span class="lv-warn"></span><button type="button" class="btn lv-stop">중지 (트윈으로)</button>';
+    + '<span class="lv-warn"></span><button type="button" class="btn lv-stop">중지 (트윈으로)</button>');
   el.querySelector('.lv-stop').addEventListener('click', () => stopLive('사용자 중지'));
   return el;
 })();
@@ -930,18 +936,18 @@ function updateLiveBar() {
   liveBar.classList.remove('hidden');
   const stateTxt = { connecting: '연결 중', connected: '연결됨', reconnecting: '재연결 중', stalled: '스트림 정지', error: '오류', closed: '종료됨', idle: '대기' }[st] || st;
   liveBar.dataset.state = st;
-  liveBar.querySelector('.lv-state').textContent = st === 'stalled' ? `스트림 정지 ${(s.stallMs / 1000).toFixed(1)} s` : stateTxt;
-  liveBar.querySelector('.lv-url').textContent = liveUrl;
-  liveBar.querySelector('.lv-fmt').textContent = h.capFs ? `${h.nCh}ch · ${h.capFs} Hz · ${h.units || 'pF'}${h.sampleFormat === 'i32' ? ' · i32' : ''}` : '–';
+  liveBar.querySelector('.lv-state').textContent = translateUI(st === 'stalled' ? `스트림 정지 ${(s.stallMs / 1000).toFixed(1)} s` : stateTxt);
+  liveBar.querySelector('.lv-url').textContent = translateUI(liveUrl);
+  liveBar.querySelector('.lv-fmt').textContent = translateUI(h.capFs ? `${h.nCh}ch · ${h.capFs} Hz · ${h.units || 'pF'}${h.sampleFormat === 'i32' ? ' · i32' : ''}` : '–');
   const lat = s.latencyMs == null ? (s.clockSuspect ? '시계 불일치' : '–') : `${s.latencyMs.toFixed(0)} ms`;
   const e2e = s.resultLatencyMs == null ? '–' : `${s.resultLatencyMs.toFixed(0)} ms`;
-  liveBar.querySelector('.lv-lat').textContent = `${lat} / ${e2e}${Math.abs(s.driftMs) > 250 ? ` (지연 누적 ${(s.driftMs / 1000).toFixed(1)} s)` : ''}`;
-  liveBar.querySelector('.lv-loss').textContent = `${s.lost} / ${s.dropped} / ${s.late}${s.mismatched ? ` / fs ${s.mismatched}` : ''}`;
+  liveBar.querySelector('.lv-lat').textContent = translateUI(`${lat} / ${e2e}${Math.abs(s.driftMs) > 250 ? ` (지연 누적 ${(s.driftMs / 1000).toFixed(1)} s)` : ''}`);
+  liveBar.querySelector('.lv-loss').textContent = translateUI(`${s.lost} / ${s.dropped} / ${s.late}${s.mismatched ? ` / fs ${s.mismatched}` : ''}`);
   const warn = [];
   if (liveSource.mismatch && liveSource.mismatch.length) warn.push(...liveSource.mismatch);
   if (s.reconnects) warn.push(`재연결 ${s.reconnects}회`);
   if (liveSource.detail && (st === 'reconnecting' || st === 'error' || st === 'stalled')) warn.push(liveSource.detail);
-  liveBar.querySelector('.lv-warn').textContent = warn.join(' · ');
+  liveBar.querySelector('.lv-warn').textContent = translateUI(warn.join(' · '));
 }
 
 // The stream header decides the array geometry, the channel count and the wire rate — exactly what a
@@ -996,7 +1002,7 @@ function stopLive(why = '') {
 }
 
 function promptLive() {
-  const url = window.prompt('라이브 스트림 WebSocket 주소\n\n브리지 실행:  node server/dt_bridge.mjs --dtrec eval/samples/measured/R3_0415-01.dtrec', liveUrl || DEFAULT_BRIDGE_URL);
+  const url = window.prompt(translateUI('라이브 센서 스트림 WebSocket 주소'), liveUrl || DEFAULT_BRIDGE_URL);
   if (!url) return;
   const u = liveUrlFromParam(url);
   if (!u) { setStatus(`알 수 없는 스트림 주소: ${url}`); return; }
@@ -1282,7 +1288,7 @@ function loopBody(ts) {
       // 옆 열로 삐져나온다(2026-08-25 사용자 보고). 툴팁에는 단위가 그대로 남아 있다.
       return { text: `시뮬 오차 ±${s.toFixed(1)} / ±${d.toFixed(1)}`, cls: Math.max(s, d) <= 5 ? 'good' : Math.max(s, d) <= 8 ? 'warn' : 'bad', title: `캘리브레이션 이후 n=${acc.n} · MAE SBP ${s.toFixed(1)} / DBP ${d.toFixed(1)} mmHg (시뮬레이터 진값 대비, 모델 일치 조건) · 평균 편향 ${(acc.bs / acc.n).toFixed(1)} / ${(acc.bd / acc.n).toFixed(1)} mmHg` };
     };
-    const setCum = (id, r) => { const el = $(id); if (!el) return; if (typeof r === 'string') { el.textContent = r; el.className = 'cum'; return; } el.textContent = r.text; el.className = 'cum ' + r.cls; el.title = r.title; };
+    const setCum = (id, r) => { const el = $(id); if (!el) return; if (typeof r === 'string') { el.textContent = translateUI(r); el.className = 'cum'; return; } el.textContent = translateUI(r.text); el.className = 'cum ' + r.cls; el.title = translateUI(r.title); };
     setCum('m-capcum', lastEstCap ? cumText(cumErr.cap, lastEstCap) : waitNote);
     setCum('m-ppgcum', lastEstPpg ? cumText(cumErr.ppg, lastEstPpg) : waitNote);
     // Estimator confidence (0–1, from the Rust/JS estimator: posterior MAP SD × window quality × calibration quality ×
@@ -1290,13 +1296,13 @@ function loopBody(ts) {
     const setErr = (errId, confId, est) => {
       const e = $(errId), c = $(confId); if (!e) return;
       const errTxt = noTruth() ? '–/기준 없음' : `${sgn(est.sbp - engine.cardiac.sbp)}/${sgn(est.dbp - engine.cardiac.dbp)}`;
-      if (!c) { e.textContent = errTxt; return; }
-      e.firstChild && e.firstChild.nodeType === 3 ? (e.firstChild.textContent = errTxt + ' ') : e.insertBefore(document.createTextNode(errTxt + ' '), c);
+      if (!c) { e.textContent = translateUI(errTxt); return; }
+      e.firstChild && e.firstChild.nodeType === 3 ? (e.firstChild.textContent = translateUI(errTxt + ' ')) : e.insertBefore(document.createTextNode(translateUI(errTxt + ' ')), c);
       const conf = typeof est.confidence === 'number' ? est.confidence : null;
       const clamped = !!est.clamped;
-      c.textContent = conf == null ? '' : `c${conf.toFixed(2)}${clamped ? ' ⚠' : ''}`;
+      c.textContent = translateUI(conf == null ? '' : `c${conf.toFixed(2)}${clamped ? ' ⚠' : ''}`);
       c.className = 'conf ' + (conf == null ? '' : conf >= 0.4 ? 'good' : conf >= 0.15 ? 'warn' : 'bad');
-      if (est.mapSd_mmHg != null) c.title = `신뢰도 ${conf == null ? '–' : conf.toFixed(2)} · 사후 MAP SD ${est.mapSd_mmHg.toFixed(0)} mmHg${clamped ? ' · 생리 범위로 클램프됨' : ''} — 0–1 = 사후 MAP SD × 창 품질 × 캘리브레이션 품질 × 홀드 감쇠`;
+      if (est.mapSd_mmHg != null) c.title = translateUI(`신뢰도 ${conf == null ? '–' : conf.toFixed(2)} · 사후 MAP SD ${est.mapSd_mmHg.toFixed(0)} mmHg${clamped ? ' · 생리 범위로 클램프됨' : ''} — 0–1 = 사후 MAP SD × 창 품질 × 캘리브레이션 품질 × 홀드 감쇠`);
     };
     // ---- 교차모달 고장 검출 칩 (docs/CLINICAL_AUDIT.md §6.17) — 표시 전용 ----
     // 플래그가 서면 해당 추정기의 신뢰도는 이미 코어가 낮춰 놓았으므로 여기서는 계산하지 않고 보여주기만 한다.
@@ -1312,60 +1318,60 @@ function loopBody(ts) {
         // 혈압 숫자와 같은 줄에 놓이므로 칩은 최대한 짧게 — 전체 문구는 title 과 어레이 카드 정보줄에 있다
         // (2026-08-25 사용자 요청: 폭 축소).
         const txt = !a || a.state === 'uncalibrated' ? '–' : a.state === 'stable' ? (contact ? '접촉' : '안정') : a.state === 'transient' ? '과도' : a.state === 'shifted' ? `이동 ${dx}` : '분리';
-        el.textContent = txt;
+        el.textContent = translateUI(txt);
         el.className = 'att ' + (!a || a.state === 'uncalibrated' ? '' : a.state === 'stable' ? (contact ? 'warn' : 'good') : a.state === 'transient' ? 'warn' : 'bad');
-        if (a) el.title = `부착 상태 ${a.state}${a.motion ? ' (동작 게이트)' : ''}${contact ? ' · 접촉 변화 감지(공통모드 DC 변화, 경고만: 신뢰도 ×0.7)' : ''} · 이동 점수 ${a.shiftScore.toFixed(2)} · Δx̂ ${dx} (임계 ${a.xThr_mm != null ? a.xThr_mm.toFixed(1) : '1.5'} mm) · 결합 패턴 유사도 ${a.patternSim != null ? a.patternSim.toFixed(3) : '–'} (허용 강하 ${a.simThr != null ? a.simThr.toFixed(2) : '0.10'}) · 진폭비 ${a.ampRatio != null ? a.ampRatio.toFixed(2) : '–'} · 기저선 스텝 ${a.baselineStep.toFixed(1)} A · 접촉지수 ${a.contactIdx != null ? (a.contactIdx >= 0 ? '+' : '') + a.contactIdx.toFixed(2) + ' A' : '–'}${a.sinceEvent_s != null ? ` · 이벤트 후 ${a.sinceEvent_s.toFixed(0)} s` : ''} — 캘리브레이션 시점 대비 빔서치 x̂(1차 증거)·결합 패턴·진폭 잔차·DC 스텝(보강 증거); 임계 = max(설계 바닥 1.5 mm / 유사도 0.1, 3×세션 자체 변동). 시트 이동/분리 시 어레이 BP는 마지막 유효값 홀드(신뢰도 ×0.1), 커프 재캘리브레이션 전까지 기준선 자동 재설정 없음`;
+        if (a) el.title = translateUI(`부착 상태 ${a.state}${a.motion ? ' (동작 게이트)' : ''}${contact ? ' · 접촉 변화 감지(공통모드 DC 변화, 경고만: 신뢰도 ×0.7)' : ''} · 이동 점수 ${a.shiftScore.toFixed(2)} · Δx̂ ${dx} (임계 ${a.xThr_mm != null ? a.xThr_mm.toFixed(1) : '1.5'} mm) · 결합 패턴 유사도 ${a.patternSim != null ? a.patternSim.toFixed(3) : '–'} (허용 강하 ${a.simThr != null ? a.simThr.toFixed(2) : '0.10'}) · 진폭비 ${a.ampRatio != null ? a.ampRatio.toFixed(2) : '–'} · 기저선 스텝 ${a.baselineStep.toFixed(1)} A · 접촉지수 ${a.contactIdx != null ? (a.contactIdx >= 0 ? '+' : '') + a.contactIdx.toFixed(2) + ' A' : '–'}${a.sinceEvent_s != null ? ` · 이벤트 후 ${a.sinceEvent_s.toFixed(0)} s` : ''} — 캘리브레이션 시점 대비 빔서치 x̂(1차 증거)·결합 패턴·진폭 잔차·DC 스텝(보강 증거); 임계 = max(설계 바닥 1.5 mm / 유사도 0.1, 3×세션 자체 변동). 시트 이동/분리 시 어레이 BP는 마지막 유효값 홀드(신뢰도 ×0.1), 커프 재캘리브레이션 전까지 기준선 자동 재설정 없음`);
         // 7차(§6.24): 광학 변화에 의한 재캘리브레이션 요구도 같은 칩을 쓴다 (기존 시트 이동/분리와 동일한 신호)
         $('calib').classList.toggle('recal', !!(a && a.recalRequired) || !!(lastEstPpg && lastEstPpg.recalRequired));
       }
     }
     if (lastEstCap) {
-      $('m-capbp').textContent = `${lastEstCap.sbp.toFixed(0)}/${lastEstCap.dbp.toFixed(0)}`;
-      $('m-capmap').textContent = lastEstCap.map.toFixed(0);
+      $('m-capbp').textContent = translateUI(`${lastEstCap.sbp.toFixed(0)}/${lastEstCap.dbp.toFixed(0)}`);
+      $('m-capmap').textContent = translateUI(lastEstCap.map.toFixed(0));
       setErr('m-caperr', 'm-capconf', lastEstCap);
-      $('m-capx').textContent = lastEstCap.x.toFixed(2);
-      $('m-cappwv').textContent = lastEstCap.pwvLocal ? lastEstCap.pwvLocal.toFixed(1) : '–';
-      $('m-captrefl').textContent = lastEstCap.tRefl_ms != null ? lastEstCap.tRefl_ms.toFixed(0) : '–';
+      $('m-capx').textContent = translateUI(lastEstCap.x.toFixed(2));
+      $('m-cappwv').textContent = translateUI(lastEstCap.pwvLocal ? lastEstCap.pwvLocal.toFixed(1) : '–');
+      $('m-captrefl').textContent = translateUI(lastEstCap.tRefl_ms != null ? lastEstCap.tRefl_ms.toFixed(0) : '–');
       // held/invalid estimates (estimator `_hold`/`_heldInvalid` before the first real estimate — e.g. right
       // after a scenario re-seed) carry no RI/PWV/tRefl cue, so every optional cue field must be guarded
-      $('m-capri').textContent = lastEstCap.ri != null ? lastEstCap.ri.toFixed(2) : '–';
-    } else $('m-capbp').textContent = waiting;
+      $('m-capri').textContent = translateUI(lastEstCap.ri != null ? lastEstCap.ri.toFixed(2) : '–');
+    } else $('m-capbp').textContent = translateUI(waiting);
     if (lastEstPpg) {
-      $('m-ppgbp').textContent = `${lastEstPpg.sbp.toFixed(0)}/${lastEstPpg.dbp.toFixed(0)}`;
-      $('m-ppgmap').textContent = lastEstPpg.map.toFixed(0);
+      $('m-ppgbp').textContent = translateUI(`${lastEstPpg.sbp.toFixed(0)}/${lastEstPpg.dbp.toFixed(0)}`);
+      $('m-ppgmap').textContent = translateUI(lastEstPpg.map.toFixed(0));
       setErr('m-ppgerr', 'm-ppgconf', lastEstPpg);
-      $('m-ppgx').textContent = lastEstPpg.x.toFixed(2);
-      $('m-ppgtrefl').textContent = lastEstPpg.tRefl_ms != null ? lastEstPpg.tRefl_ms.toFixed(0) : '–';
-      $('m-ppgri').textContent = lastEstPpg.ri != null ? lastEstPpg.ri.toFixed(2) : '–';
-    } else $('m-ppgbp').textContent = waiting;
-    $('m-hr').textContent = L.instantHR.toFixed(0);
+      $('m-ppgx').textContent = translateUI(lastEstPpg.x.toFixed(2));
+      $('m-ppgtrefl').textContent = translateUI(lastEstPpg.tRefl_ms != null ? lastEstPpg.tRefl_ms.toFixed(0) : '–');
+      $('m-ppgri').textContent = translateUI(lastEstPpg.ri != null ? lastEstPpg.ri.toFixed(2) : '–');
+    } else $('m-ppgbp').textContent = translateUI(waiting);
+    $('m-hr').textContent = translateUI(L.instantHR.toFixed(0));
     // Measured replay: the cardiac model's set-point is NOT the truth of a real recording — never display it as such
-    $('m-bp').textContent = noTruth() ? '진값 없음' : `${engine.cardiac.sbp.toFixed(0)}/${engine.cardiac.dbp.toFixed(0)}`;
-    $('m-wristbp').textContent = noTruth() ? '–' : `${(engine.cardiac.sbp + hydro).toFixed(0)}/${(engine.cardiac.dbp + hydro).toFixed(0)}`;
+    $('m-bp').textContent = translateUI(noTruth() ? '진값 없음' : `${engine.cardiac.sbp.toFixed(0)}/${engine.cardiac.dbp.toFixed(0)}`);
+    $('m-wristbp').textContent = translateUI(noTruth() ? '–' : `${(engine.cardiac.sbp + hydro).toFixed(0)}/${(engine.cardiac.dbp + hydro).toFixed(0)}`);
     syncHemoUi(); // SV/TPR/CO/C read-outs track tone·stiffness·HR (audit §6.13)
     updateDriftUi(); // 장기 혈관 드리프트 시계 읽기값 (audit §6.20; 시계가 꺼져 있으면 아무것도 표시하지 않음)
-    $('m-hydro').textContent = (hydro >= 0 ? '+' : '') + hydro.toFixed(1);
-    $('m-height').textContent = L.wristDeltaH.toFixed(0);
-    $('m-radial').textContent = L.radialPulseDelay_ms.toFixed(0);
-    $('m-finger').textContent = L.fingerPulseDelay_ms.toFixed(0);
-    $('m-spo2').textContent = L.spo2.toFixed(1);
+    $('m-hydro').textContent = translateUI((hydro >= 0 ? '+' : '') + hydro.toFixed(1));
+    $('m-height').textContent = translateUI(L.wristDeltaH.toFixed(0));
+    $('m-radial').textContent = translateUI(L.radialPulseDelay_ms.toFixed(0));
+    $('m-finger').textContent = translateUI(L.fingerPulseDelay_ms.toFixed(0));
+    $('m-spo2').textContent = translateUI(L.spo2.toFixed(1));
     updatePpgOptics(); // PPG 광학/관류 유도값(PI는 마지막 샘플에서 갱신) — 모델 가정 표시
     updateCapPhysics(); // 접촉압(압평/폐색/정맥 울혈)·곡률 이격·비선형 탄성 유도값 — 모델 가정 표시 (§6.15)
-    $('m-motion').textContent = (L.motionLevel * 100).toFixed(0);
-    const arteryHere=engine.capArray.arteryAt(engine.capArray.sheetAlong_mm,L.arteryOffset);$('m-art').textContent=`${arteryHere.lateral.toFixed(1)} / ${arteryHere.depth.toFixed(1)}`;
-    $('m-ang').textContent = `${L.angles.shoulderAbd.toFixed(0)}° / ${L.angles.elbowFlex.toFixed(0)}° / ${L.angles.wristPron.toFixed(0)}°`;
-    $('m-fs').textContent = SAMPLE_RATE.toLocaleString();
-    $('m-capfs').textContent = Math.round(L.capSampleRate_Hz).toLocaleString();
-    if (L.torso) $('m-sway').textContent = `${(L.torso.pos[0] * 1000).toFixed(1)} / ${(L.torso.pos[2] * 1000).toFixed(1)}`;
-    if (lastAnalysis) { $('w-snr').textContent = lastAnalysis.bestSnr_db.toFixed(1); $('w-mrc').textContent = lastAnalysis.mrcSnr_db.toFixed(1); }
-    $('m-samples').textContent = engine.totalSamples.toLocaleString();
+    $('m-motion').textContent = translateUI((L.motionLevel * 100).toFixed(0));
+    const arteryHere=engine.capArray.arteryAt(engine.capArray.sheetAlong_mm,L.arteryOffset);$('m-art').textContent=translateUI(`${arteryHere.lateral.toFixed(1)} / ${arteryHere.depth.toFixed(1)}`);
+    $('m-ang').textContent = translateUI(`${L.angles.shoulderAbd.toFixed(0)}° / ${L.angles.elbowFlex.toFixed(0)}° / ${L.angles.wristPron.toFixed(0)}°`);
+    $('m-fs').textContent = translateUI(SAMPLE_RATE.toLocaleString());
+    $('m-capfs').textContent = translateUI(Math.round(L.capSampleRate_Hz).toLocaleString());
+    if (L.torso) $('m-sway').textContent = translateUI(`${(L.torso.pos[0] * 1000).toFixed(1)} / ${(L.torso.pos[2] * 1000).toFixed(1)}`);
+    if (lastAnalysis) { $('w-snr').textContent = translateUI(lastAnalysis.bestSnr_db.toFixed(1)); $('w-mrc').textContent = translateUI(lastAnalysis.mrcSnr_db.toFixed(1)); }
+    $('m-samples').textContent = translateUI(engine.totalSamples.toLocaleString());
 
     const { arterial } = engine.describeAnatomy();
     arterial.forEach((s, i) => {
       const el = $(`del-${s.name}`);
       if (el) {
         const d = engine.latest && i > 0 ? (i === engine.wristIdx ? L.radialPulseDelay_ms : i === engine.fingerIdx ? L.fingerPulseDelay_ms : null) : 0;
-        if (d != null) el.textContent = d.toFixed(0) + ' ms';
+        if (d != null) el.textContent = translateUI(d.toFixed(0) + ' ms');
       }
     });
     for (const [m, def] of Object.entries(MUSCLES)) {
@@ -1410,7 +1416,7 @@ for (const h of document.querySelectorAll('.card > h3')) {
   let dragging = null;
   for (const c of cards()) {
     const h = c.querySelector(':scope > h3'); if (!h) continue;
-    h.setAttribute('draggable', 'true'); h.title = (h.title ? h.title + ' · ' : '') + '드래그하여 카드 순서 변경';
+    h.setAttribute('draggable', 'true'); h.title = translateUI((h.title ? h.title + ' · ' : '') + '드래그하여 카드 순서 변경');
     h.addEventListener('dragstart', (e) => { dragging = c; c.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', cardId(c)); } catch (_) {} });
     h.addEventListener('dragend', () => { dragging = null; c.classList.remove('dragging'); for (const x of cards()) x.classList.remove('drop-before', 'drop-after'); });
     c.addEventListener('dragover', (e) => { if (!dragging || dragging === c) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const r = c.getBoundingClientRect(); const before = e.clientY < r.top + r.height / 2; c.classList.toggle('drop-before', before); c.classList.toggle('drop-after', !before); });
@@ -1423,7 +1429,7 @@ for (const h of document.querySelectorAll('.card > h3')) {
 const emgBars = $('emg-bars');
 for (const [m, def] of Object.entries(MUSCLES)) {
   const row = document.createElement('div'); row.className = 'bar-row';
-  row.innerHTML = `<span>${def.label}</span><div class="bar"><div class="fill" id="emg-${m}"></div></div>`;
+  row.innerHTML = localizeHTML(`<span>${def.label}</span><div class="bar"><div class="fill" id="emg-${m}"></div></div>`);
   emgBars.appendChild(row);
 }
 
@@ -1433,7 +1439,7 @@ window.addEventListener('resize', () => { avatar?.resize(); wristView?.resize();
 engine.start();
 requestAnimationFrame(loop);
 
-document.getElementById('tissueFat')?.addEventListener('input',e=>{engine.set('capArray.tissueFat_mm',Number(e.target.value));document.getElementById('tissueFatOut').textContent=e.target.value+' mm';});
+document.getElementById('tissueFat')?.addEventListener('input',e=>{engine.set('capArray.tissueFat_mm',Number(e.target.value));document.getElementById('tissueFatOut').textContent=translateUI(e.target.value+' mm');});
 
 $('resetWrist').addEventListener('click',e=>{
  e.stopPropagation();

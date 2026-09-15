@@ -1,3 +1,5 @@
+
+import {t as translateUI,html as localizeHTML} from '../../../i18n/locale.js';
 // Custom dropdown that replaces native <select> elements (keeps the <select> as the data
 // model so existing `.value` / 'change' wiring keeps working). Usage: enhanceSelect(selectEl).
 
@@ -10,7 +12,7 @@ export function enhanceSelect(select) {
   const btn = document.createElement('button');
   btn.type = 'button'; btn.className = 'dd-btn';
   const label = document.createElement('span'); label.className = 'dd-label';
-  const caret = document.createElement('span'); caret.className = 'dd-caret'; caret.textContent = '▾';
+  const caret = document.createElement('span'); caret.className = 'dd-caret'; caret.textContent = translateUI('▾');
   btn.append(label, caret);
   const list = document.createElement('ul'); list.className = 'dd-list'; list.setAttribute('role', 'listbox');
   wrap.append(btn, list);
@@ -19,11 +21,11 @@ export function enhanceSelect(select) {
 
   const api = {
     refresh() {
-      list.innerHTML = '';
+      list.innerHTML = localizeHTML('');
       for (const opt of select.options) {
         const li = document.createElement('li');
         li.className = 'dd-item' + (opt.value === select.value ? ' selected' : '');
-        li.textContent = opt.textContent; li.dataset.value = opt.value; li.setAttribute('role', 'option');
+        li.textContent = translateUI(opt.textContent); li.dataset.value = opt.value; li.setAttribute('role', 'option');
         li.addEventListener('click', (e) => {
           e.stopPropagation();
           if (select.value !== opt.value) { select.value = opt.value; select.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -32,7 +34,7 @@ export function enhanceSelect(select) {
         list.appendChild(li);
       }
       const cur = select.options[select.selectedIndex];
-      label.textContent = cur ? cur.textContent : '';
+      label.textContent = translateUI(cur ? cur.textContent : '');
       btn.disabled = select.disabled;
       wrap.classList.toggle('disabled', select.disabled);
     },

@@ -1,3 +1,5 @@
+
+import {t as translateUI,html as localizeHTML} from '../../../i18n/locale.js';
 // Session data export — CSV / JSONL + a JSON parameter sidecar (ROADMAP §2.3-14).
 //
 // WHAT IS EXPORTED
@@ -210,7 +212,7 @@ const mb = (b) => (b >= 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.max(0, Math
 // ---- dialog
 let modal = null, refreshFn = null;
 export function openExportDialog({ buffer, meta, onStatus }) {
-  const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+  const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = translateUI(x); return e; };
   if (!modal) {
     modal = el('div', 'modal hidden export'); modal.id = 'exportModal'; modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true');
     const box = el('div', 'modal-box'); box.style.width = '560px';
@@ -219,7 +221,7 @@ export function openExportDialog({ buffer, meta, onStatus }) {
     const opts = el('div', 'exp-opts');
     const mkChk = (id, label, checked, title) => {
       const l = el('label'); const i = document.createElement('input'); i.type = 'checkbox'; i.id = id; i.checked = checked;
-      l.append(i, el('span', null, label)); if (title) l.title = title; opts.appendChild(l); return i;
+      l.append(i, el('span', null, label)); if (title) l.title = translateUI(title); opts.appendChild(l); return i;
     };
     const cWin = mkChk('expWin', '분석 창 결과 CSV (t · HR · amp · RI · tRefl · PWV · x̂ · 어레이/PPG BP · 신뢰도 · 부착 · SpO₂)', true);
     const cJsonl = mkChk('expJsonl', '같은 내용을 JSONL 로도 저장 (pandas: read_json(lines=True))', false);
@@ -229,7 +231,7 @@ export function openExportDialog({ buffer, meta, onStatus }) {
     box.appendChild(opts);
     const warn = el('p', 'exp-warn'); box.appendChild(warn);
     const note = el('p', 'exp-note');
-    note.innerHTML = 'Parquet 은 <b>브라우저에서 생성하지 않습니다</b>(외부 라이브러리 없이 정직하게 만들 수 없어 흉내내지 않음) — CSV/JSONL 로 내보낸 뒤 <code>pd.read_csv(…, comment=\'#\')</code> → <code>df.to_parquet(…)</code> 로 변환하십시오. 전체 세션 원파형이 필요하면 도구 &gt; 기록(<code>.dtrec</code>)이 정확한 16 kHz 프레임을 저장합니다. <b>true_* 열은 시뮬레이터 설정값</b>이며 임상 기준이 아닙니다.';
+    note.innerHTML = localizeHTML('Parquet 은 <b>브라우저에서 생성하지 않습니다</b>(외부 라이브러리 없이 정직하게 만들 수 없어 흉내내지 않음) — CSV/JSONL 로 내보낸 뒤 <code>pd.read_csv(…, comment=\'#\')</code> → <code>df.to_parquet(…)</code> 로 변환하십시오. 전체 세션 원파형이 필요하면 도구 &gt; 기록(<code>.dtrec</code>)이 정확한 16 kHz 프레임을 저장합니다. <b>true_* 열은 시뮬레이터 설정값</b>이며 임상 기준이 아닙니다.');
     box.appendChild(note);
     const actions = el('div', 'modal-actions');
     const bClear = el('button', 'btn', '버퍼 비우기'); bClear.type = 'button';
@@ -240,15 +242,15 @@ export function openExportDialog({ buffer, meta, onStatus }) {
 
     refreshFn = () => {
       const s = buffer.stats();
-      stats.innerHTML = '';
-      const add = (k, v, title) => { const a = el('span', null, k); const b = el('b', null, v); if (title) { a.title = title; b.title = title; } stats.append(a, b); };
+      stats.innerHTML = localizeHTML('');
+      const add = (k, v, title) => { const a = el('span', null, k); const b = el('b', null, v); if (title) { a.title = translateUI(title); b.title = translateUI(title); } stats.append(a, b); };
       add('분석 창', `${s.windows.toLocaleString()} 행 · ${s.span_s.toFixed(1)} s${s.dropped ? ` (오래된 ${s.dropped} 행 폐기)` : ''}`, `버퍼 상한 ${buffer.maxWindows.toLocaleString()} 행 — 넘으면 오래된 행부터 버립니다`);
       add('창 CSV 예상 크기', mb(s.csvBytes));
       add('원파형 캡처', s.rawOn ? `켜짐 · ${s.rawSpan_s.toFixed(1)} s · ${s.rawCh} ch · 메모리 ${mb(s.rawBytes)}` : '꺼짐');
       add('원파형 CSV 예상', s.rawOn ? mb(s.rawCsvBytes) : '–', '표본당 채널 수 × ~9 B 로 추정한 값입니다');
-      warn.textContent = cRaw.checked && s.rawOn && s.rawCsvBytes > 20e6
+      warn.textContent = translateUI(cRaw.checked && s.rawOn && s.rawCsvBytes > 20e6
         ? `⚠ 원파형 CSV 가 약 ${mb(s.rawCsvBytes)} 입니다 — 브라우저 다운로드/후처리가 느려질 수 있습니다. 캡처 길이를 줄이거나 .dtrec 기록을 쓰십시오.`
-        : (cRaw.checked && !s.rawOn ? '⚠ 원파형 캡처가 꺼져 있어 내보낼 원파형이 없습니다. 위 체크박스로 켠 뒤 몇 초 모으십시오.' : '');
+        : (cRaw.checked && !s.rawOn ? '⚠ 원파형 캡처가 꺼져 있어 내보낼 원파형이 없습니다. 위 체크박스로 켠 뒤 몇 초 모으십시오.' : ''));
     };
     for (const c of [cRaw, cRawOn]) c.addEventListener('change', refreshFn);
     cRawOn.addEventListener('change', () => { buffer.setRaw(cRawOn.checked); refreshFn(); });

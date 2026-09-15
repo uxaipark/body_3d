@@ -1,3 +1,5 @@
+
+import {t as translateUI} from '../../../i18n/locale.js';
 import {arteryTether} from './arteryDeformation.js';
 import {atlasArteryAt} from './atlasProfile.js';
 import {rotatePatchPoint,patchAlongHalf,normalizePatchAngle} from './patchGeometry.js';
@@ -282,8 +284,8 @@ export class WristView {
     // Thin, solid (opaque) filled digits with a hairline dark outline for contrast on the bright pad
     ctx.font = '400 40px ui-monospace, Menlo, monospace';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(15,23,42,0.9)'; ctx.strokeText(text, 32, 34);
-    ctx.fillStyle = '#ffffff'; ctx.fillText(text, 32, 34);
+    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(15,23,42,0.9)'; ctx.strokeText(translateUI(text), 32, 34);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(translateUI(text), 32, 34);
     const tex = new THREE.CanvasTexture(cv); tex.needsUpdate = true;
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
     const sp = new THREE.Sprite(mat); sp.renderOrder = 10;
@@ -410,7 +412,7 @@ export class WristView {
   // pulseNorm 0..1 (at the wrist); pulseFn(delay_s) → 0..1 pulse value `delay_s` earlier (for the travelling wave).
   update(arteryOffset, channelNorm, snrDb, pulseNorm = 0, pulseFn = null, tissue = null) {
     const gain=Number(document.getElementById('tissueGain')?.value||1);
-    const meter=document.getElementById('tissueReadout');if(meter)meter.textContent=`반경 변화 ${((tissue?.radiusDelta_mm||0)*1000).toFixed(1)} µm · 표면 ${Math.max(0,...(tissue?.displacement_mm||[]).map(Math.abs)).toFixed(4)} mm · 표시 ×${gain}`;
+    const meter=document.getElementById('tissueReadout');if(meter)meter.textContent=translateUI(`반경 변화 ${((tissue?.radiusDelta_mm||0)*1000).toFixed(1)} µm · 표면 ${Math.max(0,...(tissue?.displacement_mm||[]).map(Math.abs)).toFixed(4)} mm · 표시 ×${gain}`);
     if(this._handModel==='S'||this._handModel==='T'){
       const w=arteryTether(this.sheet.along).weight,fat=tissue?.fat_mm||2.2,depth=Math.max(1.3,atlasArteryAt(this.sheet.along).depth_mm+(tissue?.arteryDepthShift_mm||0)*w),lateral=(tissue?.arteryLateralShift_mm||0)*w;
       if(this.section&&(Math.abs(this.section.profile.fat-fat)>.05||Math.abs(this.section.profile.arteryDepth-depth)>.05||Math.abs(this.section.profile.arteryX-lateral)>.05)){
