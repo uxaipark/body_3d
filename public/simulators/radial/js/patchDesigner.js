@@ -1,3 +1,4 @@
+import {chartCaption} from '../../../i18n/chart-layout.js';
 
 import {t as translateUI,html as localizeHTML} from '../../../i18n/locale.js';
 // Patch electrode design tool — modal with a 0.1 mm grid canvas: drag-and-drop electrodes, set each
@@ -326,7 +327,8 @@ export function initPatchDesigner({ onApply, getCurrent } = {}) {
     ctx.fillStyle = 'rgba(226,232,240,0.85)'; ctx.font = font(10.5);
     ctx.fillText(translateUI('+y 손가락 (distal)'), 8 * dpr, 14 * dpr); ctx.fillText(translateUI('−y 몸통 (proximal)'), 8 * dpr, h - 8 * dpr);
     ctx.textAlign = 'right'; ctx.fillText(translateUI('+x 엄지 →'), w - 8 * dpr, h / 2 - 4 * dpr); ctx.textAlign = 'left'; ctx.fillText(translateUI('← −x 새끼'), 8 * dpr, h / 2 - 4 * dpr);
-    ctx.fillStyle = 'rgba(148,163,184,0.95)'; ctx.textAlign = 'right'; ctx.fillText(translateUI(`커서 x ${hover.x.toFixed(1)}  y ${hover.y.toFixed(1)} mm · 줌 ${view.pxPerMm.toFixed(0)} px/mm (휠)`), w - 8 * dpr, 14 * dpr); ctx.textAlign = 'left';
+    const cursorText=`커서 x ${hover.x.toFixed(1)}  y ${hover.y.toFixed(1)} mm · 줌 ${view.pxPerMm.toFixed(0)} px/mm (휠)`;
+    if(!chartCaption(canvas,'cursor',cursorText)){ctx.fillStyle = 'rgba(148,163,184,0.95)';ctx.textAlign='right';ctx.fillText(translateUI(cursorText),w-8*dpr,14*dpr);ctx.textAlign='left';}
   }
 
   // Volar wrist outline (mm, wrist frame: u = lateral, + thumb; v = along, 0 = wrist crease, − proximal),

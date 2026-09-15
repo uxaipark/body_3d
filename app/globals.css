@@ -205,3 +205,38 @@ body {
 @media(max-width:380px){.creator-profile{column-gap:12px}.creator-focus{font-size:14px}.creator-link{padding:9px 10px}}
 
 .language-switch{display:inline-flex;flex-shrink:0;border:1px solid #3b514a;border-radius:7px;padding:3px;gap:2px;align-items:center}.language-switch button{border:0;background:transparent;color:#9fb9ad;font-size:13px;line-height:1.3;padding:7px 9px;border-radius:4px;white-space:nowrap;cursor:pointer}.language-switch button[aria-pressed=true]{color:#e4f4ea;background:#345142}.language-switch button:focus-visible{outline:2px solid #b5e5ce;outline-offset:2px}html[lang=en] .simulator-nav a{padding-left:9px;padding-right:9px}.portal-topbar .language-switch{margin-left:auto}.lab .language-switch{margin-left:auto}@media(max-width:1250px){.portal-topbar .portal-research-badge{display:none}html[lang=en] .lab .topbar{flex-wrap:wrap;height:auto;min-height:70px}html[lang=en] .lab .simulator-nav{order:3;width:100%}}@media(max-width:780px){.portal-topbar .language-switch{margin-left:auto}.language-switch button{min-height:32px}.top-actions{flex-wrap:wrap}}
+
+/* English captions use intrinsic height and keep switches/units in their own space. */
+html:lang(en) :is(.left-panel,.right-panel,.layer-name,.signal-heading>div,.parameter>div,.sensor-title>div,.vital>div){min-width:0}
+html:lang(en) :is(.small-chip,.synthetic-badge,.section-chip){display:inline-block;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.4;height:auto;vertical-align:middle}
+html:lang(en) :is(.section-title,.signal-heading,.signal-heading>div,.sensor-detail,.signal-controls,.sensor-header){flex-wrap:wrap;gap:6px}
+html:lang(en) .section-title>span:first-child{min-width:0;flex:1 1 120px}
+html:lang(en) :is(.section-title svg,.signal-dot,.live-label,.layer-icon,.layer-top [data-slot=switch],.sensor-round-switch){flex-shrink:0}
+html:lang(en) :is(.layer-name strong,.layer-name span,.site-option,.focus-grid button,.timing-card p,.sensor-detail,.sensor-callout){white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+html:lang(en) .layer-name strong{font-size:13px}
+html:lang(en) .layer-name span{font-size:11px}
+html:lang(en) .focus-grid button{min-height:44px;height:auto;padding:7px 6px}
+html:lang(en) .right-panel .site-picker{grid-template-columns:repeat(2,minmax(0,1fr))}
+html:lang(en) .right-panel .site-picker .site-option{min-width:0;font-size:12px;min-height:38px}
+html:lang(en) .parameter>div:first-child{gap:5px 10px;flex-wrap:wrap;align-items:baseline}
+html:lang(en) .parameter>div:first-child>span{min-width:0;flex:1 1 120px}
+html:lang(en) .parameter strong{flex:0 0 auto;white-space:nowrap}
+html:lang(en) .right-panel .signal-heading strong{font-size:12px;line-height:1.4}
+html:lang(en) .sensor-timing-table{width:100%;table-layout:fixed}
+html:lang(en) .sensor-timing-table th{overflow-wrap:anywhere;white-space:normal}
+html:lang(en) .sensor-timing-table :is(td,small){white-space:nowrap}
+html:lang(en) .timing-path{flex-wrap:wrap}
+html:lang(en) .sensor-callout{max-width:calc(100% - 36px);height:auto}
+html:lang(en) .bottom-strip{flex-wrap:wrap;row-gap:14px;padding-top:12px;padding-bottom:12px}
+html:lang(en) .vital{min-width:135px}
+html:lang(en) .lab-footer{height:auto;min-height:31px;gap:8px;flex-wrap:wrap;line-height:1.4}
+html:lang(en) .section-controls{flex-wrap:wrap;gap:8px}
+html:lang(en) .skin-section-dialog [data-slot=dialog-title]{line-height:1.5}
+@media(max-width:620px){
+ html:lang(en) .small-chip{display:none}
+ html:lang(en) .focus-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html:lang(en) .vital{min-width:90px}
+}
+/* Nine motion choices wrap inside the dock instead of widening the page. */
+.motion-dock > [data-slot=tabs]{min-width:0;max-width:100%;flex:0 1 auto}
+.motion-dock .motion-tabs{max-width:100%}

@@ -101,13 +101,16 @@ export class ArrayViz {
   _labelSprite(text, { color = '#ffffff', size = 48, bg = null } = {}) {
     const cv = document.createElement('canvas'); cv.width = 128; cv.height = 64;
     const ctx = cv.getContext('2d');
-    if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, 128, 64); }
+    text=translateUI(text);ctx.font=`500 ${size}px ui-monospace, Menlo, monospace`;
+    cv.width=Math.max(128,Math.ceil(ctx.measureText(text).width+20));
+    if (bg) { ctx.fillStyle = bg; ctx.fillRect(0, 0, cv.width, 64); }
     ctx.font = `500 ${size}px ui-monospace, Menlo, monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(11,16,32,0.9)'; ctx.strokeText(translateUI(text), 64, 34);
-    ctx.fillStyle = color; ctx.fillText(translateUI(text), 64, 34);
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(11,16,32,0.9)'; ctx.strokeText(text, cv.width/2, 34);
+    ctx.fillStyle = color; ctx.fillText(text, cv.width/2, 34);
     const tex = new THREE.CanvasTexture(cv);
     // Depth-tested so the bars / surface occlude the floor numbers (they live on the floor plane)
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false }));
+    sp.userData.labelAspect=cv.width/cv.height;
     return sp;
   }
 
@@ -133,9 +136,9 @@ export class ArrayViz {
       s.position.set(x0 + r * pitch - pitch * 0.3, 0.012, z0 + c * pitch - pitch * 0.3);
       T.floorGroup.add(s);
     }
-    const ax = this._labelSprite('손가락', { color: '#fbbf24', size: 34 }); ax.scale.set(pitch * 1.2, pitch * 0.42, 1); ax.position.set(xMax + pitch * 0.55, 0.02, 0); T.floorGroup.add(ax);
-    const az = this._labelSprite('엄지쪽', { color: '#fbbf24', size: 34 }); az.scale.set(pitch * 1.2, pitch * 0.42, 1); az.position.set(0, 0.02, zMax + pitch * 0.6); T.floorGroup.add(az);
-    const ap = this._labelSprite('몸통', { color: '#94a3b8', size: 34 }); ap.scale.set(pitch * 1.0, pitch * 0.42, 1); ap.position.set(xMin - pitch * 0.5, 0.02, 0); T.floorGroup.add(ap);
+    const ax = this._labelSprite('손가락', { color: '#fbbf24', size: 34 }); ax.scale.set(pitch * 0.42 * ax.userData.labelAspect, pitch * 0.42, 1); ax.position.set(xMax + pitch * 0.55, 0.02, 0); T.floorGroup.add(ax);
+    const az = this._labelSprite('엄지쪽', { color: '#fbbf24', size: 34 }); az.scale.set(pitch * 0.42 * az.userData.labelAspect, pitch * 0.42, 1); az.position.set(0, 0.02, zMax + pitch * 0.6); T.floorGroup.add(az);
+    const ap = this._labelSprite('몸통', { color: '#94a3b8', size: 34 }); ap.scale.set(pitch * 0.42 * ap.userData.labelAspect, pitch * 0.42, 1); ap.position.set(xMin - pitch * 0.5, 0.02, 0); T.floorGroup.add(ap);
   }
 
   _rebuildBars(rows, cols) {

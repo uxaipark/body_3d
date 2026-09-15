@@ -1,3 +1,4 @@
+import {chartCaption,chartLegend} from '../../../i18n/chart-layout.js';
 
 import {t as translateUI,html as localizeHTML} from '../../../i18n/locale.js';
 function drawArteryPath(ctx,path,X,Y,bounds,dpr){
@@ -113,10 +114,11 @@ export class Scope {
     ctx.font = `${11 * dpr}px ui-monospace, Menlo, monospace`;
     ctx.fillText(translateUI(`${yMax.toFixed(1)} ${this.unit}`), 6 * dpr, 13 * dpr);
     ctx.fillText(translateUI(`${yMin.toFixed(1)} ${this.unit}`), 6 * dpr, h - 6 * dpr);
+    if(chartLegend(this.canvas,this.traces))return;
     let lx = w - 8 * dpr;
     for (let i = this.traces.length - 1; i >= 0; i--) {
       const tr = this.traces[i];
-      const tw = ctx.measureText(tr.name).width;
+      const tw = ctx.measureText(translateUI(tr.name)).width;
       lx -= tw + 18 * dpr;
       ctx.fillStyle = tr.color;
       ctx.fillRect(lx, 6 * dpr, 10 * dpr, 10 * dpr);
@@ -212,7 +214,9 @@ export class MultiChannelScope {
       const top = 14 * dpr, labelW = 34 * dpr;
       const stripH = (h - top - 2 * dpr) / n;
       ctx.fillStyle = 'rgba(226,232,240,0.7)'; ctx.font = font(9.5);
-      ctx.fillText(translateUI(`${n}ch  #번호 · SNR(dB, 진값 대비) · 색=SNR`), 4 * dpr, 10 * dpr);
+      const stripLabel=`${n}ch  #번호 · SNR(dB, 진값 대비) · 색=SNR`;
+      if(chartCaption(this.canvas,'channels',stripLabel))ctx.fillText(`${n}ch · SNR`,4*dpr,10*dpr);
+      else ctx.fillText(translateUI(stripLabel),4*dpr,10*dpr);
       for (let k = 0; k < n; k++) {
         const arr = channels[k]; if (!arr) continue;
         const y0 = top + k * stripH, sh = Math.max(2 * dpr, stripH - 1.5 * dpr);
@@ -281,7 +285,7 @@ export class MultiChannelScope {
     const lh = Math.max(12, Math.min(17, (h - 8 * dpr) / Math.max(1, lines.length) / dpr)) * dpr; // fit all lines
     let fs = Math.min(12.5, lh / dpr * 0.8); ctx.font = font(12.5);
     // shrink font until the longest line fits the column
-    const longest = Math.max(...lines.map((l) => ctx.measureText(l.text).width + (l.swatch ? 16 * dpr : 0)));
+    const longest = Math.max(...lines.map((l) => ctx.measureText(translateUI(l.text)).width + (l.swatch ? 16 * dpr : 0)));
     while (longest * (fs / 12.5) > iw - 4 * dpr && fs > 8) { fs -= 0.5; }
     ctx.font = font(fs);
     let y = 6 * dpr + lh * 0.8;
@@ -310,7 +314,7 @@ export class TimingGrid {
     const font = (px) => `${px * dpr}px ui-monospace, Menlo, monospace`;
     const top = 16 * dpr, bottom = 16 * dpr;
     ctx.fillStyle = 'rgba(226,232,240,0.8)'; ctx.font = font(10);
-    ctx.fillText(translateUI(`셀: 추정 Δt(위) / m=모델 진값 Δt(아래) · 색 = 지연`), 4 * dpr, 11 * dpr);
+    if(!chartCaption(this.canvas,'key',`셀: 추정 Δt(위) / m=모델 진값 Δt(아래) · 색 = 지연`))ctx.fillText(translateUI(`셀: 추정 Δt(위) / m=모델 진값 Δt(아래) · 색 = 지연`), 4 * dpr, 11 * dpr);
     if (custom) return this._drawCustom(ctx, w, h, dpr, top, bottom, font, { measured, model, pwv, capFs, arteryLateral_mm, arteryPath, estLateral_mm, custom });
     if (!rows || !cols) return;
     // Same physical layout as the heatmap: square cells at the electrode pitch, centred
@@ -359,7 +363,7 @@ export class TimingGrid {
     ctx.fillText(translateUI('distal'), 4 * dpr, gy + 9 * dpr);
     ctx.fillText(translateUI('proximal (#1)'), 4 * dpr, gy + cell * rows - 3 * dpr);
     ctx.fillStyle = 'rgba(148,163,184,0.9)'; ctx.font = font(9.5);
-    ctx.fillText(translateUI(`행 간격 ${spacingMm} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s → 행당 ${(spacingMm / 1000 / pwv * 1000).toFixed(2)} ms · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`), 4 * dpr, h - 5 * dpr);
+    if(!chartCaption(this.canvas,'detail',`행 간격 ${spacingMm} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s → 행당 ${(spacingMm / 1000 / pwv * 1000).toFixed(2)} ms · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`))ctx.fillText(translateUI(`행 간격 ${spacingMm} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s → 행당 ${(spacingMm / 1000 / pwv * 1000).toFixed(2)} ms · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`), 4 * dpr, h - 5 * dpr);
   }
 
   // Custom (designed) layout: pads drawn at their true positions on the sheet, distal at the top.
@@ -396,7 +400,7 @@ export class TimingGrid {
     ctx.fillText(translateUI('distal'), 4 * dpr, gy + 9 * dpr);
     ctx.fillText(translateUI('proximal (#1)'), 4 * dpr, gy + sheetH * s - 3 * dpr);
     ctx.fillStyle = 'rgba(148,163,184,0.9)';
-    ctx.fillText(translateUI(`사용자 레이아웃 ${electrodes.length}전극 · 시트 ${sheetW}×${sheetH} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`), 4 * dpr, h - 5 * dpr);
+    if(!chartCaption(this.canvas,'detail',`사용자 레이아웃 ${electrodes.length}전극 · 시트 ${sheetW}×${sheetH} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`))ctx.fillText(translateUI(`사용자 레이아웃 ${electrodes.length}전극 · 시트 ${sheetW}×${sheetH} mm · 모델 국소 PWV ${pwv.toFixed(1)} m/s · 샘플 주기 ${(1000 / capFs).toFixed(2)} ms`), 4 * dpr, h - 5 * dpr);
   }
 }
 
@@ -498,7 +502,7 @@ export class ContourMap {
     ctx.fillText(translateUI('proximal (#1 행)'), 4 * dpr, h - 4 * dpr);
     ctx.fillStyle = 'rgba(203,213,225,0.8)';
     const tag = custom ? `등고선 ${levels}단계 · 사용자 레이아웃 ${custom.electrodes.length}전극 (IDW 보간)` : `등고선 ${levels}단계 · ${cols}×${rows} @ ${spacingMm} mm`;
-    ctx.fillText(translateUI(tag), w - 4 * dpr - ctx.measureText(tag).width, h - 4 * dpr);
+    if(!chartCaption(this.canvas,'detail',tag))ctx.fillText(translateUI(tag), w - 4 * dpr - ctx.measureText(translateUI(tag)).width, h - 4 * dpr);
   }
 }
 
@@ -594,7 +598,7 @@ export class Heatmap {
     ctx.fillText(translateUI('distal (손가락)'), 4 * dpr, 11 * dpr);
     ctx.fillText(translateUI('proximal (#1 행)'), 4 * dpr, h - 4 * dpr);
     ctx.fillStyle = 'rgba(203,213,225,0.8)';
-    { const tag = custom ? `사용자 레이아웃 ${custom.electrodes.length}전극 · ${custom.sheetW}×${custom.sheetH} mm (IDW 보간)` : `${cols}×${rows} @ ${spacingMm} mm`; ctx.fillText(translateUI(tag), w - 4 * dpr - ctx.measureText(tag).width, h - 4 * dpr); }
+    { const tag = custom ? `사용자 레이아웃 ${custom.electrodes.length}전극 · ${custom.sheetW}×${custom.sheetH} mm (IDW 보간)` : `${cols}×${rows} @ ${spacingMm} mm`; if(!chartCaption(this.canvas,'detail',tag))ctx.fillText(translateUI(tag), w - 4 * dpr - ctx.measureText(translateUI(tag)).width, h - 4 * dpr); }
     // Pulse propagation direction marker (proximal → distal = bottom → top) in the left margin
     if (gx > 14 * dpr) {
       const ax = gx - 8 * dpr, y1 = gy + cell * rows - 6 * dpr, y2 = gy + 6 * dpr;

@@ -899,3 +899,76 @@ td:nth-child(n+2) { font-family: ui-monospace, Menlo, monospace; }
 
 .wrist-card-heading{display:flex;align-items:center;gap:8px}
 #resetWrist{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:25px;height:24px;padding:3px;cursor:pointer}
+
+/* English text grows in normal flow; data values keep their precision. */
+html:lang(en) .chart-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+html:lang(en) :is(.panel,.card,.sub,.ocol,.grp,.dd,.m,.col) { min-width:0; }
+html:lang(en) :is(.chip,.chip.w1,.chip.w2) { width:auto; min-width:0; max-width:100%; flex:0 1 auto; white-space:normal; overflow-wrap:anywhere; text-align:left; justify-content:flex-start; border-radius:10px; padding:5px 9px; line-height:1.4; }
+html:lang(en) .chip::before { flex:0 0 7px; }
+html:lang(en) :is(.att,.scen-chip,.small-chip) { white-space:normal; max-width:100%; height:auto; line-height:1.4; overflow-wrap:anywhere; }
+html:lang(en) :is(.card > h3,.panel h2,.card.wide2 .sub h4,.sub.square > h4,.sub.snap > h4 .ttl) { height:auto; min-height:18px; white-space:normal; overflow:visible; line-height:1.45; overflow-wrap:anywhere; }
+html:lang(en) :is(.card > h3,.panel h2) { gap:8px; }
+html:lang(en) :is(.card > h3,.panel h2)::after { flex-shrink:0; }
+html:lang(en) .sub.snap > h4 { flex-wrap:wrap; align-items:flex-start; }
+html:lang(en) .sub.snap > h4 .ttl { flex:1 1 100%; }
+html:lang(en) :is(.radio-group,.opts .grp,.card.array > .viz-foot.ctrlbar .radio-group.inline) { flex-wrap:wrap; white-space:normal; max-width:100%; }
+html:lang(en) :is(.radio-group label,.opts label) { min-width:0; line-height:1.4; }
+html:lang(en) :is(.radio-group input,.opts input[type=checkbox],.dd-caret) { flex-shrink:0; }
+html:lang(en) .dd-btn { min-width:0; white-space:normal; overflow-wrap:anywhere; line-height:1.35; }
+html:lang(en) .dd-btn > :first-child { min-width:0; }
+html:lang(en) .dd-item { overflow-wrap:anywhere; }
+html:lang(en) .row { grid-template-columns:minmax(0,1fr) minmax(64px,.8fr) minmax(76px,.65fr); gap:7px; }
+html:lang(en) .row :is(label,output) { min-width:0; overflow-wrap:anywhere; line-height:1.4; }
+html:lang(en) .row input { min-width:0; }
+html:lang(en) .wrist-foot .tissue-controls { grid-template-columns:minmax(0,1fr) minmax(0,1fr); white-space:normal; }
+html:lang(en) .tissue-controls > :first-child { grid-column:1/-1; }
+html:lang(en) .tissue-controls > label { flex-wrap:wrap; white-space:normal; }
+html:lang(en) .tissue-controls :is(#tissueGain,#tissueFat) { flex-basis:45px; }
+html:lang(en) .artery-control { flex-wrap:wrap; }
+html:lang(en) .artery-control label { flex:1 1 100%; }
+html:lang(en) .card.wide2.h248:not(.collapsed),html:lang(en) .card.h248.spo2:not(.collapsed) { height:auto; min-height:258px; }
+html:lang(en) .card.wide2.sensors.h248 > .subrow { grid-template-rows:auto; }
+html:lang(en) .card.wide2.sensors.h248 > .subrow > .sub { display:flex; flex-direction:column; grid-row:auto; }
+html:lang(en) .card.wide2.sensors.h248 .sub canvas { flex:0 0 150px; height:150px!important; }
+html:lang(en) .card.h248.spo2 > canvas { flex:0 0 150px; height:150px!important; }
+html:lang(en) .card.wide2.sensors.h248 .sub-opts :is(.grp,.ci,.kvp,.val),html:lang(en) .wave-info { white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; line-height:1.45; }
+html:lang(en) .card.wide2.sensors.h248 :is(.capinfo,.vals) { grid-template-columns:repeat(auto-fit,minmax(min(155px,100%),1fr)); }
+html:lang(en) .card.wide2.sensors.h248 .kvp { flex-wrap:wrap; column-gap:6px; }
+html:lang(en) .card.wide2.sensors.h248 .opts label.sld { grid-template-columns:minmax(0,1fr) auto; grid-template-areas:'cap val' 'sld sld'; }
+html:lang(en) .card.wide2.sensors.h248 .opts label.sld > span { white-space:normal; overflow:visible; }
+html:lang(en) .card.wide2.sensors.h248 .sub-opts.capopts { grid-template-columns:minmax(110px,.7fr) minmax(0,1fr); }
+html:lang(en) .card.array > .subrow { aspect-ratio:auto; align-items:start; }
+html:lang(en) .sub.square { height:auto; }
+html:lang(en) .sub.square .viz-stack { flex:none; height:auto; aspect-ratio:1; }
+html:lang(en) .card.wide2 .sub.square #c-timing { flex:none; height:auto!important; aspect-ratio:1; }
+.chart-legend { display:flex; flex-wrap:wrap; gap:4px 12px; margin:2px 0 6px; font-size:11px; line-height:1.4; flex:0 0 auto; }
+.chart-legend-item { min-width:0; max-width:100%; overflow-wrap:anywhere; color:var(--text); }
+.chart-legend-item::before { content:''; display:inline-block; width:10px; height:3px; margin-right:5px; vertical-align:middle; background:var(--trace-color); }
+.chart-caption { min-width:0; margin-top:5px; font-size:11px; line-height:1.45; color:var(--muted); overflow-wrap:anywhere; flex:0 0 auto; }
+html:lang(en) header { grid-template-columns: minmax(0,1fr); }
+html:lang(en) .metrics { grid-template-columns:repeat(auto-fit,minmax(min(118px,100%),1fr)); grid-template-rows:auto; grid-auto-flow:row; grid-auto-columns:auto; }
+html:lang(en) .m { width:auto; height:auto; min-height:56px; white-space:normal; overflow:visible; }
+html:lang(en) .m.big { grid-column:1/-1; grid-row:auto; grid-template-columns:repeat(3,minmax(0,1fr)); height:auto; }
+html:lang(en) .m.big .kv { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:3px 8px; }
+html:lang(en) .m.big :is(.kv i,.kv span,.col > span,.cum) { white-space:normal; overflow-wrap:anywhere; }
+html:lang(en) .m.big .col b { font-variant-numeric:tabular-nums; }
+html:lang(en) .m.big :is(.bprow,.col.dual b) { flex-wrap:wrap; }
+html:lang(en) .mb-list { max-width:min(440px,calc(100vw - 24px)); }
+html:lang(en) .mb-item { white-space:normal; overflow-wrap:anywhere; }
+html:lang(en) :is(.pd-row,.pd-seg) { flex-wrap:wrap; }
+html:lang(en) .pd-width-note { white-space:normal; margin-left:0; }
+@media(max-width:1100px) {
+ html:lang(en) .chart-grid,html:lang(en) .card.wide2.sensors.h248 > .subrow.r53 { grid-template-columns:minmax(0,1fr); }
+ html:lang(en) .card.wide2.sensors.h248 .sub-opts.capopts { grid-template-columns: minmax(0,1fr) minmax(0,1.5fr); }
+}
+@media(max-width:700px) {
+ html:lang(en) .m.big { grid-template-columns:minmax(0,1fr); gap:10px; }
+ html:lang(en) .m.big .col + .col { border-left:0; border-top:1px solid var(--border); padding-top:10px; }
+ html:lang(en) .card.array > .subrow { grid-template-columns:minmax(0,1fr); }
+ html:lang(en) .row { grid-template-columns:minmax(0,1fr) minmax(76px,.5fr); }
+ html:lang(en) .row > label { grid-column:1/-1; }
+ html:lang(en) .row :is(.dd,.layout-ctl,.body-presets) { grid-column:1/-1; }
+}
+html:lang(en) .card.wide2.h248 .sub canvas { flex:0 0 150px; height:150px!important; }
+html:lang(en) .card.wide2.h248 .sub.imu canvas { flex-basis:88px; height:88px!important; }
+html:lang(en) .card.wide2.h248 .sub.emg .emg-body canvas { height:180px!important; }

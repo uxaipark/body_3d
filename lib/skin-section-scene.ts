@@ -1,4 +1,5 @@
 
+import {wrapCanvasText} from '../public/i18n/chart-layout.js';
 import {t as translateUI} from '../public/i18n/locale.js';
 import * as T from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -160,23 +161,33 @@ export class SkinSectionScene{
   const c=this.overlay.getContext('2d')!,w=this.host.clientWidth,h=this.host.clientHeight,dpr=Math.min(devicePixelRatio,2);if(this.overlay.width!==Math.round(w*dpr)||this.overlay.height!==Math.round(h*dpr)){this.overlay.width=Math.round(w*dpr);this.overlay.height=Math.round(h*dpr);}c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,w,h);c.font='12px sans-serif';
   const project=(x:number,d:number,z=.06)=>{const q=new T.Vector3(...deformSection(x,d,z,this.profile,this.drive,this.gain)).project(this.camera);return [(q.x+1)*w/2,(1-q.y)*h/2];};
   const p=this.profile;const labels=this.view==='top'?[]:this.view==='vessel'?[['정맥',p.arteryDepth+.3,p.veinX],...p.structures.filter(s=>s.kind==='tendon'||s.kind==='bone').map(s=>[s.label,s.depth,s.x])]:this.view==='dermis'?[['표피 · 기저층',p.epidermis,3.4],['유두 진피',p.papillary,3.4],['망상 진피',p.dermis*.7,3.4]]:[['표피',p.epidermis,p.width/2-.2],['진피',p.dermis*.65,p.width/2-.2],['피하 지방',p.dermis+p.fat*.5,p.width/2-.2],...p.structures.map(s=>[s.label,s.depth,s.x])];
-  let lastY=-30;for(const [text,depth,x] of labels){const a=project(Number(x),Number(depth)),y=Math.max(a[1],lastY+23);if(a[0]<20||a[0]>w-10||y<22||y>h-45)continue;lastY=y;const tx=Math.min(a[0]+15,w-174);c.strokeStyle='#c2cbbb88';c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(tx,y);c.stroke();c.fillStyle='#101b23dd';c.fillRect(tx-3,y-13,172,19);c.fillStyle='#e0d9c9';c.fillText(translateUI(String(text)),tx,y);}
+  let lastY=0;for(const [text,depth,x] of labels){
+   const a=project(Number(x),Number(depth)),caption=translateUI(String(text));
+   const lines=wrapCanvasText(c,caption,Math.max(40,Math.min(220,w-40))),boxW=Math.min(w-30,Math.max(...lines.map(line=>c.measureText(line).width))+10),boxH=lines.length*16+4;
+   const y=Math.max(a[1],lastY+18);if(a[0]<20||a[0]>w-10||y<22||y+boxH>h-45)continue;
+   lastY=y+boxH;const tx=Math.max(12,Math.min(a[0]+15,w-boxW-12));c.strokeStyle='#c2cbbb88';c.beginPath();c.moveTo(a[0],a[1]);c.lineTo(tx,y);c.stroke();c.fillStyle='#101b23dd';c.fillRect(tx-3,y-13,boxW,boxH);c.fillStyle='#e0d9c9';lines.forEach((line,i)=>c.fillText(line,tx,y+i*16));
+  }
   if(this.led.visible)for(const [mesh,label] of [[this.led,'LED'],[this.detector,'PD']] as const){const q=mesh.position.clone().project(this.camera),x=(q.x+1)*w/2,y=(1-q.y)*h/2;c.fillStyle='#daede1';c.fillText(translateUI(label),x-10,y-12);}
-  if(this.view==='top'){c.fillStyle='#cce8d4';c.fillText(translateUI('TOP · 2 mm 격자 / 0.25 mm 등고선 / 1 mm 굵은 선'),18,25);c.fillStyle='#b9cfc8';c.fillText(translateUI('높이 기준: 정지 상태의 패치 중앙 · 맥동 강조 배율 적용'),18,45);}
+  let topNoteBottom=25;
+  if(this.view==='top'){
+   for(const [text,color] of [['TOP · 2 mm 격자 / 0.25 mm 등고선 / 1 mm 굵은 선','#cce8d4'],['높이 기준: 정지 상태의 패치 중앙 · 맥동 강조 배율 적용','#b9cfc8']]){
+    c.fillStyle=color;for(const line of wrapCanvasText(c,translateUI(text),Math.max(40,w-36))){c.fillText(line,18,topNoteBottom);topNoteBottom+=17;}topNoteBottom+=3;
+   }
+  }
   if(this.view!=='dermis'){
    // A priority callout cannot be dropped by the secondary label collision pass.
    // On TOP, point to the surface projection and explicitly mark it as subsurface.
    const top=this.view==='top',a=project(p.arteryX,top?0:p.arteryDepth,top?-p.thickness/2:.06);
-   const title=p.arteryLabel+(top?' · 피부 아래':''),x=18,y=top?65:18;
-   c.font='bold 14px sans-serif';const width=Math.min(w-36,c.measureText(title).width+24);
+   const title=translateUI(p.arteryLabel+(top?' · 피부 아래':'')),x=18,y=top?topNoteBottom+5:18;
+   c.font='bold 14px sans-serif';const titleLines=wrapCanvasText(c,title,Math.max(40,w-60)),width=Math.min(w-36,Math.max(...titleLines.map(line=>c.measureText(line).width))+24),height=titleLines.length*18+12;
    c.strokeStyle='#ff8795';c.lineWidth=1.7;
    if(a.every(Number.isFinite)&&a[0]>=0&&a[0]<=w&&a[1]>=0&&a[1]<=h){
-    c.setLineDash(top?[4,3]:[]);c.beginPath();c.moveTo(x+width/2,y+30);c.lineTo(a[0],a[1]);c.stroke();c.setLineDash([]);
+    c.setLineDash(top?[4,3]:[]);c.beginPath();c.moveTo(x+width/2,y+height);c.lineTo(a[0],a[1]);c.stroke();c.setLineDash([]);
     c.beginPath();c.arc(a[0],a[1],7,0,Math.PI*2);c.stroke();c.fillStyle='#ff8795';c.beginPath();c.arc(a[0],a[1],2.5,0,Math.PI*2);c.fill();
    }
-   c.fillStyle='#2c1723ed';c.fillRect(x,y,width,30);c.strokeRect(x,y,width,30);c.fillStyle='#ffd8df';c.fillText(translateUI(title),x+12,y+20);c.font='12px sans-serif';
+   c.fillStyle='#2c1723ed';c.fillRect(x,y,width,height);c.strokeRect(x,y,width,height);c.fillStyle='#ffd8df';titleLines.forEach((line,i)=>c.fillText(line,x+12,y+20+i*18));c.font='12px sans-serif';
   }
-  const a=project(-3,p.total+.7),b=project(0,p.total+.7),length=Math.hypot(b[0]-a[0],b[1]-a[1]);c.strokeStyle='#c5d9cf';c.lineWidth=2;c.beginPath();c.moveTo(22,h-25);c.lineTo(22+Math.min(length,w*.4),h-25);c.stroke();c.fillStyle='#b2c7c2';c.fillText(translateUI(length<w*.4?'3 mm':'배율 확대'),22,h-34);c.textAlign='right';c.fillText(translateUI('드래그 회전 · 휠 확대 · 우클릭 이동'),w-16,h-15);c.textAlign='left';
+  const a=project(-3,p.total+.7),b=project(0,p.total+.7),length=Math.hypot(b[0]-a[0],b[1]-a[1]);c.strokeStyle='#c5d9cf';c.lineWidth=2;c.beginPath();c.moveTo(22,h-25);c.lineTo(22+Math.min(length,w*.4),h-25);c.stroke();c.fillStyle='#b2c7c2';c.fillText(translateUI(length<w*.4?'3 mm':'배율 확대'),22,h-34);c.textAlign='right';wrapCanvasText(c,translateUI('드래그 회전 · 휠 확대 · 우클릭 이동'),Math.max(40,w-36)).reverse().forEach((line,i)=>c.fillText(line,w-16,h-15-i*16));c.textAlign='left';
  }
  dispose(){this.pointerAbort.abort();this.controls.dispose();this.geometries.forEach(g=>g.dispose());this.materials.forEach(m=>m.dispose());this.texture.dispose();this.renderer.dispose();this.renderer.forceContextLoss();this.renderer.domElement.remove();this.overlay.remove();}
 }

@@ -858,7 +858,7 @@ function updatePwvChips() {
     const errStr = (err >= 0 ? '+' : '−') + Math.abs(err).toFixed(0).padStart(3, ' ');
     chips.push({ cls: cls + ' w2', text: `추정 PWV ${pwvStr} m/s · 오차 ${errStr} %`, title: `추정 PTT ${lastFeat.pttLocal_ms.toFixed(2)} ms vs 모델 진값 ${tau.toFixed(2)} ms` });
   }
-  el.innerHTML = localizeHTML(chips.map((c) => `<span class="chip ${c.cls}" title="${c.title || ''}">${c.text.replace(/ /g, '&nbsp;')}</span>`).join(''));
+  el.innerHTML = localizeHTML(chips.map((c) => `<span class="chip ${c.cls}" title="${c.title || ''}">${c.text}</span>`).join(''));
 }
 
 // ---------- ⑤ Recording (export) & replay ----------

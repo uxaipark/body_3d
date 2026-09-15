@@ -171,6 +171,14 @@
       {
         "type": "paragraph",
         "text": "순환계의 동맥 팽창 1×/8×는 시각적 변형 배율입니다. 호흡에 따른 폐·간·복부 변형과 심장 수축은 공통 신체 동작과 연결된 근사입니다. 일부 장기 경계는 렌더링·기하 제약으로 보정되며 환자별 접촉 해석 결과는 아닙니다."
+      },
+      {
+        "type": "heading",
+        "text": "인사와 춤"
+      },
+      {
+        "type": "paragraph",
+        "text": "움직임에서 오른손 인사 또는 춤추기를 선택한다. 실제 CMU 모션 캡처를 현재 신체 리그에 맞춰 재생하며 반복과 기존 동작 사이의 전환을 부드럽게 연결한다. 인사에서는 오른손을 들어 흔들고, 춤은 Charleston 동작이다. 캡처에 없는 손가락 세부 움직임은 합성하지 않는다."
       }
     ],
     "en": {
@@ -225,6 +233,14 @@
         {
           "type": "paragraph",
           "text": "The arterial 1×/8× setting magnifies visual deformation only. Lung, liver, abdominal and cardiac motion are approximations coupled to body movement. Some organ boundaries use geometric/rendering constraints, not patient-specific contact analysis."
+        },
+        {
+          "type": "heading",
+          "text": "Greeting and dance"
+        },
+        {
+          "type": "paragraph",
+          "text": "Choose Wave hello or Dance in the Motion controls. Actual CMU motion captures are retargeted to the body rig, with smooth looping and transitions. The greeting raises and waves the right hand; Dance uses a Charleston capture. Unmeasured finger articulation is not synthesized."
         }
       ]
     }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {mocapData} from './mocap-data.js';
+import {expressionMocapData} from './expression-mocap-data.js';
 import {bed,aboveBed,bedSurface,bedPlacement,bedToWorld,worldToBed} from './bed.js';
 import {bedSupport} from './bed-support.js';
 import {chair,aboveSeat} from './chair.js';
@@ -225,12 +226,13 @@ export class HumanRig {
    if(changed){
     if(motion==='lie'&&this.motion!=='lie')this.bedAnchor.set(this.bones[0].position.x,0,this.bones[0].position.z-this.bind[0].z);
     this.transitionBedLoad=this.bedLoad;this.transitionQuaternions=this.bones.map(b=>b.quaternion.clone());this.transitionRoot.copy(this.bones[0].position);this.transitionFeet=['l','r'].map(side=>this.bone(`foot.${side}`).getWorldPosition(new THREE.Vector3()));
-    this.transition=isClinicalMotion(motion)||isClinicalMotion(this.motion)?0:1;
+    this.transition=isClinicalMotion(motion)||isClinicalMotion(this.motion)||['wave','dance'].includes(motion)||['wave','dance'].includes(this.motion)?0:1;
     this.motion=motion;this.revision=revision;this.taskTime=0;
    }
    if(dt<=0)return;
    this.taskTime+=dt;if(motion!=='lie')this.bedLoad=0;
-   if(isClinicalMotion(motion))this.poseTask(motion,this.taskTime);
+   if(motion==='wave'||motion==='dance')this.poseExpression(motion,this.taskTime);
+   else if(isClinicalMotion(motion))this.poseTask(motion,this.taskTime);
    else{
     const k=1-Math.exp(-dt*7);this.amount=THREE.MathUtils.lerp(this.amount,motion==='rest'?0:1,k);
     this.runMix=THREE.MathUtils.lerp(this.runMix,motion==='run'?1:0,k);
@@ -468,6 +470,26 @@ export class HumanRig {
    if(this.floorSamples.length){this.updatePalette();floor=Math.min(...this.floorSamples.map(s=>this.transform(s.point,s.w).y))-.001;}
    // Walking always has a supporting foot; retain captured flight only for running.
    p.position.y-=floor<0?floor:floor*(1-run);p.updateMatrixWorld(true);this.updatePalette();
+ }
+ /** Sample measured greeting/dance rotations; do not apply locomotion palm or gaze overrides. */
+ poseExpression(mode:'wave'|'dance',time:number){
+  const clip=expressionMocapData[mode],frames=clip.frames,x=((time%clip.duration)+clip.duration)%clip.duration/clip.duration*frames.length,i=Math.floor(x),u=x-i;
+  const a=frames[i],b=frames[(i+1)%frames.length],root=this.bone('pelvis'),q=new THREE.Quaternion();
+  root.position.set(THREE.MathUtils.lerp(a[0],b[0],u),THREE.MathUtils.lerp(a[1],b[1],u),this.bind[0].z+THREE.MathUtils.lerp(a[2],b[2],u));
+  this.bones.forEach((bone,j)=>bone.quaternion.fromArray(a,3+j*4).slerp(q.fromArray(b,3+j*4),u));
+  root.updateMatrixWorld(true);
+  if(mode==='wave'){
+   // Retarget a standing greeting onto the atlas leg lengths with planted feet.
+   let lowerBy=0;
+   for(const side of ['l','r']){
+    const hip=this.bone(`thigh.${side}`).getWorldPosition(new THREE.Vector3()),target=this.bind[ids[`foot.${side}`]],reach=this.bone(`shin.${side}`).position.length()+this.bone(`foot.${side}`).position.length()-.004;
+    const horizontal=(hip.x-target.x)**2+(hip.z-target.z)**2;
+    lowerBy=Math.max(lowerBy,hip.y-target.y-Math.sqrt(Math.max(0,reach*reach-horizontal)));
+   }
+   root.position.y-=lowerBy;root.updateMatrixWorld(true);
+   for(const side of ['l','r']){this.solveLeg(side,this.bind[ids[`foot.${side}`]].clone());this.setWorldRotation(`foot.${side}`,new THREE.Quaternion());}
+  }
+  this.updatePalette();this.groundTask(false);
  }
  updatePalette(){
    this.skeleton.update();const matrix=new THREE.Matrix4(),q=new THREE.Quaternion(),t=new THREE.Vector3(),scale=new THREE.Vector3();

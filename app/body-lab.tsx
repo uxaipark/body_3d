@@ -28,7 +28,7 @@ export default function Home(){
  const selectedRef=useRef(selectedSites);selectedRef.current=selectedSites;
  const paramsRef=useRef(params);paramsRef.current=params;useEffect(()=>registerLabTools(()=>paramsRef.current,setParams,{read:()=>selectedRef.current,write:setSelectedSites}),[]);
  function update<K extends keyof Parameters>(key:K,value:Parameters[K]){setParams(p=>({...p,[key]:value}));}
- function setMotion(motion:Motion){setParams(p=>({...p,motion,motionStartedAt:sceneRef.current?.time||0,motionRevision:(p.motionRevision||0)+1,hr:motion==='walk'?100:motion==='run'?142:72,rr:motion==='walk'?20:motion==='run'?30:14}));}
+ function setMotion(motion:Motion){setParams(p=>({...p,motion,motionStartedAt:sceneRef.current?.time||0,motionRevision:(p.motionRevision||0)+1,hr:motion==='walk'?100:motion==='run'?142:motion==='dance'?118:72,rr:motion==='walk'?20:motion==='run'?30:motion==='dance'?22:14}));}
  function toggleRun(){setRunning(v=>{if(sceneRef.current)sceneRef.current.running=!v;return!v;});}
  function reset(){setSkinOpacity(32);setSkinInspection(false);setSkinRegion(null);setSelectedSites([]);setSensorTipOpen(true);setParams({...defaults});setLayers({...initialLayers});setPicked('');sceneRef.current?.focus('body');if(sceneRef.current){sceneRef.current.time=0;sceneRef.current.rig.reset();sceneRef.current.skinRig.reset();sceneRef.current.cardiacCycles=0;sceneRef.current.running=true;}setRunning(true);}
  function toggleSensor(site:Site){

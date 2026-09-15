@@ -1,6 +1,6 @@
 import {taskState,isClinicalMotion} from './clinical-motion.js';
 export type Site = 'wrist' | 'finger' | 'ear' | 'forehead' | 'chest' | 'arm';
-export type Motion = 'rest' | 'walk' | 'run' | 'stand' | 'sitStand' | 'grip' | 'lie';
+export type Motion = 'rest' | 'walk' | 'run' | 'stand' | 'sitStand' | 'grip' | 'lie' | 'wave' | 'dance';
 export type Channel = 'ECG'|'PPG'|'EEG'|'EMG'|'RESP'|'CAP';
 export interface Parameters { hr:number; rr:number; stiffness:number; spo2:number; tidal:number; contact:number; wavelength:number; motion:Motion; motionStartedAt?:number; motionRevision?:number; site:Site; }
 export const defaults:Parameters={hr:72,rr:14,stiffness:35,spo2:98,tidal:500,contact:90,wavelength:530,motion:'rest',site:'wrist'};
@@ -28,12 +28,12 @@ export function sample(t:number,p:Parameters):Record<Channel,number>{
  const noise=Math.sin(t*123.47)*.43+Math.sin(t*287.13)*.32+Math.sin(t*61.1)*.25;
  const elapsed=t-(p.motionStartedAt||0),task=taskState(p.motion,elapsed);
  const clinical=isClinicalMotion(p.motion);
- const movement=clinical?(elapsed<0?0:task.activity*.12):p.motion==='rest'?0:p.motion==='walk'?.075:.19;
+ const movement=clinical?(elapsed<0?0:task.activity*.12):p.motion==='rest'?0:p.motion==='walk'?.075:p.motion==='wave'?(p.site==='wrist'||p.site==='finger'||p.site==='arm'?.045:.01):p.motion==='dance'?.13:.19;
  const artifact=movement*(Math.sin(t*tau*(p.motion==='run'?2.6:1.6))+.5*noise);
  const ecg=.12*gaussian(phase,.78*period,.035)-.14*gaussian(phase,.97*period,.009)+1.1*(gaussian(phase,0,.012)+gaussian(phase,period,.012))-.22*gaussian(phase,.035,.012)+.27*gaussian(phase,.24*period,.05);
  const pulse=q<0?0:(q/.055)**2*Math.exp(-q/.055)/.5413 + .23*gaussian(q,.29*period,.038);
  const optical=p.wavelength===530?1:p.wavelength===660?.75:.88;
- const emg=clinical?(.015+(elapsed<0?0:task.effort)*.36)*noise:(p.motion==='rest'?.015:p.motion==='walk'?.15:.4)*noise*(.35+.65*Math.max(0,Math.sin(t*tau*1.6)));
+ const emg=clinical?(.015+(elapsed<0?0:task.effort)*.36)*noise:(p.motion==='rest'?.015:p.motion==='walk'?.15:p.motion==='wave'?.10:p.motion==='dance'?.28:.4)*noise*(.35+.65*Math.max(0,Math.sin(t*tau*1.6)));
  return {ECG:ecg+.015*breath+artifact*.2,PPG:pulse*sites[p.site].gain*optical*(p.contact/100)*(1+.05*breath)+artifact+(1-p.contact/100)*noise*.15,EEG:18*Math.sin(t*tau*10)+6*Math.sin(t*tau*6)+3*noise+artifact*80,EMG:emg,RESP:p.tidal*(1+breath)/2,CAP:p.tidal*(1+breath)/2*.004};
 }
 export function csv(p:Parameters,duration=10,rate=250,start=0){

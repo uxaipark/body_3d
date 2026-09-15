@@ -25,3 +25,7 @@ Select multiple sensor sites or clear all. Settings and waveforms follow the cho
 ## Pulsation and breathing
 
 The arterial 1×/8× setting magnifies visual deformation only. Lung, liver, abdominal and cardiac motion are approximations coupled to body movement. Some organ boundaries use geometric/rendering constraints, not patient-specific contact analysis.
+
+## Greeting and dance
+
+Choose Wave hello or Dance in the Motion controls. Actual CMU motion captures are retargeted to the body rig, with smooth looping and transitions. The greeting raises and waves the right hand; Dance uses a Charleston capture. Unmeasured finger articulation is not synthesized.
