@@ -14,7 +14,7 @@ await readFile(path.join(root,'dist/server/index.js'));await mkdir(out,{recursiv
 for(const dir of ['dist','runtime','docs','scripts','lib']){await rm(path.join(out,dir),{recursive:true,force:true});await mkdir(path.join(out,dir),{recursive:true});}
 for(const dir of ['server','client'])await cp(path.join(root,'dist',dir),path.join(out,'dist',dir),{recursive:true,filter:src=>!['.wrangler','.openai','.git'].includes(path.basename(src))&&!/^\.(env|dev\.vars)(\.|$)/.test(path.basename(src))});
 await mkdir(path.join(out,'scripts/sleep'),{recursive:true});await mkdir(path.join(out,'lib/sleep'),{recursive:true});
-await cp(path.join(root,'scripts/sleep/gateway.mjs'),path.join(out,'scripts/sleep/gateway.mjs'));await cp(path.join(root,'lib/sleep/model.js'),path.join(out,'lib/sleep/model.js'));
+await cp(path.join(root,'scripts/sleep/gateway.mjs'),path.join(out,'scripts/sleep/gateway.mjs'));for(const name of ['model.js','sensing.js','ecg-derived.js','anatomy-data.js'])await cp(path.join(root,'lib/sleep',name),path.join(out,'lib/sleep',name));
 const built=JSON.parse(await readFile(path.join(root,'dist/server/wrangler.json'),'utf8'));
 const config={name:'soma-local-demo',main:'index.js',compatibility_date:built.compatibility_date,compatibility_flags:built.compatibility_flags,no_bundle:true,rules:[{type:'ESModule',globs:['**/*.js','**/*.mjs']}],assets:{directory:'../client'},dev:{ip:'127.0.0.1',port:3000},observability:{enabled:false}};
 await writeFile(path.join(out,'dist/server/wrangler.json'),JSON.stringify(config,null,2)+'\n');

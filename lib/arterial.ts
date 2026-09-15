@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-export function isArtery(name:string){return /artery|arteries|aorta|aortic arch|arterial/i.test(name)&&!/vein|venous|valve|atrium|ventricle/i.test(name);}
+export function isArtery(name:string){return /artery|arteries|aorta|aortic arch|arterial|pulmonary trunk|brachiocephalic trunk|coeliac trunk|thyrocervical trunk|costocervical trunk/i.test(name)&&!/vein|venous|valve|atrium|ventricle/i.test(name);}
 export function systolicPulse(cycles:number){const phase=((cycles%1)+1)%1;return phase<.38?Math.sin(Math.PI*phase/.38)**2:0;}
 export function distensionFraction(stiffness:number){return .025*(1-.7*THREE.MathUtils.clamp(stiffness/100,0,1));}
 export function arterialPulse(cycles:number,hr:number,pwv:number,distance:number){return systolicPulse(cycles-(.025+distance/Math.max(pwv,.1))*hr/60);}

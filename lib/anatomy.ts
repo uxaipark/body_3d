@@ -1,3 +1,4 @@
+import {connectVesselJunctions,bakeAnatomyTransform,type VesselPart} from './vessel-junctions';
 import {refineFlexibleTissue} from './flexible-tissue';
 import {updateDeformedBounds,bedViewPoint,followBedView} from './rig-view';
 import * as THREE from 'three';
@@ -88,7 +89,7 @@ export class AnatomyScene{
  if(layer==='skin'||layer==='dermis'||layer==='adipose'){
  const group=new THREE.Group();
  gltf.scene.traverse(obj=>{if(!(obj instanceof THREE.Mesh))return;
- const geometry=obj.geometry.clone().applyMatrix4(obj.matrixWorld);
+ const geometry=bakeAnatomyTransform(obj.geometry.clone(),obj.matrixWorld);
  const pelvicAnchors=layer==='skin'?[]:registerSkinGeometry(geometry);
  const source=Array.isArray(obj.material)?obj.material[0]:obj.material;
  const mat=source.clone() as THREE.MeshStandardMaterial;
@@ -110,6 +111,7 @@ export class AnatomyScene{
  this.groups.set(layer,group);this.root.add(group);this.setLayers(this.layers);onProgress(Math.round(++done/6*100));continue;
  }
 
+ const vesselParts:VesselPart[]=[];
  const batches=new Map<string,{geometries:THREE.BufferGeometry[];ranges:PickRange[];count:number}>();
  gltf.scene.traverse(obj=>{if(!(obj instanceof THREE.Mesh))return;
  const name=(obj.userData.name||obj.name).replace(/_/g,' ');if(layer==='visceral'&&respiratoryPart(name)==='pleura')return;if(/systemg\d|organsg\d/i.test(name))return;
@@ -117,7 +119,7 @@ export class AnatomyScene{
  const color=source.color?.clone()||new THREE.Color(0xddb2a4);
  const part=layer==='visceral'&&isHepatic(name)?'hepatic':layer==='visceral'&&pelvicOrgan(name)?'pelvic':layer==='muscular'?muscleTissue(name):layer==='visceral'&&respiratoryPart(name)?respiratoryPart(name)!:layer==='cardiovascular'&&isCardiacChamber(name)?'heart':layer==='cardiovascular'&&isArtery(name)?'artery':'body';
  const key=part;let batch=batches.get(key);if(!batch){batch={geometries:[],ranges:[],count:0};batches.set(key,batch);}
- const geometry=obj.geometry.clone().applyMatrix4(obj.matrixWorld);
+ const geometry=bakeAnatomyTransform(obj.geometry.clone(),obj.matrixWorld);
  if(part==='hepatic')fitHepaticGeometry(geometry);
  for(const key of Object.keys(geometry.attributes))if(!['position','normal','_lung_inhale','_rib_guard','_rib_chest'].includes(key))geometry.deleteAttribute(key);
  if(isRespiratoryPart(part)){const inhale=geometry.getAttribute('_lung_inhale') as THREE.BufferAttribute;if(!inhale)throw new Error(`Missing bounded respiratory pose: ${name}`);const v=new THREE.Vector3();for(let i=0;i<inhale.count;i++){v.fromBufferAttribute(inhale,i).applyMatrix4(obj.matrixWorld);inhale.setXYZ(i,v.x,v.y,v.z);}geometry.setAttribute('lungInhale',inhale);geometry.deleteAttribute('_lung_inhale');}
@@ -135,8 +137,10 @@ export class AnatomyScene{
  if(layer==='cardiovascular')bindVesselClearance(geometry);
  if(layer==='muscular'){color.set(tissueColors[part as Tissue]);muscleFrame(geometry,name);bindMuscleVolume(geometry,name);}
  for(let i=0;i<count;i++)color.toArray(colors,i*3);geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+ if(layer==='cardiovascular'&&part!=='heart')vesselParts.push({name,geometry,kind:part});
  batch.count+=(geometry.index?.count||count)/3;batch.ranges.push({end:batch.count,name:name.replace(/\d{3}$/,'').replace(/([a-z])([lr])$/,'$1 ($2)')});batch.geometries.push(geometry);
  });
+ for(const join of connectVesselJunctions(vesselParts)){const batch=batches.get(join.kind)!;batch.count+=join.geometry.index!.count/3;batch.ranges.push({end:batch.count,name:`${join.from} ↔ ${join.to}`});batch.geometries.push(join.geometry);}
  const group=new THREE.Group();
  for(const [part,batch]of batches){const geometry=mergeGeometries(batch.geometries);batch.geometries.forEach(g=>g.dispose());if(!geometry)continue;
  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.52,metalness:.07,transparent:true,opacity:this.layers[layer]/100,depthWrite:this.layers[layer]>=95,side:THREE.FrontSide});

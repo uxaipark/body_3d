@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {poseSupportedSleep} from './posture';
 import {AnatomyScene} from '../anatomy';
 import {defaults} from '../physiology';
 import {bedPlacement,bedSurface,worldToBed,aboveBed} from '../bed.js';
@@ -11,7 +12,7 @@ export class SleepScene{
  surface:PatchSurface|null=null;position:PatchPosition={...patchOrigin};editing=false;
  patchBase=new T.PlaneGeometry(.094,.040,16,8);anchors:SurfaceAnchor[]=[];attachments:{mesh:T.Object3D;x:number;y:number;height:number;anchors:SurfaceAnchor[]}[]=[];
  dragging:number|null=null;dragOffset={x:0,y:0};controlsEnabled=true;ray=new T.Raycaster();
- constructor(host:HTMLDivElement,progress:(n:number)=>void,private onPosition:(p:PatchPosition)=>void=()=>{}){
+ constructor(host:HTMLDivElement,progress:(n:number)=>void,private onPosition:(p:PatchPosition,geometry:{electrodes:number[][];up:number[]})=>void=()=>{}){
   this.view=new AnatomyScene(host,{...defaults,motion:'lie'},{skin:10,dermis:0,adipose:0,skeleton:50,muscular:24,cardiovascular:90,nervous:0,visceral:85},{stats:()=>{},pick:()=>{},time:()=>{},site:()=>{},skin:()=>{}});
   const v=this.view;cancelAnimationFrame(v.frame);v.setComfortMode(true);v.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));v.chair.visible=false;v.bedGroup.visible=true;
   for(const marker of v.markers.values())marker.visible=false;
@@ -27,15 +28,7 @@ export class SleepScene{
  update(dt:number,target:number,volume:number,effort:number,heart:number){
   if(this.disposed)return;const v=this.view,r=v.rig;dt=Math.min(dt,.05);
   this.velocity=dt>0?(target-this.roll)/dt:0;this.roll=target;
-  r.poseBed(14);const root=r.bones[0];root.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),this.roll));
-  r.bone('spine').rotation.y=.035*this.velocity;r.bone('chest').rotation.y=.045*this.velocity;
-  const side=Math.abs(this.roll)/1.2;
-  for(const [name,sign] of [['l',1],['r',-1]]as const){r.bone(`thigh.${name}`).rotation.x-=side*.22;r.bone(`shin.${name}`).rotation.x+=side*.38;r.bone(`upperArm.${name}`).rotation.x-=side*.36;r.bone(`forearm.${name}`).rotation.x-=side*.18;}
-  root.updateMatrixWorld(true);r.updatePalette();
-  // A common pelvis correction keeps all anatomy together; do not stretch bones
-  // or clamp individual vertices against the bed.
-  let lowest=Infinity;for(const s of r.bedSamples){const p=r.transform(s.point,s.w),[x,z]=worldToBed(p.x,p.z,r.bedAnchor);if(aboveBed(x,z))lowest=Math.min(lowest,p.y-bedSurface(x,z,1));}
-  if(Number.isFinite(lowest)){root.position.y+=.004-lowest;root.updateMatrixWorld(true);r.updatePalette();}
+  poseSupportedSleep(r,this.roll,this.velocity);
   v.skinRig.copyPose(r);updateDeformedBounds(r.bones,v.bodyBounds);v.bedGroup.position.set(bedPlacement.x,0,bedPlacement.z);v.bedLoad.value=1;
   v.uniforms.uLungInflation.value=Math.min(.85,volume);v.uniforms.uResp.value=effort*2-1;v.softBody.update(dt,effort,500);v.uniforms.uCardiacCycles.value=heart;v.uniforms.uBeat.value=Math.exp(-(((heart%1-.12)/.09)**2));
   this.updatePatch();
@@ -49,7 +42,7 @@ export class SleepScene{
   for(let i=0;i<this.patchBase.getAttribute('uv').count;i++){const uv=this.patchBase.getAttribute('uv'),a=this.surface.anchor(p.x+(uv.getX(i)-.5)*.094,p.y+(uv.getY(i)-.5)*.040);if(!a)return;anchors.push(a);}
   const attachments=this.attachments.map(a=>[this.surface!.anchor(p.x+a.x,p.y+a.y),this.surface!.anchor(p.x+a.x+.002,p.y+a.y),this.surface!.anchor(p.x+a.x,p.y+a.y+.002)]);
   if(attachments.some(a=>a.some(v=>!v)))return;
-  this.anchors=anchors;this.attachments.forEach((a,i)=>a.anchors=attachments[i] as SurfaceAnchor[]);this.position=p;this.patch.visible=true;this.updatePatch();this.onPosition({...p});
+  this.anchors=anchors;this.attachments.forEach((a,i)=>a.anchors=attachments[i] as SurfaceAnchor[]);this.position=p;this.patch.visible=true;this.updatePatch();const rest=(a:SurfaceAnchor)=>this.surface!.deform(a,p=>p,()=>new T.Vector3()).toArray();this.onPosition({...p},{electrodes:this.attachments.slice(0,3).map(a=>rest(a.anchors[0])),up:rest(this.attachments[1].anchors[2])});
  }
  deform=(anchor:SurfaceAnchor)=>this.surface!.deform(anchor,(p,w)=>this.view.skinRig.transform(p,w),p=>this.view.softBody.sample(p));
  updatePatch(){

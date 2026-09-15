@@ -1,0 +1,24 @@
+import test from'node:test';import assert from'node:assert/strict';import * as T from'three';import{NodeIO}from'@gltf-transform/core';import{ALL_EXTENSIONS}from'@gltf-transform/extensions';import draco from'draco3dgltf';
+import{connectVesselJunctions,bakeAnatomyTransform,vesselRims}from'../lib/vessel-junctions.ts';import{bindTissueGeometry}from'../lib/tissue-binding.ts';import{refineFlexibleTissue}from'../lib/flexible-tissue.ts';import{HumanRig}from'../lib/rig.ts';import{isArtery,bindArterialPulse}from'../lib/arterial.ts';import{bindCardiacMotion,isCardiacChamber}from'../lib/cardiac.ts';import{bindVesselClearance}from'../lib/vessel-clearance.ts';import{expressionMocapData}from'../lib/expression-mocap-data.js';
+const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),doc=await io.read('public/models/cardiovascular-web.glb'),parts=[];
+for(const n of doc.getRoot().listNodes()){if(!n.getMesh()||isCardiacChamber(n.getName()))continue;for(const p of n.getMesh().listPrimitives()){const g=new T.BufferGeometry();for(const [src,dst,size]of[['POSITION','position',3],['NORMAL','normal',3],['_RIB_CHEST','_rib_chest',1],['_RIB_GUARD','_rib_guard',4]])if(p.getAttribute(src))g.setAttribute(dst,new T.Float32BufferAttribute(p.getAttribute(src).getArray(),size));g.setIndex(new T.BufferAttribute(p.getIndices().getArray().slice(),1));bakeAnatomyTransform(g,new T.Matrix4().fromArray(n.getWorldMatrix()));refineFlexibleTissue(g,n.getName());bindTissueGeometry(g,n.getName());const kind=isArtery(n.getName())?'artery':'body';if(kind==='artery')bindArterialPulse(g,n.getName());bindCardiacMotion(g,n.getName());bindVesselClearance(g);parts.push({name:n.getName(),geometry:g,kind});}}
+const joins=connectVesselJunctions(parts);
+test('open atlas vascular continuations are sealed, including both mirrored shoulders and limb chains',()=>{
+ assert.ok(joins.length>=220);for(const side of['l','r'])for(const [a,b]of[[`${side==='l'?'Left':'Right'} subclavian artery.001`,`Axillary artery.${side}.001`],[`Axillary artery.${side}.001`,`Brachial artery.${side}.001`],[`Brachial artery.${side}.001`,`Radial artery.${side}.001`],[`${side==='l'?'Left':'Right'} subclavian vein.001`,`Axillary vein.${side}.001`],[`Femoral artery.${side}.001`,`Popliteal artery.${side}.001`]])assert.ok(joins.some(j=>[j.from,j.to].includes(a)&&[j.from,j.to].includes(b)),`missing ${a}/${b}`);
+ assert.ok(!joins.some(j=>/Right renal vein/.test(j.from)&&/Left renal vein/.test(j.to)),'nearby renal outlets must not connect directly');
+ for(const j of joins){assert.equal(parts.find(p=>p.name===j.from).kind,parts.find(p=>p.name===j.to).kind);assert.ok(j.gap<.012);}
+});
+test('vessel bridge rims copy the complete deformation state and cannot detach during greeting or jazz',()=>{
+ const rig=new HumanRig(),samples=[];
+ for(const join of joins){const g=join.geometry,p=g.getAttribute('position'),sources=parts.filter(s=>s.name===join.from||s.name===join.to),maps=sources.map(s=>{const a=s.geometry.getAttribute('position'),m=new Map();for(let i=0;i<a.count;i++){const key=[a.getX(i),a.getY(i),a.getZ(i)].join('/');m.set(key,[...(m.get(key)||[]),i]);};return m;});
+  for(let i=0;i<p.count;i++){const key=[p.getX(i),p.getY(i),p.getZ(i)].join('/'),si=maps.findIndex(m=>m.has(key));assert.ok(si>=0);const matches=sources.flatMap((s,j)=>(maps[j].get(key)||[]).map(k=>({source:s.geometry,k}))),match=matches.find(({source,k})=>Object.entries(g.attributes).every(([name,a])=>Array.from({length:a.itemSize},(_,c)=>a.getComponent(i,c)===source.getAttribute(name).getComponent(k,c)).every(Boolean)));assert.ok(match,`${join.from}: bridge endpoint differs from both source rims`);const {source,k}=match;
+   if(i%4===0){const w=geo=>({indices:[0,1,2,3].map(c=>geo.getAttribute('rigIndex').getComponent(geo===g?i:k,c)),weights:[0,1,2,3].map(c=>geo.getAttribute('rigWeight').getComponent(geo===g?i:k,c))});samples.push({p:new T.Vector3().fromBufferAttribute(p,i),a:w(g),b:w(source)});}
+  }
+ }
+ for(const mode of['wave','dance'])for(let f=0;f<48;f++){rig.poseExpression(mode,f/48*expressionMocapData[mode].duration);for(const s of samples)assert.ok(rig.transform(s.p,s.a).distanceTo(rig.transform(s.p,s.b))<1e-8);}
+ rig.dispose();
+});
+test('mirrored transforms preserve outward triangle winding instead of hiding the right vessel wall',()=>{
+ const g=new T.CylinderGeometry(.003,.003,.10,12,1,true),matrix=new T.Matrix4().makeScale(-1,1,1);bakeAnatomyTransform(g,matrix);const p=g.getAttribute('position'),n=g.getAttribute('normal'),ix=g.index;
+ for(let i=0;i<ix.count;i+=3){const a=new T.Vector3().fromBufferAttribute(p,ix.getX(i)),b=new T.Vector3().fromBufferAttribute(p,ix.getX(i+1)),c=new T.Vector3().fromBufferAttribute(p,ix.getX(i+2)),normal=b.sub(a).cross(c.sub(a)).normalize();assert.ok(normal.dot(new T.Vector3().fromBufferAttribute(n,ix.getX(i)))>.9);}
+});

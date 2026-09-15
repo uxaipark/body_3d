@@ -32,3 +32,7 @@ Choose Wave hello or Dance in the Motion controls. Actual CMU motion captures ar
 
 
 Nerves and vessels bend continuously around the shoulders, elbows and wrists. Cervical brachial-plexus roots stay attached to the neck when the arms rise. This is geometric deformation, not a nerve-tension or vascular-stress solver.
+
+## Vessel continuity and deformation
+
+Matching open vessel rims are joined using position, radius and orientation. Junctions share joint weights and interpolate pulse/breathing attributes continuously. Mirrored mesh transforms preserve triangle winding so right-sided vessel surfaces remain visible. Connections and subdivision are prepared once at loading; animation uses GPU skinning. Nearby arteries and veins are never joined merely by proximity. Missing capillary beds and physiological flow connections are not invented. This is a geometric research visualization, not a clinically calibrated vascular material or flow–structure solver.

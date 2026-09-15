@@ -183,6 +183,14 @@
       {
         "type": "paragraph",
         "text": "신경계와 혈관은 어깨·팔꿈치·손목 등 관절 주변에서 연속적으로 휘도록 연결한다. 상완신경총의 목 쪽 뿌리는 팔을 들어도 목의 고정점을 유지한다. 신경 장력이나 혈관 응력의 물리 해석을 의미하지는 않는다."
+      },
+      {
+        "type": "heading",
+        "text": "혈관 연결과 탄성 변형"
+      },
+      {
+        "type": "paragraph",
+        "text": "열린 혈관 끝단의 위치·굵기·방향을 대조해 일치하는 원본 연결을 이어 준다. 연결부는 같은 관절 가중치를 사용하고 맥동·호흡 속성을 연속으로 보간한다. 대칭 복제 메시의 면 방향을 보정해 우측 혈관 표면 누락을 방지한다. 로딩 시 연결과 세분화를 준비하고 애니메이션은 GPU 스키닝으로 처리한다. 주변을 지나는 동맥과 정맥을 임의로 붙이지 않으며 원본에 없는 모세혈관이나 혈류 연결을 새로 만들어 낸 모델은 아니다. 형상 변형은 연구 시각화용이며 혈관 탄성 재료·혈류 FSI의 임상 교정 해석과 구분한다."
       }
     ],
     "en": {
@@ -249,6 +257,14 @@
         {
           "type": "paragraph",
           "text": "Nerves and vessels bend continuously around the shoulders, elbows and wrists. Cervical brachial-plexus roots stay attached to the neck when the arms rise. This is geometric deformation, not a nerve-tension or vascular-stress solver."
+        },
+        {
+          "type": "heading",
+          "text": "Vessel continuity and deformation"
+        },
+        {
+          "type": "paragraph",
+          "text": "Matching open vessel rims are joined using position, radius and orientation. Junctions share joint weights and interpolate pulse/breathing attributes continuously. Mirrored mesh transforms preserve triangle winding so right-sided vessel surfaces remain visible. Connections and subdivision are prepared once at loading; animation uses GPU skinning. Nearby arteries and veins are never joined merely by proximity. Missing capillary beds and physiological flow connections are not invented. This is a geometric research visualization, not a clinically calibrated vascular material or flow–structure solver."
         }
       ]
     }
@@ -283,7 +299,7 @@
       },
       {
         "type": "paragraph",
-        "text": "패치의 곡면은 실제 외피 삼각형에 부착되며 호흡과 체위 변화에 따라 같은 피부 위치를 유지한다. 위치는 내보내기 JSON의 patchPlacement에 atlas-bind 좌표(m, X는 환자의 왼쪽, Y는 위쪽)로 기록한다. 이 조절은 부착 위치 시각화이며, 위치별 전기장·CAP·ECG 감도 변화는 아직 신호 모델에 연결하지 않는다."
+        "text": "패치의 곡면은 실제 외피 삼각형에 부착되며 호흡과 체위 변화에 따라 같은 피부 위치를 유지한다. 위치는 내보내기 JSON의 patchPlacement에 atlas-bind 좌표(m, X는 환자의 왼쪽, Y는 위쪽)로 기록한다. 합성 모드에서는 세 전극의 실제 피부 좌표로 ECG 전위차와 국소 CAP 감도를 다시 계산한다. 이동 시 아티팩트 구간을 기록한다. 외부 소켓 신호는 위치 이동으로 수정하거나 합성하지 않는다."
       },
       {
         "type": "heading",
@@ -299,7 +315,31 @@
       },
       {
         "type": "paragraph",
-        "text": "ECG는 P·Q·R·S·T 성분의 시간 파형, 호흡에 따른 기저선 및 R파 진폭 변조, 호흡성 심박 변동을 포함한 자체 합성 모델이다. ECGSYN의 공개 설명을 참고했지만 ECGSYN 코드나 임상 검증 결과를 재현한 구현은 아니다. 가속도는 a_sensor = Rᵀ·g + d²x/dt² + noise의 구조로 체위별 중력 성분, 명치 운동과 잡음을 결합한다."
+        "text": "ECG는 P·Q·R·S·T별 3차원 전류 쌍극자 p를 합산하고, 균질 준정적 체적 도체의 전위 φ = p·r/(4πσ|r|³)를 전극별로 계산한다. r은 심장 소스에서 전극까지의 벡터(m), p는 A·m, σ는 S/m이며 표시 전위는 mV로 변환한다. C3−C1 전위차를 측정하고 C2를 기준으로 두는 연구용 배선 가정이다. 실제 장치 배선을 확인했다는 뜻은 아니다. 위치·방향에 따라 진폭, 극성, P/QRS/T 비율이 달라지며 거리만으로 단조 감소하지는 않는다. 호흡에 의한 심장 위치·방향과 국소 접촉 기저선 변화를 포함한다. 기본 전도도 0.2 S/m와 쌍극자 크기는 연구용 유효값이며 실제 ECG 교정을 대신하지 않는다."
+      },
+      {
+        "type": "paragraph",
+        "text": "CAP의 국소 결합은 실제 폐 5엽의 전면 메시에서 추출한 541개 표본과 각 전극의 피부 위치를 사용한다. 30 mm 공간 가중, 조직 깊이 감쇠, 복부 호흡 노력의 공간 분포, 피하지방 유효 두께를 적용해 국소 변위를 산출하고 A_eff와 d_eff에 반영한다. 공면 전극의 직접 유전 감도는 exp(−2π·depth/28 mm)로 감쇠하는 작은 항이다. 기본 명치 위치는 폐 아래이므로 주로 복부의 기계적 결합을 반영한다. 깊은 폐를 직접 정밀 측정하는 전기장 FEM이 아니다. 기본 지방 두께 8 mm 및 감쇠 길이는 교정 전 가정이다. scripts/build-sleep-anatomy.mjs가 입력 메시 해시와 감도용 공간 표본을 재생성한다."
+      },
+      {
+        "type": "paragraph",
+        "text": "가속도는 a_sensor = Rᵀ[g + α×r + ω×(ω×r) + a_resp] + noise로 체위·회전·국소 호흡 가속도를 조합한다. 패치 X는 전극 C1→C3, Y는 피부를 따라 머리 방향, Z는 피부 바깥 방향이다. 세 축 모두 중력과 잡음을 포함하며, 정지 시 벡터 크기는 약 9.81 m/s²이다. 호흡 융합은 세 축에서 유효한 주기성 후보를 평가해 가장 품질이 좋은 축 하나를 사용한다."
+      },
+      {
+        "type": "heading",
+        "text": "파형 읽기"
+      },
+      {
+        "type": "paragraph",
+        "text": "CAP C1·C2·C3, ECG, ACC X·Y·Z, EDR을 각각 8개 행에 표시한다. CAP와 ACC는 같은 모달리티 안에서 같은 배율을 사용하되 각 채널의 중심은 다르며 숫자 축에 실제 단위를 표시한다. ECG는 ±0.5/1/2/5 mV 고정 범위를 선택한다. 범위 초과 시 CLIP을 표시하므로 패치 이동에 따른 진폭 차이를 자동 확대가 숨기지 않는다. 여러 외부 채널이 같은 종류로 들어오면 가장 최근 채널을 그리며, 분석에는 활성 채널들이 참여한다."
+      },
+      {
+        "type": "paragraph",
+        "text": "EDR은 획득 ECG의 200 ms·600 ms 인과적 중앙값 필터와 저주파 기저선 처리 결과다. 합성 목표 호흡수나 폐용적을 직접 그린 파형이 아니며 필터 지연을 포함한다. HR은 ECG 극성에 독립적인 적응 임계값 검출과 측정 박동 간격으로 구한다."
+      },
+      {
+        "type": "paragraph",
+        "text": "수면에서는 위쪽 팔을 몸 앞쪽으로 모으고 아래쪽 팔은 매트리스 방향으로 두는 연속 관절 자세를 사용한다. 팔을 몸통과 함께 공중으로 들어 올리던 추가 회전을 제거했다. 신체 외피의 지지 표본으로 침대 높이를 보정하며, 개인별 접촉 역학을 푸는 모션 캡처나 FEM은 아니다."
       },
       {
         "type": "paragraph",
@@ -342,7 +382,7 @@
           "cap: [C1,C2,C3], pF. ecg: 스칼라, mV. acc: [ax,ay,az], m/s2, 중력을 포함한다.",
           "breathAudio: 비음수 음성 RMS 포락선, rms. snore: 0–1 코골이 확률, probability.",
           "camera: 0–1 움직임 점수, motion. radar: [호흡방향 변위,x,y,z], mm. airflow: 부호 있는 기류, L/s.",
-          "ACC x축은 명치의 호흡/기울기 변화를 포착하는 교정된 축이다. 실제 기기 축이 다르면 게이트웨이에서 축을 정렬한다."
+          "ACC는 패치 좌표의 XYZ를 모두 전송한다. 실제 기기 축과 단위를 게이트웨이에서 정렬한다. 융합은 주기성 품질이 좋은 축을 선택한다."
         ]
       },
       {
@@ -380,6 +420,10 @@
       {
         "type": "paragraph",
         "text": "ECG 합성 모델 참고: https://physionet.org/content/ecgsyn/1.0.0/ . 수면 호흡 사건과 노력/기류 구분 참고: https://pmc.ncbi.nlm.nih.gov/articles/PMC3459210/ . WebSocket 게이트웨이: https://github.com/websockets/ws . 입력 자료의 회사 정보, 임상 수치, 내부 일정은 공개 매뉴얼에 옮기지 않는다."
+      },
+      {
+        "type": "paragraph",
+        "text": "전위 모델 참고: [3차원 ECG 쌍극자 모델](https://www.mit.edu/~gari/papers/eurasipReza06.pdf). 국소 정전용량과 흉벽 호흡 참고: [정전용량 호흡 패치 연구](https://pmc.ncbi.nlm.nih.gov/articles/PMC6956860/). 본 구현의 공간 커널 및 계수는 별도 연구용 근사이다."
       }
     ],
     "en": {
@@ -411,7 +455,7 @@
         },
         {
           "type": "paragraph",
-          "text": "The curved patch follows the actual fitted skin triangles during breathing and posture changes. Export records patchPlacement in atlas-bind metres (X toward the patient's left, Y upward). Placement is a visualization control; location-dependent electric fields and CAP/ECG sensitivity are not yet coupled to the signal model."
+          "text": "The curved patch follows the actual fitted skin triangles during breathing and posture changes. Export records patchPlacement in atlas-bind metres (X toward the patient's left, Y upward). In simulation mode, actual skin coordinates of all three electrodes update the ECG lead voltage and regional CAP coupling. Repositioning marks an artifact interval. External socket samples are never modified or synthesized when the patch moves."
         },
         {
           "type": "heading",
@@ -427,7 +471,31 @@
         },
         {
           "type": "paragraph",
-          "text": "ECG is an original P–QRS–T component model with respiratory baseline swing, R-wave amplitude modulation and respiratory heart-rate variation. It draws on the public ECGSYN description without implementing its code or claiming its validation. Acceleration follows a_sensor = Rᵀ·g + d²x/dt² + noise, combining orientation-dependent gravity, epigastric dynamics and noise."
+          "text": "ECG sums three-dimensional current dipoles for P, Q, R, S and T and evaluates φ = p·r/(4πσ|r|³) in a homogeneous quasi-static volume conductor. Positions use metres, dipole moments A·m and conductivity S/m; potentials are converted to mV. The modeled lead is C3−C1, with C2 as reference. This is an explicit research wiring assumption, not verified device wiring. Placement changes amplitude, polarity and P/QRS/T ratios; distance alone need not change amplitude monotonically. Respiration changes source orientation/position and the local electrode-interface baseline. Default conductivity (0.2 S/m) and dipole magnitude are effective research parameters, not individual calibration."
+        },
+        {
+          "type": "paragraph",
+          "text": "Regional CAP coupling uses 541 anterior-surface samples from the actual five lung lobes and each pad's skin coordinates. A 30 mm spatial kernel, depth attenuation, an abdominal effort footprint and effective fat thickness determine local excursion, which changes A_eff and d_eff. The small direct dielectric term decays as exp(−2π·depth/28 mm) for coplanar electrodes. The default epigastric site lies below the lungs and mainly follows abdominal mechanical coupling. This is not an electrical FEM resolving deep lung sensing. Default fat thickness (8 mm), kernels and attenuation lengths are uncalibrated assumptions. scripts/build-sleep-anatomy.mjs regenerates the spatial samples and input-mesh hashes."
+        },
+        {
+          "type": "paragraph",
+          "text": "Acceleration combines orientation, angular and centripetal acceleration, local respiratory acceleration and noise: a_sensor = Rᵀ[g + α×r + ω×(ω×r) + a_resp] + noise. Patch X runs from C1 to C3, Y follows the skin toward the head, and Z points outward. All three axes include gravity and noise; the stationary vector magnitude is approximately 9.81 m/s². Respiratory fusion evaluates all three axes and uses the strongest valid periodicity candidate."
+        },
+        {
+          "type": "heading",
+          "text": "Reading the traces"
+        },
+        {
+          "type": "paragraph",
+          "text": "Eight separate rows show CAP C1/C2/C3, ECG, ACC X/Y/Z and EDR. CAP and ACC share a scale within each modality, with separate channel centers and numeric axes in original units. ECG uses a selectable fixed ±0.5/1/2/5 mV range, with a CLIP indicator outside the range. Automatic gain therefore cannot hide placement-dependent ECG amplitude. For multiple external channels of the same kind, the newest channel is drawn; active channels remain available to analysis."
+        },
+        {
+          "type": "paragraph",
+          "text": "EDR comes from acquired ECG through causal 200/600 ms median filters and low-frequency baseline processing, with filter delay. It is not drawn from respiratory-rate or lung-volume truth. HR uses polarity-independent adaptive detection and measured beat intervals."
+        },
+        {
+          "type": "paragraph",
+          "text": "During sleep, the upper arm gathers toward the front of the body and the lower arm reaches toward the mattress. Continuous joint poses replace the extra rotations that raised the arms with the torso. Exterior support samples constrain mattress contact; this is authored animation, not captured sleep motion or personalized contact FEM."
         },
         {
           "type": "paragraph",
@@ -470,7 +538,7 @@
             "cap: [C1,C2,C3], pF. ecg: scalar, mV. acc: [ax,ay,az], m/s2, including gravity.",
             "breathAudio: nonnegative RMS envelope, rms. snore: probability in [0,1], probability.",
             "camera: motion score in [0,1], motion. radar: [respiratory displacement,x,y,z], mm. airflow: signed flow, L/s.",
-            "ACC x is the calibrated respiratory/tilt-sensitive axis. Align device axes at the gateway if necessary."
+            "Send all patch-frame ACC XYZ components. Align device axes and units at the gateway. Fusion selects the strongest valid periodic axis."
           ]
         },
         {
@@ -508,6 +576,10 @@
         {
           "type": "paragraph",
           "text": "ECG synthesis reference: https://physionet.org/content/ecgsyn/1.0.0/ . Respiratory event scoring and effort/airflow distinction: https://pmc.ncbi.nlm.nih.gov/articles/PMC3459210/ . WebSocket gateway: https://github.com/websockets/ws . Company details, clinical performance figures and internal schedules from the supplied concept deck are not reproduced in this public manual."
+        },
+        {
+          "type": "paragraph",
+          "text": "Lead-field reference: [Three-dimensional ECG dipole model](https://www.mit.edu/~gari/papers/eurasipReza06.pdf). Chest-wall capacitance reference: [Capacitive respiratory patch study](https://pmc.ncbi.nlm.nih.gov/articles/PMC6956860/). Spatial kernels and coefficients in this implementation are separate research approximations."
         }
       ]
     }
