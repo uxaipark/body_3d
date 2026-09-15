@@ -1,0 +1,9 @@
+import {NodeIO}from'@gltf-transform/core';import{ALL_EXTENSIONS}from'@gltf-transform/extensions';import draco from'draco3dgltf';import * as T from'three';import{HumanRig,bindGeometry}from'../lib/rig.ts';
+import{bindTissueGeometry}from'../lib/tissue-binding.ts';
+import assert from 'node:assert/strict';
+const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),rig=new HumanRig();
+for(const layer of ['muscular','cardiovascular']){const doc=await io.read(`public/models/${layer}-web.glb`),rows=[];
+for(const n of doc.getRoot().listNodes()){if(!n.getMesh())continue;for(const p of n.getMesh().listPrimitives()){const g=new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(new Float32Array(p.getAttribute('POSITION').getArray()),3)).applyMatrix4(new T.Matrix4().fromArray(n.getWorldMatrix()));bindTissueGeometry(g,n.getName());const v=g.getAttribute('position'),ix=g.getAttribute('rigIndex'),w=g.getAttribute('rigWeight'),tri=p.getIndices()?.getArray();if(!tri)continue;let peak=1;const samples=[];
+for(let j=0;j<tri.length;j+=Math.max(3,Math.floor(tri.length/300/3)*3)){const ids=[tri[j],tri[j+1],tri[j+2]];samples.push(ids.map(i=>({v:new T.Vector3().fromBufferAttribute(v,i),w:{indices:[0,1,2,3].map(k=>ix.getComponent(i,k)),weights:[0,1,2,3].map(k=>w.getComponent(i,k))}})));}
+for(const mode of ['wave','dance'])for(let f=0;f<24;f++){rig.poseExpression(mode,f*.17);for(const points of samples){const moved=points.map(p=>rig.transform(p.v,p.w));for(let i=0;i<3;i++){const j=(i+1)%3,rest=points[i].v.distanceTo(points[j].v);if(rest>.001)peak=Math.max(peak,moved[i].distanceTo(moved[j])/rest);}}}rows.push({name:n.getName(),peak:+peak.toFixed(2)});}}
+if(!process.argv.includes('--report'))assert.ok(rows.every(r=>r.peak<4.05),`${layer}: excessive stretch`);console.log(layer,rows.sort((a,b)=>b.peak-a.peak).slice(0,20));}

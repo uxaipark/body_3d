@@ -52,3 +52,7 @@ Model sources and terms are preserved in `dist/client/models/ATTRIBUTION.md` and
 ## Environment references
 
 Based on the [official Node.js 24 distribution](https://nodejs.org/download/release/v24.21.0/) and [Wrangler supported environments](https://developers.cloudflare.com/workers/wrangler/install-and-update/).
+
+## Sleep sensor socket demo
+
+After installation, run npm run sleep:demo from the demo folder in a separate terminal. In Sleep apnea, choose WebSocket / IP and enter ws://localhost:8765/stream. For device input, run npm run sleep:gateway and send v1 JSON packets to /input. See the Sleep apnea chapter in the web manual for units and channel formats. The default gateway is accessible only on this computer and is not an authenticated Internet service.

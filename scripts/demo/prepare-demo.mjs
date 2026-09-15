@@ -11,8 +11,10 @@ let prior;try{prior=JSON.parse(await readFile(path.join(out,'manifest.json'),'ut
 try{const names=await readdir(out);if(names.length&&!prior?.somaDemo)throw new Error('Destination is not an existing SOMA demo; choose an empty directory.');}catch(e){if(e.code!=='ENOENT')throw e;}
 await readFile(path.join(root,'dist/server/index.js'));await mkdir(out,{recursive:true});
 // Replace generated application/runtime only; retain this machine's installed dependencies.
-for(const dir of ['dist','runtime','docs']){await rm(path.join(out,dir),{recursive:true,force:true});await mkdir(path.join(out,dir),{recursive:true});}
+for(const dir of ['dist','runtime','docs','scripts','lib']){await rm(path.join(out,dir),{recursive:true,force:true});await mkdir(path.join(out,dir),{recursive:true});}
 for(const dir of ['server','client'])await cp(path.join(root,'dist',dir),path.join(out,'dist',dir),{recursive:true,filter:src=>!['.wrangler','.openai','.git'].includes(path.basename(src))&&!/^\.(env|dev\.vars)(\.|$)/.test(path.basename(src))});
+await mkdir(path.join(out,'scripts/sleep'),{recursive:true});await mkdir(path.join(out,'lib/sleep'),{recursive:true});
+await cp(path.join(root,'scripts/sleep/gateway.mjs'),path.join(out,'scripts/sleep/gateway.mjs'));await cp(path.join(root,'lib/sleep/model.js'),path.join(out,'lib/sleep/model.js'));
 const built=JSON.parse(await readFile(path.join(root,'dist/server/wrangler.json'),'utf8'));
 const config={name:'soma-local-demo',main:'index.js',compatibility_date:built.compatibility_date,compatibility_flags:built.compatibility_flags,no_bundle:true,rules:[{type:'ESModule',globs:['**/*.js','**/*.mjs']}],assets:{directory:'../client'},dev:{ip:'127.0.0.1',port:3000},observability:{enabled:false}};
 await writeFile(path.join(out,'dist/server/wrangler.json'),JSON.stringify(config,null,2)+'\n');
@@ -36,7 +38,7 @@ for(const action of ['Install','Start','Verify']){
 await chmod(path.join(out,'runtime/bootstrap.sh'),0o755);
 const files={};async function walk(dir){for(const name of (await readdir(dir)).sort()){if(['.runtime','node_modules','manifest.json'].includes(name))continue;const file=path.join(dir,name),stat=await lstat(file);if(stat.isSymbolicLink())throw new Error(`Unexpected symlink: ${file}`);if(stat.isDirectory())await walk(file);else files[path.relative(out,file).split(path.sep).join('/')]=createHash('sha256').update(await readFile(file)).digest('hex');}}
 // Only generated payload roots enter the manifest; unrelated local files never ship.
-for(const name of ['dist','runtime','docs'])await walk(path.join(out,name));
+for(const name of ['dist','runtime','docs','scripts','lib'])await walk(path.join(out,name));
 for(const name of ['README.md','ATTRIBUTION.md','VALIDATION.md','package.json','package-lock.json',...['Install','Start','Verify'].flatMap(action=>[`${action}-macOS.command`,`${action}-Linux.sh`,`${action}-Windows.cmd`])])files[name]=createHash('sha256').update(await readFile(path.join(out,name))).digest('hex');
 const commit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
 await writeFile(path.join(out,'manifest.json'),JSON.stringify({somaDemo:true,generatedAt:new Date().toISOString(),sourceCommit:commit,files},null,2)+'\n');

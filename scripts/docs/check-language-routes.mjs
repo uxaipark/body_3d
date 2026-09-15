@@ -5,7 +5,7 @@ const docs=JSON.parse(await readFile('app/documents/content.json','utf8'));
 let checked=0;
 for(const language of ['en','ko','en']){
  const headers={cookie:`soma_language=${language}`};
- for(const path of ['/','/simulators/body','/simulators/wrist','/research','/manual',...docs.map(d=>`/documents/${d.collection}/${d.slug}`)]){
+ for(const path of ['/','/simulators/body','/simulators/sleep','/simulators/wrist','/research','/manual',...docs.map(d=>`/documents/${d.collection}/${d.slug}`)]){
   const response=await fetch(base+path,{headers});assert.equal(response.status,200,path);
   const html=await response.text();assert.ok(html.includes(`<html lang="${language}">`),path);
   const visible=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,'').replace(/<style\b[^>]*>[\s\S]*?<\/style>/g,'').replace(/<[^>]+>/g,' ');

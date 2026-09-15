@@ -23,7 +23,7 @@ test('document links use the web reader and reject unsafe or private destination
 test('all bundled documents decode strictly as UTF-8 and exclude private implementation records', async () => {
   const docs = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(await readFile(new URL('../app/documents/content.json', import.meta.url))));
   assert.equal(docs.filter(d => d.collection === 'research').length, 10);
-  assert.equal(docs.filter(d => d.collection === 'manual').length, 5);
+  assert.equal(docs.filter(d => d.collection === 'manual').length, 6);
   for (const doc of docs) {
     assert.ok(doc.markdown.includes(doc.title));
     assert.ok(!/\uFFFD|\/Users\/|\/home\/|[A-Z]:\\Users\\|appg(?:prj|ver|dep)_|\b[\da-f]{40}\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(doc.markdown), doc.slug);

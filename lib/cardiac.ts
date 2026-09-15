@@ -12,12 +12,21 @@ export function cardiacDisplacement(point:T.Vector3,role:number,weight:number,cy
  return base.clone().add(radial).addScaledVector(axis,axial).sub(point).multiplyScalar(weight);
 }
 export const isCardiacChamber=(name:string)=>!/vein|artery|vessel/i.test(name)&&/atrium|ventricle|papillary|leaflet|myocard|epicard|pericard/i.test(name);
+/** Myocardium moves fully; great-vessel roots taper over a short tethered segment.
+ * Descending/abdominal vessels retain their independent wall pulse and breathing. */
+export function cardiacAttachmentWeight(name:string,v:T.Vector3){
+ if(isCardiacChamber(name))return 1;
+ if(/coronar|cardiac vein/i.test(name))return 1-smooth(.9,1.35,Math.sqrt(((v.x-.025)/.088)**2+((v.y-1.29)/.092)**2+((v.z-.025)/.082)**2));
+ if(!/ascending aorta|aortic arch|pulmonary (arter|vein|trunk)|pulmonic|vena cava.*thoracic|superior vena cava/i.test(name))return 0;
+ const inferior=1-smooth(0,.07,Math.max(0,1.30-v.y));
+ return .25*(1-smooth(.025,.075,v.distanceTo(new T.Vector3(.009,1.329,.012))))*inferior;
+}
 export function bindCardiacMotion(geometry:T.BufferGeometry,name:string){
  const p=geometry.getAttribute('position'),data=new Float32Array(p.count*2),chamber=isCardiacChamber(name),atrial=/atrium/i.test(name);
  for(let i=0;i<p.count;i++){
   const v=new T.Vector3().fromBufferAttribute(p,i),distance=Math.sqrt(((v.x-.025)/.088)**2+((v.y-1.29)/.092)**2+((v.z-.025)/.082)**2);
   data[i*2]=atrial?1:chamber?0:smooth(1.29,1.34,v.y);
-  data[i*2+1]=chamber?1:1-smooth(.78,1.35,distance);
+  data[i*2+1]=cardiacAttachmentWeight(name,v);
  }
  geometry.setAttribute('cardiacData',new T.BufferAttribute(data,2));
  // The heart and nearby vessel roots follow the same chest transform as lungs.

@@ -3,11 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "24.21.0" },
+  "engines": {
+    "node": "24.21.0"
+  },
   "scripts": {
     "install:demo": "node runtime/runner.mjs install",
     "start": "node runtime/runner.mjs start",
-    "verify": "node runtime/runner.mjs verify"
+    "verify": "node runtime/runner.mjs verify",
+    "sleep:demo": "node scripts/sleep/gateway.mjs --demo",
+    "sleep:gateway": "node scripts/sleep/gateway.mjs"
   },
-  "dependencies": { "wrangler": "4.92.0" }
+  "dependencies": {
+    "wrangler": "4.92.0",
+    "ws": "8.21.3"
+  }
 }

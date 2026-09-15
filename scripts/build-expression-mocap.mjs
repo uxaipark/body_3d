@@ -14,7 +14,7 @@ function frame(direction,secondary){
  const x=y.clone().cross(z).normalize();return Q().setFromRotationMatrix(new T.Matrix4().makeBasis(x,y,z));
 }
 const output={};
-for(const [mode,id,first,last] of [['wave','141_16',3,290],['dance','103_03',50,425]]){
+for(const [mode,id,first,last] of [['wave','141_16',3,290],['dance','90_28',330,750]]){
  const raw=fs.readFileSync(`.asset-cache/mocap/${id}.bvh`,'utf8');
  const frameTime=Number(raw.match(/Frame Time:\s*([\d.]+)/)[1]);
  const {skeleton,clip}=new BVHLoader().parse(raw),src=skeleton.bones[0],mixer=new T.AnimationMixer(src);mixer.clipAction(clip).play();
@@ -95,7 +95,7 @@ for(const [mode,id,first,last] of [['wave','141_16',3,290],['dance','103_03',50,
   data.push(frame);
  }
  const smoothingSeconds=.035,frames=smoothCapture(data,duration,smoothingSeconds).map(f=>f.map(v=>+v.toFixed(7)));
- output[mode]={source:`CMU ${id}`,description:mode==='wave'?'Wave Hello (right hand)':'Charleston dance',sha256:crypto.createHash('sha256').update(raw).digest('hex'),sourceFrames:[first+start,first+end],sourceFrameTime:frameTime,duration,smoothingSeconds,frames};
+ output[mode]={source:`CMU ${id}`,description:mode==='wave'?'Wave Hello (right hand)':'Breakdance',sha256:crypto.createHash('sha256').update(raw).digest('hex'),sourceFrames:[first+start,first+end],sourceFrameTime:frameTime,duration,smoothingSeconds,frames};
  console.log(mode,output[mode].sourceFrames,duration,frames.length);
  rig.dispose();mixer.stopAllAction();mixer.uncacheRoot(src);
 }

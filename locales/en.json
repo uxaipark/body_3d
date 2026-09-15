@@ -1299,5 +1299,15 @@
   "반경 변화": "Radius change",
   "표면": "Surface",
   "오른손 인사": "Wave hello",
-  "춤추기": "Dance"
+  "춤추기": "Dance",
+  "브레이크댄스": "Breakdance",
+  "수면무호흡": "Sleep apnea",
+  "명치의 세 전극과 호흡, 심전도 신호": "Three epigastric electrodes with respiratory and ECG traces",
+  "명치 패치의 정전용량·ECG·가속도로 호흡을 추정하고, 침대 자세와 외부 채널을 함께 실험합니다.": "Estimate respiration from epigastric capacitance, ECG and acceleration while exploring sleep positions and external inputs.",
+  "명치 3전극 · 폐 역학 · 합성 신호": "Three epigastric pads · lung mechanics · synthetic signals",
+  "선택형 호흡수 융합 · 아티팩트 분류": "Optional respiratory fusion · artifact labels",
+  "왼쪽·오른쪽 수면 · 연속 뒤척이기": "Left/right sleep · continuous turns",
+  "소켓 입력 · 오디오·영상·레이더": "Socket inputs · audio, video and radar",
+  "호흡 노력 · 가상 실험": "Respiratory effort · virtual experiment",
+  "수면 실험 열기": "Open sleep experiment"
 }

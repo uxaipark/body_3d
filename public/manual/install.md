@@ -52,3 +52,7 @@ Verify는 서버를 직접 시작하고 홈·전신·손목·연구·매뉴얼·
 ## 환경 근거
 
 [Node.js 24 공식 배포](https://nodejs.org/download/release/v24.21.0/)와 [Wrangler 지원 환경](https://developers.cloudflare.com/workers/wrangler/install-and-update/)을 기준으로 작성했습니다.
+
+## 수면 센서 소켓 데모
+
+설치가 끝난 데모 폴더에서도 npm run sleep:demo를 실행할 수 있다. 별도 터미널에서 실행한 뒤 수면무호흡 화면의 WebSocket / IP에 ws://localhost:8765/stream을 입력한다. 실제 장치는 npm run sleep:gateway의 /input으로 v1 JSON 패킷을 전송한다. 자세한 단위와 채널 형식은 웹 사용 매뉴얼의 수면무호흡 실험을 참고한다. 기본 게이트웨이는 이 컴퓨터에서만 접근하며 인터넷 공개용 인증 서비스가 아니다.

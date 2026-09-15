@@ -8,14 +8,15 @@ import {defaults,sample} from '../lib/physiology.ts';
 const pos=(rig,name)=>rig.bone(name).getWorldPosition(new T.Vector3());
 
 test('greeting and dance are traceable finite CMU clips with rigid normalized bones',()=>{
- for(const [mode,id] of [['wave','141_16'],['dance','103_03']]){
+ for(const [mode,id] of [['wave','141_16'],['dance','90_28']]){
   const clip=expressionMocapData[mode];assert.equal(clip.source,`CMU ${id}`);assert.match(clip.sha256,/^[a-f0-9]{64}$/);assert.ok(clip.frames.length>100);assert.ok(clip.sourceFrames[0]>0);
   const rig=new HumanRig(),lengths=rig.bones.map(b=>b.position.length());
   for(let i=0;i<clip.frames.length;i++){
    const frame=clip.frames[i];assert.equal(frame.length,3+BONE_NAMES.length*4);assert.ok(frame.every(Number.isFinite));
    rig.poseExpression(mode,i/clip.frames.length*clip.duration);
    rig.bones.forEach((b,j)=>{assert.ok(Math.abs(b.quaternion.length()-1)<1e-6);if(j)assert.ok(Math.abs(b.position.length()-lengths[j])<1e-10);assert.deepEqual(b.scale.toArray(),[1,1,1]);});
-   for(const side of ['l','r']){const foot=rig.bone(`foot.${side}`),q=foot.getWorldQuaternion(new T.Quaternion()),p=pos(rig,foot.name);for(const z of [-.055,.145])assert.ok(new T.Vector3(0,-.073,z).applyQuaternion(q).add(p).y>=-1e-6);}
+   if(mode==='dance')for(const point of rig.bedSamples)assert.ok(rig.transform(point.point,point.w).y>=.0039,'floorwork surface penetrates the floor');
+   for(const side of ['l','r']){const foot=rig.bone(`foot.${side}`),q=foot.getWorldQuaternion(new T.Quaternion()),p=pos(rig,foot.name);for(const z of (mode==='dance'?[]:[-.055,.145]))assert.ok(new T.Vector3(0,-.073,z).applyQuaternion(q).add(p).y>=-1e-6);}
   }
   rig.dispose();
  }

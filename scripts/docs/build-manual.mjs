@@ -1,5 +1,5 @@
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
-const sources=[['start','docs/manual/start.md'],['body','docs/manual/body.md'],['wrist','docs/manual/wrist.md'],['skin','docs/manual/skin.md'],['install','docs/operations/demo-guide.md']];
+const sources=[['start','docs/manual/start.md'],['body','docs/manual/body.md'],['sleep','docs/manual/sleep.md'],['wrist','docs/manual/wrist.md'],['skin','docs/manual/skin.md'],['install','docs/operations/demo-guide.md']];
 const check=process.argv.includes('--check');
 async function output(file,text){
  if(check){if(await readFile(file,'utf8').catch(()=>null)!==text)throw new Error(`Manual is out of date: ${file}. Run npm run docs:build.`);}

@@ -240,3 +240,5 @@ html:lang(en) .skin-section-dialog [data-slot=dialog-title]{line-height:1.5}
 /* Nine motion choices wrap inside the dock instead of widening the page. */
 .motion-dock > [data-slot=tabs]{min-width:0;max-width:100%;flex:0 1 auto}
 .motion-dock .motion-tabs{max-width:100%}
+
+@media(min-width:1280px){.simulator-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

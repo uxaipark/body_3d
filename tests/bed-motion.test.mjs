@@ -67,19 +67,19 @@ test('bed joints retain hinge alignment and bounded angular speed without wrist 
  }
 });
 
-test('side transfer keeps the supporting arm tucked and the free arm extended',()=>{
+test('both arms are extended by side lying and remain down through the roll',()=>{
  const rig=new HumanRig();
- for(let i=0;i<=62;i++){
-  const time=6.85+i/12;rig.poseBed(time);const chest=rig.bone('chest').matrixWorld.clone().invert();
-  for(const side of ['r']){
-   const local=name=>rig.bone(`${name}.${side}`).getWorldPosition(new T.Vector3()).applyMatrix4(chest),shoulder=local('upperArm'),elbow=local('forearm'),wrist=local('hand');
-   assert.ok(Math.abs(elbow.x)<=Math.abs(shoulder.x)+.012,'elbow stays beside the ribs during side lying and roll');
-   assert.ok(Math.abs(wrist.x)<.21,'wrists do not reach sideways');
-   assert.ok(wrist.z>.25,'forearms remain folded in front of the torso until the back is down');
+ for(let i=432;i<=840;i++){
+  rig.poseBed(i/60);
+  for(const side of ['l','r']){const p=n=>rig.bone(`${n}.${side}`).getWorldPosition(new T.Vector3());
+   const a=p('upperArm'),b=p('forearm'),c=p('hand');
+   assert.ok(b.clone().sub(a).angleTo(c.clone().sub(b))<.36,'neither elbow remains at 90 degrees');
+   const local=rig.bone('chest').matrixWorld.clone().invert();b.applyMatrix4(local);c.applyMatrix4(local);
+   assert.ok(c.y<b.y-.20,'wrists extend toward the hips, without raised forearms');
   }
  }
- assert.equal(taskState('lie',13).complete,false);assert.equal(taskState('lie',14).complete,true);
- rig.poseBed(14);for(const side of ['l','r']){const elbow=rig.bone(`forearm.${side}`).getWorldPosition(new T.Vector3()),wrist=rig.bone(`hand.${side}`).getWorldPosition(new T.Vector3());assert.ok(Math.abs(wrist.y-elbow.y)<.04,'forearm rests approximately level on the mattress');}
+ rig.poseBed(12);const before=rig.bones.map(b=>b.quaternion.clone());rig.poseBed(14);
+ for(const side of ['l','r'])for(const part of ['upperArm','forearm','hand'])assert.ok(rig.bone(`${part}.${side}`).quaternion.angleTo(before[BONE_NAMES.indexOf(`${part}.${side}`)])<1e-6);
 });
 
 test('bed appears behind the current standing position without relocating or turning the patient',()=>{

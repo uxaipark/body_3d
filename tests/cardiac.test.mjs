@@ -19,7 +19,12 @@ test('cardiac deformation twists/shortens smoothly without jumps or rigid scalin
  }
  assert.ok(cardiacDisplacement(a,0,0,.19).length()<1e-10);
 });
-test('remote vessels stay fixed while vessels near the heart follow its surface',()=>{
- const g=new T.BufferGeometry().setAttribute('position',new T.Float32BufferAttribute([.03,1.29,.04,.08,.45,0],3));bindCardiacMotion(g,'artery');
- assert.ok(g.getAttribute('cardiacData').getY(0)>.99);assert.equal(g.getAttribute('cardiacData').getY(1),0);
+test('heart root motion is localized and attenuated; descending vessels only retain wall pulse',()=>{
+ for(const name of ['Descending aorta','Abdominal aorta','Inferior vena cava (abdominal part)','Brachial artery.r.001']){
+  const g=new T.BufferGeometry().setAttribute('position',new T.Float32BufferAttribute([.03,1.29,.04,0,1.16,.01],3));bindCardiacMotion(g,name);
+  assert.equal(g.getAttribute('cardiacData').getY(0),0);assert.equal(g.getAttribute('cardiacData').getY(1),0);
+ }
+ const g=new T.BufferGeometry().setAttribute('position',new T.Float32BufferAttribute([.009,1.329,.012,.01,1.19,.01],3));bindCardiacMotion(g,'Ascending aorta');
+ assert.ok(g.getAttribute('cardiacData').getY(0)<=.25);assert.ok(g.getAttribute('cardiacData').getY(0)>.2);assert.equal(g.getAttribute('cardiacData').getY(1),0);
+ for(let i=0;i<100;i++)assert.ok(cardiacDisplacement(new T.Vector3(.03,1.30,.04),0,.25,i/100).length()<.0015);
 });

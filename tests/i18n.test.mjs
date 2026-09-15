@@ -23,7 +23,7 @@ test('dynamic scientific readouts translate labels while preserving numeric data
 });
 test('all public reader documents have UTF-8 English counterparts with matching scientific formulas',async()=>{
  const docs=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await readFile(new URL('../app/documents/content.json',import.meta.url))));
- assert.equal(docs.length,15);
+ assert.equal(docs.length,16);
  for(const d of docs){
   assert.ok(d.en.title && d.en.markdown.includes(d.en.title),d.slug);
   assert.ok(!/[가-힣]/.test(d.en.markdown.replaceAll('한국어','')),d.slug);
