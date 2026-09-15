@@ -29,3 +29,6 @@ The arterial 1×/8× setting magnifies visual deformation only. Lung, liver, abd
 ## Greeting and dance
 
 Choose Wave hello or Dance in the Motion controls. Actual CMU motion captures are retargeted to the body rig, with smooth looping and transitions. The greeting raises and waves the right hand; Jazz dance uses the CMU 103_03 Charleston capture. Unmeasured finger articulation is not synthesized.
+
+
+Nerves and vessels bend continuously around the shoulders, elbows and wrists. Cervical brachial-plexus roots stay attached to the neck when the arms rise. This is geometric deformation, not a nerve-tension or vascular-stress solver.

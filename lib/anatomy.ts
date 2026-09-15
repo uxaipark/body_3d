@@ -1,3 +1,4 @@
+import {refineFlexibleTissue} from './flexible-tissue';
 import {updateDeformedBounds,bedViewPoint,followBedView} from './rig-view';
 import * as THREE from 'three';
 import {chair} from './chair.js';
@@ -121,6 +122,7 @@ export class AnatomyScene{
  for(const key of Object.keys(geometry.attributes))if(!['position','normal','_lung_inhale','_rib_guard','_rib_chest'].includes(key))geometry.deleteAttribute(key);
  if(isRespiratoryPart(part)){const inhale=geometry.getAttribute('_lung_inhale') as THREE.BufferAttribute;if(!inhale)throw new Error(`Missing bounded respiratory pose: ${name}`);const v=new THREE.Vector3();for(let i=0;i<inhale.count;i++){v.fromBufferAttribute(inhale,i).applyMatrix4(obj.matrixWorld);inhale.setXYZ(i,v.x,v.y,v.z);}geometry.setAttribute('lungInhale',inhale);geometry.deleteAttribute('_lung_inhale');}
  if(!geometry.getAttribute('normal'))geometry.computeVertexNormals();
+ if(layer==='nervous'||layer==='cardiovascular')refineFlexibleTissue(geometry,name);
  geometry.computeBoundingBox();bindGeometry(geometry,layer==='skeleton'?rigidBone(name,geometry.boundingBox!.getCenter(new THREE.Vector3())):isRespiratoryPart(part)||part==='hepatic'?2:pelvicOrgan(name)?0:undefined);
  if(layer==='muscular'||layer==='cardiovascular'||layer==='nervous')bindTissueGeometry(geometry,name);
  const count=geometry.getAttribute('position').count;const colors=new Float32Array(count*3);
