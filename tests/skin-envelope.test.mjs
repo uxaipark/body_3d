@@ -1,5 +1,5 @@
 import test from'node:test';import assert from'node:assert/strict';import *as T from'three';import{NodeIO}from'@gltf-transform/core';import{ALL_EXTENSIONS}from'@gltf-transform/extensions';import draco from'draco3dgltf';
-import{HumanRig,BONE_NAMES,surfaceTissueWeight}from'../lib/rig.ts';
+import{HumanRig,BONE_NAMES,surfaceTissueWeight,weightsAt}from'../lib/rig.ts';
 test('the shipped fitted exterior keeps hands on their arms throughout running',async()=>{
  const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),doc=await io.read('public/models/skin-fitted-web.glb');
  const hand={l:[],r:[]},feet=[];let arms=0,pelvis=0;
@@ -30,4 +30,19 @@ test('the shipped fitted exterior keeps hands on their arms throughout running',
   }
   for(let i=0;i<feet.length;i+=13)assert.ok(rig.transform(feet[i].point,feet[i].w).y>-.014,'skin foot penetrates the visible ground grid');
  }
+});
+
+test('axillary fold stays with the torso while the hand waves',()=>{
+ const rig=new HumanRig();
+ const samples=[];
+ for(const side of [-1,1])for(const y of [1.05,1.10,1.16,1.23])for(const z of [-.02,.02,.06]){
+  const x=side*(.155+(1.20-y)*.02),w=weightsAt(x,y,z,true);samples.push({p:new T.Vector3(x,y,z),w});
+  const armWeight=w.indices.reduce((sum,id,i)=>sum+(/^(upperArm|forearm|hand)\./.test(BONE_NAMES[id])?w.weights[i]:0),0);
+  assert.ok(armWeight<.35,`axillary surface gained ${armWeight.toFixed(3)} arm weight`);
+ }
+ for(const mode of ['wave','dance'])for(let f=0;f<48;f++){
+  rig.poseExpression(mode,f/48*(mode==='wave'?1.6:3.2));
+  for(const {p,w} of samples){const moved=rig.transform(p,w),torso=rig.transform(p,weightsAt(0,p.y,p.z));assert.ok(moved.toArray().every(Number.isFinite));assert.ok(moved.distanceTo(torso)<.035,'axillary fold follows the arm instead of the torso');}
+ }
+ rig.dispose();
 });

@@ -53,7 +53,13 @@ export function weightsAt(x:number,y:number,z:number,surface=false):Weights {
  let armEnvelope=smooth(.14+Math.max(0,1.37-y)*.04,.18+Math.max(0,1.37-y)*.04,ax)*arm;
  // The restored exterior has a narrower waist and a clear arm/torso gap.
  // Follow that gap so the medial elbow is not partly pinned to the trunk.
- if(surface){const edge=.15+Math.max(0,1.12-y)*.30;const lower=smooth(edge-.01,edge+.01,ax)*smooth(.60,.67,y);armEnvelope=THREE.MathUtils.lerp(lower,armEnvelope,smooth(1.15,1.25,y));}
+ if(surface){const edge=.15+Math.max(0,1.12-y)*.30;const lower=smooth(edge-.01,edge+.01,ax)*smooth(.60,.67,y);armEnvelope=THREE.MathUtils.lerp(lower,armEnvelope,smooth(1.15,1.25,y));
+  // The axillary fold belongs to the torso envelope. A raised arm opens the
+  // fold at its crease, but must not pull the lateral chest wall outward.
+  const axilla=smooth(.13,.23,ax)*smooth(1.00,1.30,y)*(1-smooth(1.27,1.36,y));
+  armEnvelope*=1-.92*axilla;
+  if(ax>.13&&ax<.23&&y>1.00&&y<1.30)armEnvelope=0;
+ }
  const a=armEnvelope*(1-leg);
  if(leg>0){
    const knee=1-smooth(.405,.477,y),ankle=1-smooth(.06,.11,y);
