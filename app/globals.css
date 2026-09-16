@@ -242,3 +242,5 @@ html:lang(en) .skin-section-dialog [data-slot=dialog-title]{line-height:1.5}
 .motion-dock .motion-tabs{max-width:100%}
 
 @media(min-width:1280px){.simulator-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.vessel-visibility-control{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 0 32px;font-size:14px;color:#becbd0;cursor:pointer;min-width:0}.vessel-visibility-control>span{overflow-wrap:anywhere}

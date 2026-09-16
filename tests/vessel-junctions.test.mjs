@@ -1,3 +1,4 @@
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import test from'node:test';import assert from'node:assert/strict';import * as T from'three';import{NodeIO}from'@gltf-transform/core';import{ALL_EXTENSIONS}from'@gltf-transform/extensions';import draco from'draco3dgltf';
 import{connectVesselJunctions,bakeAnatomyTransform,vesselRims}from'../lib/vessel-junctions.ts';import{bindTissueGeometry}from'../lib/tissue-binding.ts';import{refineFlexibleTissue}from'../lib/flexible-tissue.ts';import{HumanRig}from'../lib/rig.ts';import{isArtery,bindArterialPulse}from'../lib/arterial.ts';import{bindCardiacMotion,isCardiacChamber}from'../lib/cardiac.ts';import{bindVesselClearance}from'../lib/vessel-clearance.ts';import{expressionMocapData}from'../lib/expression-mocap-data.js';
 const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),doc=await io.read('public/models/cardiovascular-web.glb'),parts=[];
@@ -21,4 +22,8 @@ test('vessel bridge rims copy the complete deformation state and cannot detach d
 test('mirrored transforms preserve outward triangle winding instead of hiding the right vessel wall',()=>{
  const g=new T.CylinderGeometry(.003,.003,.10,12,1,true),matrix=new T.Matrix4().makeScale(-1,1,1);bakeAnatomyTransform(g,matrix);const p=g.getAttribute('position'),n=g.getAttribute('normal'),ix=g.index;
  for(let i=0;i<ix.count;i+=3){const a=new T.Vector3().fromBufferAttribute(p,ix.getX(i)),b=new T.Vector3().fromBufferAttribute(p,ix.getX(i+1)),c=new T.Vector3().fromBufferAttribute(p,ix.getX(i+2)),normal=b.sub(a).cross(c.sub(a)).normalize();assert.ok(normal.dot(new T.Vector3().fromBufferAttribute(n,ix.getX(i)))>.9);}
+});
+
+test('artery and vein batches remain renderable after joining all vascular rims',()=>{
+ for(const kind of ['artery','body']){const meshes=[...parts.filter(p=>p.kind===kind).map(p=>p.geometry),...joins.filter(p=>p.kind===kind).map(p=>p.geometry)];const merged=mergeGeometries(meshes);assert.ok(merged,`${kind} vascular batch disappeared during renderer merge`);assert.equal(merged.getAttribute('position').count,meshes.reduce((n,g)=>n+g.getAttribute('position').count,0));assert.equal(merged.index.count,meshes.reduce((n,g)=>n+g.index.count,0));merged.dispose();}
 });

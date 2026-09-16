@@ -36,3 +36,11 @@ Nerves and vessels bend continuously around the shoulders, elbows and wrists. Ce
 ## Vessel continuity and deformation
 
 Matching open vessel rims are joined using position, radius and orientation. Junctions share joint weights and interpolate pulse/breathing attributes continuously. Mirrored mesh transforms preserve triangle winding so right-sided vessel surfaces remain visible. Connections and subdivision are prepared once at loading; animation uses GPU skinning. Nearby arteries and veins are never joined merely by proximity. Missing capillary beds and physiological flow connections are not invented. This is a geometric research visualization, not a clinically calibrated vascular material or flow–structure solver.
+
+## Blood vessel visibility
+
+The **Blood vessels** switch sits under Circulatory, immediately before Arterial distension. It defaults to on and controls arteries and veins independently of the heart. Turning off Circulatory hides both; turning it back on retains the vessel selection. Reset and the pulse view enable vessels.
+
+## Nerves and the skin boundary
+
+Nerves use the actual exterior mesh, final joint pose and skin breathing deformation to track interior anchors. This boundary remains active with skin hidden. Cervical spinal insertions stay fixed, and a smooth radial inset fits nerves to the narrow elbow corridor. Local motion is limited relative to tissue depth, with a 3 mm visualization clearance at the skin surface. Geometry is constrained rather than deleted or made invisible. This is a kinematic visualization guard, not a calibrated nerve tension, friction or contact mechanics solver.
