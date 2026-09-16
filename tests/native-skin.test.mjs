@@ -1,5 +1,6 @@
 import test from'node:test';import assert from'node:assert/strict';import *as T from'three';import{NodeIO}from'@gltf-transform/core';import{ALL_EXTENSIONS}from'@gltf-transform/extensions';import draco from'draco3dgltf';
-import{HumanRig,BONE_NAMES,surfaceFootSupport}from'../lib/rig.ts';
+import{HumanRig,BONE_NAMES,surfaceFootSupport,bindGeometry}from'../lib/rig.ts';
+import{registerSkinGeometry}from'../lib/skin-registration.js';
 test('native atlas exterior has connected soles and arm-only distal bindings through gait',async()=>{
  const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),doc=await io.read('public/models/skin-atlas-web.glb');
  assert.equal(doc.getRoot().listMeshes().length,1);
@@ -22,4 +23,11 @@ test('native atlas exterior has connected soles and arm-only distal bindings thr
   for(const v of feet)assert.ok(rig.transform(v.point,v.w).y>-.008,'native toes penetrate ground');
   for(const v of hands)assert.ok(rig.transform(v.point,v.w).toArray().every(Number.isFinite));
  }
+});
+
+test('native axillary skin uses the torso envelope instead of arm-only bindings',async()=>{
+ const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),doc=await io.read('public/models/skin-atlas-web.glb'),p=doc.getRoot().listMeshes()[0].listPrimitives()[0],g=new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(p.getAttribute('POSITION').getArray().slice(),3)).setIndex(new T.BufferAttribute(p.getIndices().getArray().slice(),1));
+ registerSkinGeometry(g);bindGeometry(g,undefined,true);const ix=g.getAttribute('rigIndex'),w=g.getAttribute('rigWeight');let seen=0;
+ for(let i=0;i<ix.count;i++){const x=Math.abs(g.getAttribute('position').getX(i)),y=g.getAttribute('position').getY(i);if(x>.13&&x<.23&&y>1&&y<1.3){seen++;for(let j=0;j<4;j++)if(w.getComponent(i,j)>.01)assert.ok(BONE_NAMES[ix.getComponent(i,j)]!=='upperArm.l'&&BONE_NAMES[ix.getComponent(i,j)]!=='upperArm.r','axilla must not be arm-only');}}
+ assert.ok(seen>100);g.dispose();
 });

@@ -155,7 +155,7 @@ export function bindGeometry(geometry:THREE.BufferGeometry,rigidIndex?:number,su
  const skinArms=surface?geometry.getAttribute('skinArmSide'):undefined;
  for(let i=0;i<p.count;i++){
    if(rigidIndex!==undefined){indices[i*4]=rigidIndex;weights[i*4]=1;}
-   else if(skinArms?.getX(i)){
+   else if(skinArms?.getX(i)&&!(surface&&Math.abs(p.getX(i))>.13&&Math.abs(p.getX(i))<.23&&p.getY(i)>1.00&&p.getY(i)<1.30)){
      // Membership comes from the connected original arm, not a shifted/widened
      // wrist's X coordinate. Distal arm skin can never inherit trunk/leg bones.
      const side=skinArms.getX(i)<0?'r':'l',y=p.getY(i),elbow=1-smooth(1.055,1.125,y),wrist=1-smooth(.843,.888,y);
