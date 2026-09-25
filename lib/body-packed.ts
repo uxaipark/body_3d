@@ -23,7 +23,7 @@ export async function decodeBodyGeometry(bytes:ArrayBuffer){
  geometry.computeBoundingBox();return geometry;
 }
 export async function fetchBodyGeometry(file:string,signal?:AbortSignal){
- const response=await fetch(`/models/body/${file}`,{signal});if(!response.ok)throw Error('Body geometry unavailable');
+ const response=await fetch(`/models/body/${file}`,{signal,cache:/^[a-f0-9]{24}\.bin\.gz$/.test(file)?'force-cache':'default'});if(!response.ok)throw Error('Body geometry unavailable');
  return response.arrayBuffer();
 }
 
