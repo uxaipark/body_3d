@@ -1,0 +1,13 @@
+/* Shared visual tokens for React workspaces and the standalone wrist app. */
+:root{
+ color-scheme:dark;
+ --soma-bg:#0d1419;--soma-surface:#141e25;--soma-raised:#1a272f;
+ --soma-border:#2d3e47;--soma-border-strong:#47615f;
+ --soma-text:#e3eeeb;--soma-secondary:#b4c6cc;--soma-muted:#8da5ae;
+ --soma-accent:#a4e4d0;--soma-accent-ink:#123b2d;--soma-accent-soft:#243e35;
+ --soma-radius:10px;--soma-control-radius:6px;--soma-gap:16px;
+ --soma-page-gutter:28px;--soma-content-width:1360px;
+}
+.radial-app[data-theme=light]{color-scheme:light;--soma-bg:#f1f5f4;--soma-surface:#fff;--soma-raised:#e8efec;--soma-border:#ccd9d4;--soma-border-strong:#839e91;--soma-text:#18372e;--soma-secondary:#39594c;--soma-muted:#587167;--soma-accent:#247458;--soma-accent-ink:#fff;--soma-accent-soft:#dfefe7}
+@media(max-width:700px){:root{--soma-page-gutter:16px;--soma-gap:12px}}
+@media(prefers-color-scheme:light){.radial-app:not([data-theme]){color-scheme:light}}

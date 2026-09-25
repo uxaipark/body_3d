@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import '../public/ui/select.css';
+import '../public/ui/soma-theme.css';
+import './page-design.css';
 import {LanguageProvider} from './language';
 import {getServerLanguage} from '../lib/i18n/server';
 

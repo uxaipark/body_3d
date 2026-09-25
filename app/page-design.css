@@ -1,0 +1,67 @@
+/* Shared page surfaces. Scientific plot colors and geometry remain local. */
+:root{--background:var(--soma-bg);--foreground:var(--soma-text);--card:var(--soma-surface);--card-foreground:var(--soma-text);--popover:var(--soma-raised);--border:var(--soma-border);--input:var(--soma-border-strong);--primary:var(--soma-accent);--primary-foreground:var(--soma-accent-ink);--muted-foreground:var(--soma-muted);--ring:var(--soma-accent)}
+.portal,.lab,.sleep-page,.wrist-workspace{background:var(--soma-bg);color:var(--soma-text)}
+.portal .portal-content{max-width:var(--soma-content-width);padding:32px var(--soma-page-gutter)}
+.sleep-page .sleep-workspace{padding:24px var(--soma-page-gutter) 36px}
+.lab .workspace-bar{padding:20px var(--soma-page-gutter);min-height:96px}
+.portal .portal-heading{gap:20px;align-items:center;margin-bottom:28px}
+.portal .portal-heading h1,.lab .workspace-bar h1,.sleep-page .sleep-toolbar h1{font-size:28px;font-weight:600;line-height:1.3;letter-spacing:-.7px;flex-wrap:wrap;gap:8px}
+.portal .portal-heading p{font-size:15px;line-height:1.75;color:var(--soma-muted);max-width:700px;margin:10px 0 0}
+.portal-kicker,.sleep-page .sleep-eyebrow,.workspace-breadcrumb{font-size:11px;line-height:1.5;letter-spacing:1.2px;color:var(--soma-muted)}
+.portal :is(.simulator-card,.research-doc,.research-summary article,.research-architecture,.portal-next,.manual-chapter,.document-content),.lab :is(.panel,.right-panel,.bottom-strip),.sleep-page :is(.sleep-card,.sleep-metrics>div){background:var(--soma-surface);border:1px solid var(--soma-border);border-radius:var(--soma-radius);box-shadow:none}
+.portal :is(.simulator-grid,.research-doc-grid,.research-summary){gap:var(--soma-gap)}
+.portal .simulator-card{overflow:hidden;transition:border-color .18s ease}
+.portal .simulator-card:hover,.portal .research-doc:hover{border-color:var(--soma-border-strong)}
+.portal .simulator-card-body{padding:24px}
+.portal .simulator-card h2,.portal .research-doc h2{font-size:21px;line-height:1.4;letter-spacing:-.4px}
+.portal :is(.simulator-card p,.simulator-card li,.research-doc p,.research-summary p,.research-architecture p){font-size:14px;line-height:1.8;color:var(--soma-secondary)}
+.portal :is(.research-doc,.research-summary article,.research-architecture,.portal-next){padding:24px}
+.portal :is(.research-note,.research-pipeline>div){background:var(--soma-raised);border-color:var(--soma-border);border-radius:var(--soma-control-radius)}
+.portal :is(.portal-next h2,.research-summary h2,.research-architecture h2){font-size:21px;line-height:1.45}
+.portal :is(.simulator-status,.simulator-launch,.research-download,.research-links a,.creator-link,.manual-launch){color:var(--soma-accent)}
+.portal :is(.simulator-launch,.research-download,.creator-link,.manual-launch){border-radius:var(--soma-control-radius);font-size:13px;line-height:1.4;min-height:36px}
+.portal .creator-profile{padding:24px 0;border-color:var(--soma-border);gap:24px}
+.portal .creator-summary{font-size:14px;line-height:1.8;color:var(--soma-secondary)}
+.portal .portal-footer{border-color:var(--soma-border);color:var(--soma-muted);font-size:11px;line-height:1.7;margin-top:28px}
+/* Reading pages share a quiet, legible article and navigation style. */
+.portal :is(.manual-toc,.document-toc){border:1px solid var(--soma-border);border-radius:var(--soma-radius);background:var(--soma-surface);padding:16px}
+.portal :is(.manual-toc a,.document-toc a){border-radius:var(--soma-control-radius);font-size:13px;line-height:1.6;color:var(--soma-secondary)}
+.portal :is(.manual-toc a,.document-toc a):hover{color:var(--soma-accent);background:var(--soma-accent-soft)}
+.portal :is(.manual-chapter,.document-content){padding:28px 32px}
+.portal :is(.manual-layout,.document-layout)>*{min-width:0}
+.portal :is(.manual-chapter,.document-content){overflow-wrap:anywhere}
+.portal :is(.manual-chapter,.document-content) pre{max-width:100%;overflow:auto}
+.portal :is(.manual-chapter h2,.document-content h2){font-size:22px;font-weight:600;line-height:1.45;color:var(--soma-text)}
+.portal :is(.manual-chapter h3,.document-content h3){font-size:17px;line-height:1.5;color:var(--soma-text)}
+.portal :is(.manual-chapter p,.manual-chapter li,.document-content p,.document-content li){font-size:15px;line-height:1.85;color:var(--soma-secondary)}
+.portal .document-toolbar a{font-size:13px;color:var(--soma-accent);min-height:32px;align-items:center}
+.portal :is(.document-content code,.manual-chapter code){background:var(--soma-raised);color:var(--soma-accent);border-radius:4px}
+.portal .document-table{border-color:var(--soma-border)}
+/* Laboratory cards keep their dense layouts but share controls and surfaces. */
+.lab .panel-section,.lab .panel-collapse-header,.sleep-page :is(.sleep-card-head,.sleep-patch-controls,.sleep-input-row){border-color:var(--soma-border)}
+.lab :is(.panel-hint,.subtle,.channel-note),.sleep-page .sleep-note{color:var(--soma-muted);font-size:12px;line-height:1.7}
+.sleep-page .sleep-card h2,.lab .section-title{font-size:13px;font-weight:600;line-height:1.5;color:var(--soma-text)}
+.sleep-page .sleep-card-head{padding:14px 16px;border-bottom:1px solid var(--soma-border)}
+.sleep-page .sleep-layout,.sleep-page .sleep-main,.sleep-page .sleep-side{gap:var(--soma-gap)}
+.sleep-page .sleep-metrics{gap:var(--soma-gap)}
+.sleep-page .sleep-metrics>div{padding:16px;border-top:2px solid var(--soma-border-strong)}
+.sleep-page .sleep-metrics span{font-size:12px;color:var(--soma-muted)}
+.sleep-page .sleep-metrics strong{font-variant-numeric:tabular-nums;color:var(--soma-text)}
+.sleep-page .sleep-toolbar{margin-bottom:20px;gap:16px}
+.sleep-page .sleep-toolbar h1 small{font-size:12px;font-weight:400;color:var(--soma-muted);letter-spacing:0}
+.sleep-page .sleep-toolbar h1{color:var(--soma-text)}
+.sleep-page .sleep-workspace button,.lab :is(.focus-grid button,.task-replay,.comfort-toggle,.pulse-gain-button){background:var(--soma-raised);color:var(--soma-secondary);border:1px solid var(--soma-border);border-radius:var(--soma-control-radius);font-size:12px;min-height:34px;line-height:1.4}
+.sleep-page .sleep-workspace button:hover,.lab :is(.focus-grid button,.task-replay,.comfort-toggle,.pulse-gain-button):hover{border-color:var(--soma-border-strong);color:var(--soma-text)}
+.sleep-page .sleep-workspace button[aria-pressed=true],.lab :is(.comfort-toggle[aria-checked=true],.pulse-gain-button[aria-pressed=true]){background:var(--soma-accent-soft);border-color:var(--soma-border-strong);color:var(--soma-accent)}
+.lab .export-button{background:var(--soma-accent);color:var(--soma-accent-ink);border-color:var(--soma-accent);border-radius:var(--soma-control-radius);min-height:34px;font-size:12px}
+.sleep-page .sleep-connection input{background:var(--soma-bg);border-color:var(--soma-border);color:var(--soma-text);border-radius:var(--soma-control-radius);min-height:36px}
+.sleep-page input[type=range]{accent-color:var(--soma-accent)}
+.soma-select .soma-select-trigger{background:var(--soma-raised);border-color:var(--soma-border);color:var(--soma-text);border-radius:var(--soma-control-radius)}
+.soma-select-list{background:var(--soma-surface);border-color:var(--soma-border-strong);color:var(--soma-text)}
+.soma-select-option.active{background:var(--soma-accent-soft);outline-color:var(--soma-border-strong)}
+.wrist-workspace .wrist-simulator-frame{border-color:var(--soma-border);border-radius:var(--soma-radius);margin:16px var(--soma-page-gutter) 0;width:calc(100% - 2 * var(--soma-page-gutter))}
+.wrist-workspace .wrist-workspace-footer{padding:14px var(--soma-page-gutter);font-size:12px;line-height:1.6;color:var(--soma-muted)}
+.wrist-workspace .wrist-workspace-footer a{color:var(--soma-accent)}
+:is(.portal,.lab,.sleep-workspace) :is(button,a,input):focus-visible{outline:2px solid var(--soma-accent);outline-offset:3px}
+@media(max-width:700px){.portal .portal-content{padding-top:24px}.portal .portal-heading{align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}.portal .portal-heading h1,.lab .workspace-bar h1,.sleep-page .sleep-toolbar h1{font-size:24px}.portal :is(.simulator-card-body,.research-doc,.research-summary article,.research-architecture,.portal-next,.manual-chapter,.document-content){padding:20px}.portal .creator-profile{gap:16px}.sleep-page .sleep-workspace{padding-top:20px}.lab .workspace-bar{padding:16px}.portal :is(.manual-chapter p,.manual-chapter li,.document-content p,.document-content li){font-size:14px}}
+@media(prefers-reduced-motion:reduce){.portal .simulator-card{transition:none}}
