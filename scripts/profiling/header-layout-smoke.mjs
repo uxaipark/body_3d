@@ -15,15 +15,19 @@ try{
  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value};
  await send('Page.enable');await send('Runtime.enable');await send('Emulation.setDeviceMetricsOverride',{width:1400,height:1000,deviceScaleFactor:2,mobile:false});const errors=[];ws.on('message',raw=>{const data=JSON.parse(raw);if(data.method==='Runtime.exceptionThrown')errors.push(data.params.exceptionDetails.text+': '+data.params.exceptionDetails.exception?.description)});
  const delay=ms=>new Promise(r=>setTimeout(r,ms));
- for(const route of ['/simulators/body','/simulators/sleep','/simulators/wrist']){
-  await send('Page.navigate',{url:(process.env.SOMA_TEST_URL||'http://localhost:3000')+route});
-  for(let i=0;i<100;i++){if(await evaluate(`(()=>{const d=document.querySelector('iframe')?.contentDocument||document;return !!document.querySelector('[data-site-header] .render-quality-control select') && (!d.querySelector('#renderQuality') || !!d.querySelector('#renderQuality')._dd) && !!d.querySelector('canvas') && !d.querySelector('.sleep-loading,.soma-load,.model-loading')})()`))break;await delay(300);if(i===99)throw Error('Load timeout '+route+' '+JSON.stringify({errors,body:await evaluate('document.body.innerText.slice(0,1800)')}))}
-  const selector='[data-site-header] .render-quality-control select';
-  for(const quality of ['low','high','balanced']){
-   await evaluate(`(()=>{const s=document.querySelector('${selector}');if(!s)throw Error('Quality selector missing');s.value='${quality}';s.dispatchEvent(new Event('change',{bubbles:true}))})()`);await delay(1600);if(await evaluate("localStorage.getItem('soma.body.quality')")!==quality)throw Error('Selection not saved: '+route+' '+quality);
-   const ratio=await evaluate(`(()=>{const d=document.querySelector('iframe')?.contentDocument||document,c=d.querySelector('canvas');return c.width/c.clientWidth})()`);const expected={low:.85,balanced:1.15,high:1.5}[quality];if(Math.abs(ratio-expected)>.02)throw Error('DPR mismatch: '+route+' '+quality+' '+ratio);
-   console.log(JSON.stringify({route,quality,state:await evaluate(`({saved:localStorage.getItem('soma.body.quality'),canvases:[...(document.querySelector('iframe')?.contentDocument||document).querySelectorAll('canvas')].filter(c=>c.clientWidth>100).map(c=>({width:c.width,css:c.clientWidth})).slice(0,3),status:document.querySelector('#renderQualityStatus')?.textContent})`)}));
+ for(const language of ['ko','en'])for(const width of [1600,1000,375]){
+  await send('Network.setCookie',{name:'soma_language',value:language,url:process.env.SOMA_TEST_URL||'http://localhost:3000',path:'/'});
+  await send('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});let reference;
+  for(const route of ['/','/simulators/body','/simulators/sleep','/simulators/wrist']){
+   await send('Page.navigate',{url:(process.env.SOMA_TEST_URL||'http://localhost:3000')+route+'?lang='+language});
+   for(let i=0;i<100;i++){if(await evaluate(`!!document.querySelector('[data-site-header] .render-quality-control select')?._dd`))break;await delay(150);if(i===99)throw Error('Header timeout '+route)}
+   await evaluate('document.fonts.ready');await delay(200);if(await evaluate('document.documentElement.lang')!==language)throw Error('Wrong test locale');
+   const layout=await evaluate(`(()=>{const h=document.querySelector('[data-site-header]'),nav=h.querySelector('nav'),q=h.querySelector('.render-quality-control'),lang=h.querySelector('.language-switch'),button=lang.querySelector('button');const box=e=>{const r=e.getBoundingClientRect();return [r.x,r.y,r.width,r.height].map(n=>Math.round(n*10)/10)};return {header:box(h),nav:box(nav),quality:box(q),language:box(lang),button:box(button),font:getComputedStyle(button).fontSize,background:getComputedStyle(h).backgroundColor,count:document.querySelectorAll('[data-site-header]').length}})()`);
+   if(layout.quality[2]<100||layout.count!==1||layout.quality[0]+layout.quality[2]>layout.language[0]+1||Math.abs(layout.quality[1]+layout.quality[3]/2-layout.language[1]-layout.language[3]/2)>1)throw Error('Header alignment '+JSON.stringify({route,width,layout}));
+   if(reference&&JSON.stringify(layout)!==JSON.stringify(reference))throw Error('Header differs '+JSON.stringify({route,width,language,reference,layout}));reference=layout;
+   console.log(JSON.stringify({route,width,language,layout}));
   }
  }
- if(errors.length)throw Error(errors.join('\n'));console.log('Shared header quality and all three renderers passed');
+
+ if(errors.length)throw Error(errors.join('\n'));console.log('All four headers match at desktop, tablet and mobile widths in Korean and English');
 }finally{ws?.close();chrome.kill();await new Promise(r=>chrome.once('exit',r));await rm(profile,{recursive:true,force:true})}
