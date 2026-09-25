@@ -1,6 +1,6 @@
 import test from'node:test';import assert from'node:assert/strict';import *as T from'three';import{NodeIO}from'@gltf-transform/core';import{ALL_EXTENSIONS}from'@gltf-transform/extensions';import draco from'draco3dgltf';
-import{HumanRig,BONE_NAMES,surfaceFootSupport,bindGeometry}from'../lib/rig.ts';
-import{registerSkinGeometry}from'../lib/skin-registration.js';
+import{HumanRig,BONE_NAMES,surfaceFootSupport,weightsAt}from'../lib/rig.ts';
+import{expressionMocapData}from'../lib/expression-mocap-data.js';
 test('native atlas exterior has connected soles and arm-only distal bindings through gait',async()=>{
  const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),doc=await io.read('public/models/skin-atlas-web.glb');
  assert.equal(doc.getRoot().listMeshes().length,1);
@@ -25,9 +25,18 @@ test('native atlas exterior has connected soles and arm-only distal bindings thr
  }
 });
 
-test('native axillary skin uses the torso envelope instead of arm-only bindings',async()=>{
- const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),doc=await io.read('public/models/skin-atlas-web.glb'),p=doc.getRoot().listMeshes()[0].listPrimitives()[0],g=new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(p.getAttribute('POSITION').getArray().slice(),3)).setIndex(new T.BufferAttribute(p.getIndices().getArray().slice(),1));
- registerSkinGeometry(g);bindGeometry(g,undefined,true);const ix=g.getAttribute('rigIndex'),w=g.getAttribute('rigWeight');let seen=0;
- for(let i=0;i<ix.count;i++){const x=Math.abs(g.getAttribute('position').getX(i)),y=g.getAttribute('position').getY(i);if(x>.13&&x<.23&&y>1&&y<1.3){seen++;for(let j=0;j<4;j++)if(w.getComponent(i,j)>.01)assert.ok(BONE_NAMES[ix.getComponent(i,j)]!=='upperArm.l'&&BONE_NAMES[ix.getComponent(i,j)]!=='upperArm.r','axilla must not be arm-only');}}
- assert.ok(seen>100);g.dispose();
+test('actual baked skin separates torso and arm and does not form stretched sails in expression clips',async()=>{
+ const io=new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'draco3d.decoder':await draco.createDecoderModule()}),doc=await io.read('public/models/skin-atlas-web.glb'),p=doc.getRoot().listMeshes()[0].listPrimitives()[0];
+ const positions=p.getAttribute('POSITION').getArray(),indices=p.getIndices().getArray(),ix=p.getAttribute('_RIG_INDEX').getArray(),w=p.getAttribute('_RIG_WEIGHT').getArray(),rig=new HumanRig();
+ // Read the exact baked attributes used by AnatomyScene. Rebinding a copy here
+ // would conceal a regression in the actual asset, as the previous test did.
+ const points=Array.from({length:positions.length/3},(_,i)=>new T.Vector3().fromArray(positions,i*3)),weights=points.map((_,i)=>({indices:Array.from(ix.slice(i*4,i*4+4)),weights:Array.from(w.slice(i*4,i*4+4))}));
+ const edges=[],seen=new Set();for(let f=0;f<indices.length;f+=3)for(let j=0;j<3;j++){const a=indices[f+j],b=indices[f+(j+1)%3],key=a<b?`${a}/${b}`:`${b}/${a}`;if(seen.has(key))continue;seen.add(key);if([points[a],points[b]].every(p=>p.y>.90&&p.y<1.4&&Math.abs(p.x)>.1))edges.push([a,b,points[a].distanceTo(points[b])]);}
+ assert.ok(edges.length>1000);
+ let maxEdge=0;
+ for(const mode of ['wave','dance'])for(let f=0;f<32;f++){
+  rig.poseExpression(mode,f/32*expressionMocapData[mode].duration);const posed=points.map((p,i)=>rig.transform(p,weights[i]));
+  for(const [a,b,rest]of edges){const length=posed[a].distanceTo(posed[b]);maxEdge=Math.max(maxEdge,length);assert.ok(length<Math.max(.03,rest*3),`${mode}: edge ${points[a].toArray()} / ${points[b].toArray()} grew from ${rest} to ${length} m`);}
+  for(let i=0;i<points.length;i+=10){const p=points[i];if(Math.abs(p.x)>.11&&Math.abs(p.x)<.145&&p.y>1.10&&p.y<1.28)assert.ok(posed[i].distanceTo(rig.transform(p,weightsAt(0,p.y,p.z)))<.001,'lateral torso follows raised arm');}
+ }console.log({maxAxillaryEdge:maxEdge});rig.dispose();
 });

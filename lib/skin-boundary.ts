@@ -5,7 +5,7 @@ interface Branch {box:T.Box3;left?:Branch;right?:Branch;faces?:number[]}
 /** A load-time triangle index of the actual exterior, independent of visibility.
  * No per-frame nearest-neighbour search or additional draw pass. */
 export class SkinBoundary {
- points:T.Vector3[];normals:T.Vector3[];weights:Weights[];faces:number[][];tree:Branch;
+ points:T.Vector3[];normals:T.Vector3[];weights:Weights[];faces:number[][];tree:Branch;faceArm:number[];
  constructor(g:T.BufferGeometry){
   if(!g.getAttribute('normal'))g.computeVertexNormals();
   const normals=g.getAttribute('normal');
@@ -15,13 +15,14 @@ export class SkinBoundary {
   this.weights=this.points.map((_,i)=>({indices:[0,1,2,3].map(j=>ix.getComponent(i,j)),weights:[0,1,2,3].map(j=>w.getComponent(i,j))}));
   const index=g.index;this.faces=Array.from({length:(index?.count??p.count)/3},(_,f)=>[0,1,2].map(j=>index?index.getX(f*3+j):f*3+j));
   this.faces=this.faces.filter(ids=>new T.Triangle(...ids.map(i=>this.points[i]) as [T.Vector3,T.Vector3,T.Vector3]).getArea()>1e-10);
+  this.faceArm=this.faces.map(ids=>ids.reduce((sum,i)=>sum+this.weights[i].weights.reduce((s,w,j)=>s+(/^(upperArm|forearm|hand)\./.test(BONE_NAMES[this.weights[i].indices[j]])?w:0),0),0)/3);
   const boxes=this.faces.map(ids=>new T.Box3().setFromPoints(ids.map(i=>this.points[i]))),centers=boxes.map(b=>b.getCenter(new T.Vector3()));
   const build=(ids:number[]):Branch=>{const box=new T.Box3();for(const i of ids)box.union(boxes[i]);if(ids.length<=12)return {box,faces:ids};const size=box.getSize(new T.Vector3()),axis=size.x>size.y?(size.x>size.z?0:2):(size.y>size.z?1:2);ids.sort((a,b)=>centers[a].getComponent(axis)-centers[b].getComponent(axis));const mid=ids.length>>1;return {box,left:build(ids.slice(0,mid)),right:build(ids.slice(mid))};};
   this.tree=build(this.faces.map((_,i)=>i));
  }
- nearest(p:T.Vector3){
+ nearest(p:T.Vector3,armWeight?:number){
   let distance=Infinity,face=-1;const point=new T.Vector3(),candidate=new T.Vector3(),triangle=new T.Triangle();
-  const visit=(node:Branch)=>{if(node.box.distanceToPoint(p)**2>distance)return;if(node.faces){for(const f of node.faces){const ids=this.faces[f];triangle.set(...ids.map(i=>this.points[i]) as [T.Vector3,T.Vector3,T.Vector3]);triangle.closestPointToPoint(p,candidate);const d=candidate.distanceToSquared(p);if(d<distance){distance=d;face=f;point.copy(candidate);}}}else{const a=node.left!,b=node.right!;if(a.box.distanceToPoint(p)<b.box.distanceToPoint(p)){visit(a);visit(b);}else{visit(b);visit(a);}}};
+  const visit=(node:Branch)=>{if(node.box.distanceToPoint(p)**2>distance)return;if(node.faces){for(const f of node.faces){if(armWeight!==undefined&&Math.abs(this.faceArm[f]-armWeight)>.35)continue;const ids=this.faces[f];triangle.set(...ids.map(i=>this.points[i]) as [T.Vector3,T.Vector3,T.Vector3]);triangle.closestPointToPoint(p,candidate);const d=candidate.distanceToSquared(p);if(d<distance){distance=d;face=f;point.copy(candidate);}}}else{const a=node.left!,b=node.right!;if(a.box.distanceToPoint(p)<b.box.distanceToPoint(p)){visit(a);visit(b);}else{visit(b);visit(a);}}};
   visit(this.tree);const ids=this.faces[face];triangle.set(...ids.map(i=>this.points[i]) as [T.Vector3,T.Vector3,T.Vector3]);return {ids,point,normal:triangle.getNormal(new T.Vector3()),distance:Math.sqrt(distance)};
  }
  contains(p:T.Vector3){
@@ -32,7 +33,8 @@ export class SkinBoundary {
  posed(rig:HumanRig,displacement?:(p:T.Vector3)=>T.Vector3){return this.points.map((p,i)=>rig.transform(displacement?p.clone().addScaledVector(displacement(p),surfaceTissueWeight(this.weights[i])):p,this.weights[i]));}
 }
 
-export const NERVE_SKIN_CLEARANCE=.003;
+// Include a 2 mm allowance for the curved surface between triangle anchors.
+export const NERVE_SKIN_CLEARANCE=.005;
 /** CPU reference: bounded sliding around a skin-driven interior anchor, then
  * unilateral surface contact. Cervical insertions retain their spinal binding. */
 export function constrainNerveToFace(p:T.Vector3,a:T.Vector3,b:T.Vector3,c:T.Vector3,anchor?:T.Vector4,embedded?:T.Vector3,surfaceNormal?:T.Vector3){
@@ -63,7 +65,9 @@ export class NerveSkinGuard {
    // around the atlas arm axis instead of snapping individual tube vertices.
    const armWeight=[0,1,2,3].reduce((sum,j)=>sum+(/^(upperArm|forearm|hand)\./.test(BONE_NAMES[rigIndex.getComponent(i,j)])?rigWeight.getComponent(i,j):0),0);
    if(armWeight>.8&&Math.abs(point.x)>.14&&point.y>1.0&&point.y<1.22){const side=Math.sign(point.x),t=point.y>=1.098?(point.y-1.098)/(1.375-1.098):(1.098-point.y)/(1.098-.863),x=point.y>=1.098?T.MathUtils.lerp(.222,.167,t):T.MathUtils.lerp(.222,.283,t),z=point.y>=1.098?T.MathUtils.lerp(-.035,-.019,t):T.MathUtils.lerp(-.035,.012,t),inset=.25*Math.exp(-(((point.y-1.12)/.055)**2))*T.MathUtils.smoothstep(point.y,1.0,1.025)*(1-T.MathUtils.smoothstep(point.y,1.195,1.22));point.x=T.MathUtils.lerp(point.x,x*side,inset);point.z=T.MathUtils.lerp(point.z,z,inset);changed=true;}
-   const nearest=this.boundary.nearest(point);const ids=nearest.ids;if(point.clone().sub(nearest.point).dot(nearest.normal)>0&&!this.boundary.contains(point)){point.copy(nearest.point).addScaledVector(nearest.normal,-NERVE_SKIN_CLEARANCE*2);changed=true;}entry={ids,point};cache.set(key,entry);}p.setXYZ(i,entry.point.x,entry.point.y,entry.point.z);data.set(entry.ids,i*3);this.anchor(entry.point,entry.ids).toArray(anchors,i*4);}
+   // Opposing arm and chest surfaces can be millimetres apart at rest. A
+   // nearest-only attachment makes chest nerves follow the raised arm.
+   const nearest=this.boundary.nearest(point,point.y>1&&point.y<1.40?armWeight:undefined);const ids=nearest.ids;if(point.clone().sub(nearest.point).dot(nearest.normal)>0&&!this.boundary.contains(point)){point.copy(nearest.point).addScaledVector(nearest.normal,-NERVE_SKIN_CLEARANCE*2);changed=true;}entry={ids,point};cache.set(key,entry);}p.setXYZ(i,entry.point.x,entry.point.y,entry.point.z);data.set(entry.ids,i*3);this.anchor(entry.point,entry.ids).toArray(anchors,i*4);}
   if(changed&&g.index)g.computeVertexNormals();
   g.setAttribute('nerveSkinFace',new T.BufferAttribute(data,3));g.setAttribute('nerveSkinAnchor',new T.BufferAttribute(anchors,4));
  }
