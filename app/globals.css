@@ -253,5 +253,7 @@ html:lang(en) .skin-section-dialog [data-slot=dialog-title]{line-height:1.5}
 .topbar .render-quality-control{flex-shrink:0;margin-left:12px;gap:6px}
 .topbar .render-quality-control .soma-select{width:142px}
 .topbar .render-quality-control>span{white-space:nowrap}
+.topbar .header-preferences{display:flex;align-items:center;gap:10px;flex:0 0 auto;margin-left:auto}
+.topbar .header-preferences .render-quality-control,.topbar .header-preferences .language-switch{margin-left:0}
 @media(max-width:1450px){.topbar .brand-sub,.topbar .portal-research-badge{display:none}.topbar{flex-wrap:wrap;height:auto;min-height:70px}.topbar .simulator-nav{order:3;width:100%;justify-content:center}.topbar .render-quality-control{margin-left:auto}.topbar .language-switch{margin-left:0}}
 @media(max-width:600px){.topbar .render-quality-control>span{display:none}.topbar .render-quality-control .soma-select{width:128px}.topbar .simulator-nav{justify-content:flex-start;overflow-x:auto}}
