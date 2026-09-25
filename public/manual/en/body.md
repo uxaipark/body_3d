@@ -2,6 +2,17 @@
 
 Open Whole-body Twin from the top navigation.
 
+## Performance mode
+
+Use **Performance** above the viewer to select Auto, Low-power, Balanced or High detail. Your choice is saved in this browser.
+
+- **Auto** starts in Low-power when the browser reports at most four logical processors or 4GB of memory; otherwise it starts in Balanced. Sustained low frame rates during playback lower it to Low-power. Unavailable hardware information is not guessed.
+- **Low-power** caps rendering at 30FPS and uses a lower resolution and lightweight whole-body meshes. Starting in this mode initially hides muscles and nerves; either layer can be enabled again.
+- **Balanced** uses lightweight whole-body meshes and loads detailed geometry for the region viewed close up.
+- **High detail** loads original detailed geometry for visible regions, increasing downloads and memory use.
+
+Manual choices override automatic downgrades. Select Auto to reassess the device. Rendering quality does not alter physiological formulas or CSV sampling. Paused views stop drawing once the camera settles; hidden browser tabs also stop drawing.
+
 ## Anatomy and skin
 
 Toggle circulation, organs/respiration, nerves, bones and muscles, and adjust their opacity. The muscular system shows bilateral muscles, tendons and fascia. The integumentary layer starts off; enabling it exposes skin opacity and regional section selection.

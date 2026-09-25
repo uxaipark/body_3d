@@ -48,10 +48,15 @@ export function constrainNerveToFace(p:T.Vector3,a:T.Vector3,b:T.Vector3,c:T.Vec
 }
 
 export class NerveSkinGuard {
- boundary:SkinBoundary;texture:T.DataTexture;uniforms:{uNerveSkin:{value:T.DataTexture};uNerveSkinSize:{value:T.Vector2}};
- constructor(g:T.BufferGeometry){
-  this.boundary=new SkinBoundary(g);const width=768,height=Math.ceil(this.boundary.points.length*4/width),data=new Float32Array(width*height*4);
-  this.boundary.points.forEach((p,i)=>{data.set([...p.toArray(),0],i*16);data.set(this.boundary.weights[i].indices,i*16+4);data.set(this.boundary.weights[i].weights,i*16+8);data.set([...this.boundary.normals[i].toArray(),0],i*16+12);});
+ private indexedBoundary?:SkinBoundary;
+ get boundary(){return this.indexedBoundary??=new SkinBoundary(this.geometry)}
+ texture:T.DataTexture;uniforms:{uNerveSkin:{value:T.DataTexture};uNerveSkinSize:{value:T.Vector2}};
+ private geometry:T.BufferGeometry;
+ constructor(geometry:T.BufferGeometry){
+  this.geometry=geometry;
+  const p=geometry.getAttribute('position'),ix=geometry.getAttribute('rigIndex'),w=geometry.getAttribute('rigWeight'),normal=geometry.getAttribute('normal');
+  const width=768,height=Math.ceil(p.count*4/width),data=new Float32Array(width*height*4);
+  for(let i=0;i<p.count;i++){for(let j=0;j<3;j++){data[i*16+j]=p.getComponent(i,j);data[i*16+12+j]=normal.getComponent(i,j)}for(let j=0;j<4;j++){data[i*16+4+j]=ix.getComponent(i,j);data[i*16+8+j]=w.getComponent(i,j)}}
   this.texture=new T.DataTexture(data,width,height,T.RGBAFormat,T.FloatType);this.texture.needsUpdate=true;this.texture.minFilter=this.texture.magFilter=T.NearestFilter;
   this.uniforms={uNerveSkin:{value:this.texture},uNerveSkinSize:{value:new T.Vector2(width,height)}};
  }

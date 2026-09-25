@@ -1,4 +1,7 @@
 import {NerveSkinGuard,nerveSkinShader} from './skin-boundary';
+import {loadBodyGeometry,type BodyManifest,type PackedPart} from './body-packed';
+import {NervePoseCache,cachedNerveShader} from './nerve-pose-cache';
+import {qualitySettings,readQualityPreference,resolveQuality,type QualityChoice,type QualityTier} from './render-quality';
 import {connectVesselJunctions,bakeAnatomyTransform,type VesselPart} from './vessel-junctions';
 import {refineFlexibleTissue} from './flexible-tissue';
 import {updateDeformedBounds,bedViewPoint,followBedView} from './rig-view';
@@ -35,9 +38,10 @@ export class AnatomyScene{
  groups=new Map<Layer,THREE.Group>(); meshes:THREE.Mesh[]=[]; markers=new Map<Site,THREE.Mesh>();
  root=new THREE.Group();chair=new THREE.Group();bedGroup=new THREE.Group();bedLoad={value:0};draco=new DRACOLoader();params:Parameters;layers:Layers;time=0;running=true;rotate=false;disposed=false;
  frame=0;last=0;lastStats=0;frameCount=0;slowFrames=0;resizeObserver:ResizeObserver;raycaster=new THREE.Raycaster();pointerDown=[0,0];
- followBed=false;bedViewAnchor=new THREE.Vector3();bedViewCurrent=new THREE.Vector3();bodyBounds=new THREE.Sphere(new THREE.Vector3(0,.9,0),1.3);rig=new HumanRig();skinRig=new HumanRig();softBody=new SoftBody();
+ followBed=false;bedViewAnchor=new THREE.Vector3();bedViewCurrent=new THREE.Vector3();bodyBounds=new THREE.Sphere(new THREE.Vector3(0,.9,0),1.3);rig=new HumanRig();skinRig=this.rig;softBody=new SoftBody();
  bloodVesselsVisible=true;comfortMode=true;comfortUniform={value:1};
  nerveSkin?:NerveSkinGuard;
+ nerveCache?:NervePoseCache;useNerveCache=true;qualityChoice:QualityChoice='auto';qualityTier:QualityTier='balanced';dirty=true;idleFrames=0;lastRendered=0;lastLod=0;qualitySamples=0;qualitySlow=0;ready=false;lodError='';
  muscleVolume=new MuscleVolumeGuard();skinInspection=false;skinMarkers=new Map<string,THREE.Mesh>();
  cardiacCycles=0;selectedSites=new Set<Site>();
  uniforms={uResp:{value:0},uLungInflation:{value:0},uBeat:{value:0},uCardiacCycles:{value:0},uHeartRate:{value:72},uPWV:{value:6.8},uDistension:{value:.019},uPulseGain:{value:1}};
@@ -45,8 +49,9 @@ export class AnatomyScene{
  constructor(public container:HTMLDivElement,p:Parameters,l:Layers,callbacks:{stats:AnatomyScene['onStats'];pick:AnatomyScene['onPick'];time:AnatomyScene['onTime'];site:AnatomyScene['onSite'];skin:AnatomyScene['onSkin']}){
  this.skinRig.forearmRoll=this.rig.forearmRoll;
  this.params=p;this.layers=l;this.onStats=callbacks.stats;this.onPick=callbacks.pick;this.onTime=callbacks.time;this.onSite=callbacks.site;this.onSkin=callbacks.skin;
- this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
- this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));this.renderer.setClearColor(0x0c1013,0);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.4;
+ this.qualityChoice=readQualityPreference();this.qualityTier=resolveQuality(this.qualityChoice);
+ this.renderer=new THREE.WebGLRenderer({antialias:this.qualityTier!=='low',alpha:true,powerPreference:'high-performance'});
+ this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,qualitySettings[this.qualityTier].dpr));this.renderer.setClearColor(0x0c1013,0);this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.4;
  container.appendChild(this.renderer.domElement);this.camera.position.set(.7,1.04,3.7);this.controls=new OrbitControls(this.camera,this.renderer.domElement);this.controls.target.set(0,.91,0);this.controls.enableDamping=true;this.controls.dampingFactor=.075;this.controls.minDistance=.22;this.controls.maxDistance=6;this.controls.maxPolarAngle=Math.PI*.95;
  this.scene.add(this.root);this.scene.add(new THREE.HemisphereLight(0xcce6f4,0x423b32,2));
  for(const [pos,color,intensity] of [[[2,3,3],0xffffff,3],[[-2,1,1],0x76bdce,2],[[0,2,-2],0xb4e5d0,3]] as const){const light=new THREE.DirectionalLight(color,intensity);light.position.set(pos[0],pos[1],pos[2]);this.scene.add(light);}
@@ -79,11 +84,47 @@ export class AnatomyScene{
  this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(container);this.resize();
  this.renderer.domElement.addEventListener('pointerdown',this.pointerStart);this.renderer.domElement.addEventListener('pointerup',this.pick);
  this.renderer.domElement.addEventListener('webglcontextlost',this.contextLost);
+ this.controls.addEventListener('change',this.invalidate);document.addEventListener('visibilitychange',this.visibilityChanged);
  this.frame=requestAnimationFrame(this.animate);
  }
  contextLost=(e:Event)=>{e.preventDefault();this.onPick('WebGL 연결이 끊겼습니다. 페이지를 새로고침해 주세요.');};
- resize(){const w=this.container.clientWidth,h=this.container.clientHeight;if(!w||!h)return;this.renderer.setSize(w,h);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();}
- async load(onProgress:(n:number)=>void){let done=0;const loader=new GLTFLoader().setDRACOLoader(this.draco);
+ invalidate=()=>{this.dirty=true;this.idleFrames=0};
+ setNerveCacheEnabled(enabled:boolean){if(this.useNerveCache===enabled)return;this.useNerveCache=enabled;for(const m of this.meshes)if(m.userData.layer==='nervous')(m.material as THREE.Material).needsUpdate=true;this.invalidate()}
+ visibilityChanged=()=>{this.last=0;this.lastRendered=0;this.lastStats=performance.now();this.frameCount=0;this.qualitySlow=0;this.invalidate()};
+ resize(){const w=this.container.clientWidth,h=this.container.clientHeight;if(!w||!h)return;this.renderer.setSize(w,h);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.invalidate();}
+ setQuality(choice:QualityChoice){this.qualityChoice=choice;this.qualityTier=resolveQuality(choice);if(this.lodError){this.lodError="";for(const state of this.packedParts.values())state.pending=undefined;}this.qualitySlow=0;this.qualitySamples=0;this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,qualitySettings[this.qualityTier].dpr));this.resize();this.updateLod();}
+ updateLod(){
+  if(this.disposed)return;
+  const close=this.camera.position.distanceTo(this.controls.target)<1.35,wantDetail=this.qualityTier==='high'||(this.qualityTier==='balanced'&&close);
+  const anchors:[string,string][]=[['head','head'],['torso','chest'],['legs','thigh.r'],['rightArm','forearm.r'],['leftArm','forearm.l']];let region='torso',distance=Infinity;
+  for(const [name,bone]of anchors){const d=this.rig.bone(bone).getWorldPosition(new THREE.Vector3()).distanceToSquared(this.controls.target);if(d<distance){distance=d;region=name}}
+  for(const [mesh,state]of this.packedParts){const detail=wantDetail&&mesh.visible&&(this.qualityTier==='high'||state.part.region===region||!state.part.region);
+   if(detail&&state.part.detail&&!state.high&&!state.pending){state.pending=loadBodyGeometry(state.part.detail,this.abortLoad.signal).then(g=>{if(this.disposed){g.dispose();return}state.high=g;g.boundingSphere=this.bodyBounds;state.pending=undefined;this.invalidate();this.updateLod()}).catch(e=>{if(!this.disposed)this.lodError=String(e)});}
+   const g=detail&&state.high?state.high:state.low;if(mesh.geometry!==g){mesh.geometry=g;mesh.userData.ranges=g===state.high?state.part.detailRanges:state.part.userData.ranges;this.invalidate()}
+   if(!detail&&state.high){state.high.dispose();state.high=undefined}
+  }
+ }
+ abortLoad=new AbortController();packedParts=new Map<THREE.Mesh,{part:PackedPart;low:THREE.BufferGeometry;high?:THREE.BufferGeometry;pending?:Promise<void>}>();
+ async load(onProgress:(n:number)=>void){
+  const response=await fetch('/models/body/manifest.json',{signal:this.abortLoad.signal});if(!response.ok)throw Error('Precomputed anatomy is unavailable');
+  const manifest=await response.json() as BodyManifest;if(manifest.version!==1)throw Error('Incompatible anatomy version');let done=0;
+  for(const part of manifest.parts){
+   const geometry=await loadBodyGeometry(part.file,this.abortLoad.signal);if(this.disposed){geometry.dispose();return}
+   const layer=part.layer as Layer,skin=layer==='skin';
+   if(skin){this.nerveSkin=new NerveSkinGuard(geometry);this.rig.floorSamples=surfaceFootSupport(geometry);this.skinRig.floorSamples=this.rig.floorSamples;if(this.renderer.extensions.has('EXT_color_buffer_float'))this.nerveCache=new NervePoseCache(this.nerveSkin,this.rig,this.softBody);}
+   const mat=new THREE.MeshStandardMaterial({color:new THREE.Color().fromArray(part.color),vertexColors:!skin,roughness:.52,metalness:skin?0:.07,transparent:true,side:THREE.FrontSide});
+   this.applyDeformation(mat,part.part,layer==='skeleton'||part.part==='pelvic'||part.part==='hepatic'||isRespiratoryPart(part.part),layer==='cardiovascular',layer==='muscular',layer==='nervous');
+   if(skin)applySkinTissue(mat,'skin');if(part.part==='lung')applyCardiacClearance(mat);
+   if(part.part==='heart'||part.part==='lung'){mat.metalness=0;mat.roughness=part.part==='heart'?.42:.7;applyOrganSurface(mat,part.part)}
+   if(layer==='muscular'){mat.metalness=0;mat.roughness=part.part==='tendon'?.4:.57;applyMuscleSurface(mat,part.part as Tissue)}
+   applyComfortMask(mat,this.comfortUniform);
+   const mesh=new THREE.Mesh(geometry,mat);geometry.boundingSphere=this.bodyBounds;mesh.userData={...part.userData};mesh.renderOrder=part.renderOrder;
+   if(skin)mesh.userData.ranges=[{end:Infinity,name:'피부 · BodyParts3D 성인 남성'}];
+   let group=this.groups.get(layer);if(!group){group=new THREE.Group();this.groups.set(layer,group);this.root.add(group)}group.add(mesh);this.meshes.push(mesh);this.packedParts.set(mesh,{part,low:geometry});this.setLayers(this.layers);onProgress(Math.round(++done/manifest.parts.length*100));
+  }this.ready=true;this.lastStats=performance.now();this.frameCount=0;this.updateLod();this.invalidate();
+ }
+ /** Offline asset baker only. Production uses the lossless precomputed meshes. */
+ async loadSource(onProgress:(n:number)=>void){let done=0;const loader=new GLTFLoader().setDRACOLoader(this.draco);
  // Limit concurrent decodes to keep interaction responsive on integrated GPUs.
  for(const layer of ['skin','visceral','cardiovascular','skeleton','nervous','muscular'] as Layer[]){
  const gltf=await loader.loadAsync(layer==='skin'?'/models/skin-atlas-web.glb?native=3':`/models/${layer}-web.glb${layer==='adipose'||layer==='dermis'?'?tissue=3':layer==='visceral'?'?lungs=4':layer==='cardiovascular'?'?costal=1':''}`);if(this.disposed){gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh)o.geometry.dispose()});return;}
@@ -153,14 +194,14 @@ export class AnatomyScene{
  if(part==='heart'||part==='lung'){mat.metalness=0;mat.roughness=part==='heart'?.42:.7;applyOrganSurface(mat,part);}
  if(layer==='muscular'){mat.metalness=0;mat.roughness=part==='tendon'?.4:.57;applyMuscleSurface(mat,part as Tissue);}
  applyComfortMask(mat,this.comfortUniform);
- const mesh=new THREE.Mesh(geometry,mat);geometry.boundingSphere=this.bodyBounds;mesh.userData={layer,vessel:layer==='cardiovascular'&&part!=='heart',genital:part==='pelvic',organSurface:part==='heart'||part==='lung',ranges:batch.ranges,opacityScale:part==='fascia'?.13:part==='pleura'?.18:1};mesh.renderOrder=part==='fascia'?6:layer==='muscular'?4:layer==='skeleton'?3:part==='pleura'?1:0;this.meshes.push(mesh);group.add(mesh);}
+ const mesh=new THREE.Mesh(geometry,mat);geometry.boundingSphere=this.bodyBounds;mesh.userData={layer,part,vessel:layer==='cardiovascular'&&part!=='heart',genital:part==='pelvic',organSurface:part==='heart'||part==='lung',ranges:batch.ranges,opacityScale:part==='fascia'?.13:part==='pleura'?.18:1};mesh.renderOrder=part==='fascia'?6:layer==='muscular'?4:layer==='skeleton'?3:part==='pleura'?1:0;this.meshes.push(mesh);group.add(mesh);}
  this.groups.set(layer,group);this.root.add(group);this.setLayers(this.layers);gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose());}});onProgress(Math.round(++done/6*100));
  }
  }
  applyDeformation(mat:THREE.MeshStandardMaterial,part:string,rigid=false,cardiac=false,muscular=false,nervous=false){
  mat.onBeforeCompile=shader=>{
- Object.assign(shader.uniforms,this.uniforms,this.softBody.uniforms,nervous?this.nerveSkin!.uniforms:{},muscular?this.muscleVolume.uniforms:{},['skin','dermis','adipose'].includes(part)?this.skinRig.uniforms:this.rig.uniforms);
- shader.vertexShader='uniform float uResp; uniform float uBeat;\n'+(cardiac&&part!=='artery'?'uniform float uCardiacCycles;\n':'')+(isRespiratoryPart(part)?'attribute vec3 lungInhale; uniform float uLungInflation;\n':part==='hepatic'||cardiac?'uniform float uLungInflation;\n':'')+rigShader+(muscular?muscleVolumeShader:'')+(rigid?'':tissueShader)+(part==='artery'?arterialShader:'')+(cardiac?cardiacShader+vesselClearanceShader:'')+(nervous?nerveSkinShader:'')+shader.vertexShader;
+ Object.assign(shader.uniforms,this.uniforms,this.softBody.uniforms,nervous?this.nerveSkin!.uniforms:{},nervous&&this.nerveCache&&this.useNerveCache?this.nerveCache.uniforms:{},muscular?this.muscleVolume.uniforms:{},this.rig.uniforms);
+ shader.vertexShader='uniform float uResp; uniform float uBeat;\n'+(cardiac&&part!=='artery'?'uniform float uCardiacCycles;\n':'')+(isRespiratoryPart(part)?'attribute vec3 lungInhale; uniform float uLungInflation;\n':part==='hepatic'||cardiac?'uniform float uLungInflation;\n':'')+rigShader+(muscular?muscleVolumeShader:'')+(rigid?'':tissueShader)+(part==='artery'?arterialShader:'')+(cardiac?cardiacShader+vesselClearanceShader:'')+(nervous?(this.nerveCache&&this.useNerveCache?cachedNerveShader(nerveSkinShader):nerveSkinShader):'')+shader.vertexShader;
  shader.vertexShader=shader.vertexShader.replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
  vec4 rigR;vec4 rigD;rigBlend(rigR,rigD);
  ${rigid?'':'vec3 tissueOffset;mat3 tissueJacobian;tissueField(position,tissueOffset,tissueJacobian);'}
@@ -185,16 +226,16 @@ export class AnatomyScene{
  ${muscular?'transformed=muscleVolumePosition(transformed);':''}
  ${nervous?'transformed=nerveSkinPosition(transformed);':''}
  `);
- };mat.customProgramCacheKey=()=>`joint-dq-tissue-volume-v5-${part}-${rigid}-${cardiac}-${muscular}-${nervous}`;
+ };mat.customProgramCacheKey=()=>`joint-dq-tissue-volume-v6-${part}-${rigid}-${cardiac}-${muscular}-${nervous}-${!!this.nerveCache&&this.useNerveCache}`;
  }
 
- setLayers(l:Layers){this.layers=l;for(const m of this.meshes){const v=l[m.userData.layer as Layer];const layer=m.userData.layer as Layer;const cover=l.skin>=100?'skin':l.dermis>=100?'dermis':l.adipose>=100?'adipose':null;const exterior=['skin','dermis','adipose'];m.visible=v>0&&(!m.userData.vessel||this.bloodVesselsVisible)&&!(this.comfortMode&&m.userData.genital)&&(!cover||(exterior.includes(layer)&&exterior.indexOf(layer)<=exterior.indexOf(cover)));const mat=m.material as THREE.MeshStandardMaterial;mat.opacity=v/100*(m.userData.opacityScale??1);mat.depthWrite=mat.opacity>=(m.userData.organSurface?.5:.95);}}
+ setLayers(l:Layers){this.invalidate();this.layers=l;for(const m of this.meshes){const v=l[m.userData.layer as Layer];const layer=m.userData.layer as Layer;const cover=l.skin>=100?'skin':l.dermis>=100?'dermis':l.adipose>=100?'adipose':null;const exterior=['skin','dermis','adipose'];m.visible=v>0&&(!m.userData.vessel||this.bloodVesselsVisible)&&!(this.comfortMode&&m.userData.genital)&&(!cover||(exterior.includes(layer)&&exterior.indexOf(layer)<=exterior.indexOf(cover)));const mat=m.material as THREE.MeshStandardMaterial;mat.opacity=v/100*(m.userData.opacityScale??1);mat.depthWrite=mat.opacity>=(m.userData.organSurface?.5:.95);}}
  setBloodVesselsVisible(enabled:boolean){this.bloodVesselsVisible=enabled;this.setLayers(this.layers);}
  setComfortMode(enabled:boolean){this.comfortMode=enabled;this.comfortUniform.value=enabled?1:0;this.setLayers(this.layers);}
- setSkinInspection(enabled:boolean){this.skinInspection=enabled;for(const marker of this.skinMarkers.values())marker.visible=enabled;}
- setSensors(selected:Site[]){this.selectedSites=new Set(selected);for(const [key,m]of this.markers)m.visible=this.selectedSites.has(key);}
- setParameters(p:Parameters){const previous=this.params.motion;this.params=p;if(previous!==p.motion){if(p.motion==='lie'){this.rig.bedAnchor.set(this.rig.bones[0].position.x,0,this.rig.bones[0].position.z-this.rig.bind[0].z);this.focus('bed');}else if(previous==='lie')this.focus('body');}for(const [key,m]of this.markers){m.scale.setScalar(key===p.site?1.4:.65);(m.material as THREE.MeshBasicMaterial).color.set(sensorColors[key]);}}
- focus(target:'body'|'chest'|'head'|'sensor'|'front'|'back'|'hands'|'bed'){this.followBed=target==='bed';if(target==='body'||target==='front'){this.controls.target.set(0,.91,0);this.camera.position.set(target==='front'?0:.7,1.04,3.7);}else if(target==='back'){this.controls.target.set(0,.91,0);this.camera.position.set(0,1.04,-3.7);}else if(target==='bed'){bedViewPoint(this.rig.bone('pelvis'),this.rig.bone('chest'),this.bedViewAnchor);this.controls.target.copy(this.bedViewAnchor);this.camera.position.copy(this.bedViewAnchor).add(new THREE.Vector3(1.5,1.17,3.5));}else if(target==='hands'){const p=this.rig.bone('hand.r').getWorldPosition(new THREE.Vector3()).add(this.rig.bone('hand.l').getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);this.controls.target.copy(p);this.camera.position.copy(p).add(new THREE.Vector3(.15,.12,1.45));}else{const p=target==='sensor'?this.markers.get(this.params.site)!.position.toArray():target==='head'?[0,1.62,0]:[0,1.28,0];this.controls.target.set(p[0],p[1],p[2]);this.camera.position.set(p[0]+.12,p[1]+.02,p[2]+(target==='sensor'?.5:.85));}this.controls.update();}
+ setSkinInspection(enabled:boolean){this.invalidate();this.skinInspection=enabled;for(const marker of this.skinMarkers.values())marker.visible=enabled;}
+ setSensors(selected:Site[]){this.invalidate();this.selectedSites=new Set(selected);for(const [key,m]of this.markers)m.visible=this.selectedSites.has(key);}
+ setParameters(p:Parameters){this.invalidate();const previous=this.params.motion;this.params=p;if(previous!==p.motion){if(p.motion==='lie'){this.rig.bedAnchor.set(this.rig.bones[0].position.x,0,this.rig.bones[0].position.z-this.rig.bind[0].z);this.focus('bed');}else if(previous==='lie')this.focus('body');}for(const [key,m]of this.markers){m.scale.setScalar(key===p.site?1.4:.65);(m.material as THREE.MeshBasicMaterial).color.set(sensorColors[key]);}}
+ focus(target:'body'|'chest'|'head'|'sensor'|'front'|'back'|'hands'|'bed'){this.followBed=target==='bed';if(target==='body'||target==='front'){this.controls.target.set(0,.91,0);this.camera.position.set(target==='front'?0:.7,1.04,3.7);}else if(target==='back'){this.controls.target.set(0,.91,0);this.camera.position.set(0,1.04,-3.7);}else if(target==='bed'){bedViewPoint(this.rig.bone('pelvis'),this.rig.bone('chest'),this.bedViewAnchor);this.controls.target.copy(this.bedViewAnchor);this.camera.position.copy(this.bedViewAnchor).add(new THREE.Vector3(1.5,1.17,3.5));}else if(target==='hands'){const p=this.rig.bone('hand.r').getWorldPosition(new THREE.Vector3()).add(this.rig.bone('hand.l').getWorldPosition(new THREE.Vector3())).multiplyScalar(.5);this.controls.target.copy(p);this.camera.position.copy(p).add(new THREE.Vector3(.15,.12,1.45));}else{const p=target==='sensor'?this.rig.transform(new THREE.Vector3(...sites[this.params.site].position)).toArray():target==='head'?[0,1.62,0]:[0,1.28,0];this.controls.target.set(p[0],p[1],p[2]);this.camera.position.set(p[0]+.12,p[1]+.02,p[2]+(target==='sensor'?.5:.85));}this.controls.update();}
  zoom(factor:number){this.camera.position.sub(this.controls.target).multiplyScalar(factor).add(this.controls.target);this.controls.update();}
  pointerStart=(e:PointerEvent)=>{this.pointerDown=[e.clientX,e.clientY]};
  pick=(e:PointerEvent)=>{if(Math.hypot(e.clientX-this.pointerDown[0],e.clientY-this.pointerDown[1])>5)return;const r=this.renderer.domElement.getBoundingClientRect();this.raycaster.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),this.camera);
@@ -220,26 +261,40 @@ export class AnatomyScene{
   if(hit?.face){const {a,b,c}=hit.face,local=mesh.worldToLocal(hit.point.clone()),bary=THREE.Triangle.getBarycoord(local,new THREE.Vector3().fromBufferAttribute(position,a),new THREE.Vector3().fromBufferAttribute(position,b),new THREE.Vector3().fromBufferAttribute(position,c),new THREE.Vector3());if(bary){const point=new THREE.Vector3().fromBufferAttribute(original,a).multiplyScalar(bary.x).addScaledVector(new THREE.Vector3().fromBufferAttribute(original,b),bary.y).addScaledVector(new THREE.Vector3().fromBufferAttribute(original,c),bary.z);result=point.toArray() as [number,number,number];}}
   geometry.dispose();material.dispose();return result&&this.comfortMode&&comfortRegion(...result)?null:result;
  }
- animate=(now:number)=>{if(this.disposed)return;const delta=this.last?Math.min((now-this.last)/1000,.05):0;this.last=now;if(this.running&&!document.hidden)this.time+=delta;
+ previousRunning=true;
+ animate=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(this.animate);
+ if(document.hidden){this.last=0;this.lastRendered=0;return}
+ if(this.running!==this.previousRunning){this.previousRunning=this.running;this.last=now;this.lastStats=now;this.frameCount=0;this.qualitySlow=0;this.invalidate()}
+ if(now-this.lastRendered<1000/qualitySettings[this.qualityTier].fps-1)return;
+ this.controls.autoRotate=this.rotate;const cameraChanged=this.controls.update();
+ if(cameraChanged)this.invalidate();else this.idleFrames++;
+ if(!this.running&&!this.rotate&&!this.dirty&&this.idleFrames>1){this.last=now;return}
+ const delta=this.last?Math.min((now-this.last)/1000,.05):0;this.last=now;this.lastRendered=now;if(this.running)this.time+=delta;
  this.uniforms.uLungInflation.value=(1+Math.sin(this.time*Math.PI*2*this.params.rr/60))/2*Math.min(1,this.params.tidal/1000);
  this.uniforms.uResp.value=Math.sin(this.time*Math.PI*2*this.params.rr/60)*this.params.tidal/500;if(this.running&&!document.hidden)this.cardiacCycles+=delta*this.params.hr/60;
  this.uniforms.uCardiacCycles.value=this.cardiacCycles;this.uniforms.uHeartRate.value=this.params.hr;this.uniforms.uPWV.value=4+8*this.params.stiffness/100;this.uniforms.uDistension.value=distensionFraction(this.params.stiffness);this.uniforms.uBeat.value=systolicPulse(this.cardiacCycles);
  this.softBody.update(this.running&&!document.hidden?delta:0,(1+Math.sin(this.time*Math.PI*2*this.params.rr/60))/2,this.params.tidal);
  this.rig.update(this.running&&!document.hidden?delta:0,this.params.motion,this.params.motionRevision||0);
- this.muscleVolume.update(this.params.motion,this.rig.taskTime,this.rig.transition);this.skinRig.copyPose(this.rig);updateDeformedBounds(this.rig.bones,this.bodyBounds);
+ if(this.layers.muscular>0)this.muscleVolume.update(this.params.motion,this.rig.taskTime,this.rig.transition);updateDeformedBounds(this.rig.bones,this.bodyBounds);
  this.chair.visible=this.params.motion==='stand'||this.params.motion==='sitStand';
  this.bedGroup.position.set(bedPlacement.x+this.rig.bedAnchor.x,0,bedPlacement.z+this.rig.bedAnchor.z);this.bedGroup.visible=this.params.motion==='lie';this.bedLoad.value=this.params.motion==='lie'?this.rig.bedLoad:0;
  if(this.followBed&&this.params.motion==='lie'){bedViewPoint(this.rig.bone('pelvis'),this.rig.bone('chest'),this.bedViewCurrent);followBedView(this.camera,this.controls.target,this.bedViewAnchor,this.bedViewCurrent);}
- this.controls.autoRotate=this.rotate;this.controls.autoRotateSpeed=.5;this.controls.update();
+ this.controls.autoRotateSpeed=.5;
  for(const [key,m] of this.markers){
+ if(!m.visible)continue;
  const point=new THREE.Vector3(...sites[key].position);
  point.addScaledVector(this.softBody.sample(point),this.layers.skin>0?surfaceTissueWeight(weightsAt(point.x,point.y,point.z)):1);
  m.position.copy((this.layers.skin>0||this.layers.dermis>0||this.layers.adipose>0?this.skinRig:this.rig).transform(point));
  const halo=m.getObjectByName('halo');if(halo)halo.quaternion.copy(this.camera.quaternion);
  }
  if(this.skinInspection)for(const [key,marker]of this.skinMarkers){const region=skinRegions.find(r=>r.id===key)!,point=new THREE.Vector3(...region.position);point.addScaledVector(this.softBody.sample(point),surfaceTissueWeight(weightsAt(point.x,point.y,point.z)));marker.position.copy(this.skinRig.transform(point));marker.scale.setScalar(1+.10*Math.sin(this.time*3));}
- if(!document.hidden){this.renderer.render(this.scene,this.camera);this.frameCount++;}if(now-this.lastStats>1000){const fps=Math.round(this.frameCount*1000/(now-this.lastStats));this.slowFrames=fps<38?this.slowFrames+1:0;if(this.slowFrames>=3&&this.renderer.getPixelRatio()>1){this.renderer.setPixelRatio(1);this.resize();this.slowFrames=0;}this.onStats(fps,this.renderer.info.render.triangles);this.onTime(this.time);this.lastStats=now;this.frameCount=0;}
- this.frame=requestAnimationFrame(this.animate);
+ if(this.nerveCache&&this.useNerveCache&&this.meshes.some(m=>m.userData.layer==='nervous'&&m.visible)&&(this.running||!this.nerveCache.ready||this.dirty))this.nerveCache.update(this.renderer);
+ this.renderer.render(this.scene,this.camera);this.frameCount++;this.dirty=false;
+ if(now-this.lastLod>500){this.lastLod=now;this.updateLod()}
+ if(now-this.lastStats>1000){const fps=Math.round(this.frameCount*1000/(now-this.lastStats));
+  if(this.ready&&this.running&&this.qualityChoice==='auto'){this.qualitySamples++;this.qualitySlow=fps<42?this.qualitySlow+1:0;if(this.qualitySamples>3&&this.qualitySlow>=3&&this.qualityTier!=='low'){this.qualityTier='low';this.renderer.setPixelRatio(Math.min(window.devicePixelRatio,qualitySettings.low.dpr));this.resize();this.updateLod()}}
+  this.onStats(fps,this.renderer.info.render.triangles);this.onTime(this.time);this.lastStats=now;this.frameCount=0;
+ }
  };
- dispose(){this.disposed=true;cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.controls.dispose();this.draco.dispose();this.nerveSkin?.dispose();this.muscleVolume.dispose();this.rig.dispose();this.skinRig.dispose();this.renderer.domElement.removeEventListener('pointerdown',this.pointerStart);this.renderer.domElement.removeEventListener('pointerup',this.pick);this.renderer.domElement.removeEventListener('webglcontextlost',this.contextLost);this.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{for(const v of Object.values(m)){if(v instanceof THREE.Texture)v.dispose();}m.dispose();})}});this.renderer.dispose();this.renderer.domElement.remove();}
+ dispose(){this.disposed=true;this.abortLoad.abort();document.removeEventListener('visibilitychange',this.visibilityChanged);this.nerveCache?.dispose();for(const state of this.packedParts.values()){state.low.dispose();state.high?.dispose()}cancelAnimationFrame(this.frame);this.resizeObserver.disconnect();this.controls.dispose();this.draco.dispose();this.nerveSkin?.dispose();this.muscleVolume.dispose();this.rig.dispose();this.renderer.domElement.removeEventListener('pointerdown',this.pointerStart);this.renderer.domElement.removeEventListener('pointerup',this.pick);this.renderer.domElement.removeEventListener('webglcontextlost',this.contextLost);this.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{for(const v of Object.values(m)){if(v instanceof THREE.Texture)v.dispose();}m.dispose();})}});this.renderer.dispose();this.renderer.domElement.remove();}
 }

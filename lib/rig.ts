@@ -259,6 +259,7 @@ export class HumanRig {
  }
  /** One final palette is shared by skeleton, native skin, vessels and markers. */
  copyPose(source:HumanRig){
+  if(source===this)return;
   this.bedLoad=source.bedLoad;
   this.bones.forEach((b,i)=>{b.position.copy(source.bones[i].position);b.quaternion.copy(source.bones[i].quaternion)});
   this.bones[0].updateMatrixWorld(true);this.updatePalette();
