@@ -22,7 +22,7 @@ export class SleepScene{
   const chip=new T.Mesh(new T.BoxGeometry(.012,.009,.003),new T.MeshStandardMaterial({color:'#122c38'}));chip.position.set(0,.013,.003);this.patch.add(chip);v.root.add(this.patch);this.attachments.push({mesh:chip,x:0,y:.013,height:.003,anchors:[]});this.patch.visible=false;
   const canvas=v.renderer.domElement;canvas.addEventListener('pointerdown',this.pointerDown,true);canvas.addEventListener('pointermove',this.pointerMove,true);canvas.addEventListener('pointerup',this.pointerUp,true);canvas.addEventListener('pointercancel',this.pointerUp,true);canvas.addEventListener('lostpointercapture',this.pointerUp,true);
   v.rig.poseBed(14);v.skinRig.copyPose(v.rig);v.focus('bed');v.controls.target.set(-.15,.6,-.805);v.camera.position.set(1.2,1.8,1.0);v.controls.update();
-  v.load(progress).then(()=>{if(this.disposed)return;const skin=v.meshes.find(m=>m.userData.layer==='skin'&&m.geometry.getAttribute('position').count>10000);if(skin){this.surface=new PatchSurface(skin.geometry);this.setPatchPosition(this.position);}}).catch(()=>progress(-1));
+  v.load(progress,'sleep').then(()=>{if(this.disposed)return;const skin=v.meshes.find(m=>m.userData.layer==='skin'&&m.geometry.getAttribute('position').count>10000);if(skin){this.surface=new PatchSurface(skin.geometry);this.setPatchPosition(this.position);}}).catch(()=>progress(-1));
  }
  get qualityTier(){return this.view.qualityTier;}
  setQuality(choice:QualityChoice){this.view.externalBudget.reset();this.view.setQuality(choice);}

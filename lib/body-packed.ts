@@ -22,7 +22,9 @@ export async function decodeBodyGeometry(bytes:ArrayBuffer){
  if(offset!==raw.byteLength||!geometry.getAttribute('position')||!geometry.index)throw Error('Incomplete body geometry');
  geometry.computeBoundingBox();return geometry;
 }
-export async function loadBodyGeometry(file:string,signal?:AbortSignal){
+export async function fetchBodyGeometry(file:string,signal?:AbortSignal){
  const response=await fetch(`/models/body/${file}`,{signal});if(!response.ok)throw Error('Body geometry unavailable');
- return decodeBodyGeometry(await response.arrayBuffer());
+ return response.arrayBuffer();
 }
+
+export async function loadBodyGeometry(file:string,signal?:AbortSignal){return decodeBodyGeometry(await fetchBodyGeometry(file,signal));}

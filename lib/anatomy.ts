@@ -1,5 +1,6 @@
+import {orderedBatches,bodyLoadParts} from './body-loading.js';
 import {NerveSkinGuard,nerveSkinShader} from './skin-boundary';
-import {loadBodyGeometry,type BodyManifest,type PackedPart} from './body-packed';
+import {loadBodyGeometry,fetchBodyGeometry,decodeBodyGeometry,type BodyManifest,type PackedPart} from './body-packed';
 import {NervePoseCache,cachedNerveShader} from './nerve-pose-cache';
 import {qualitySettings,readQualityPreference,resolveQuality,type QualityChoice,type QualityTier} from './render-quality';
 import {connectVesselJunctions,bakeAnatomyTransform,type VesselPart} from './vessel-junctions';
@@ -106,13 +107,14 @@ export class AnatomyScene{
   }
  }
  abortLoad=new AbortController();packedParts=new Map<THREE.Mesh,{part:PackedPart;low:THREE.BufferGeometry;high?:THREE.BufferGeometry;pending?:Promise<void>}>();
- async load(onProgress:(n:number)=>void){
+ async load(onProgress:(n:number)=>void,profile:'full'|'sleep'='full'){
   const response=await fetch('/models/body/manifest.json',{signal:this.abortLoad.signal});if(!response.ok)throw Error('Precomputed anatomy is unavailable');
   const manifest=await response.json() as BodyManifest;if(manifest.version!==1)throw Error('Incompatible anatomy version');let done=0;
-  for(const part of manifest.parts){
-   const geometry=await loadBodyGeometry(part.file,this.abortLoad.signal);if(this.disposed){geometry.dispose();return}
+  const parts=bodyLoadParts(manifest.parts,profile);
+  for await(const {item:part,value:bytes} of orderedBatches(parts,(part:PackedPart,signal:AbortSignal)=>fetchBodyGeometry(part.file,signal),this.abortLoad.signal,4)){
+   const geometry=await decodeBodyGeometry(bytes);if(this.disposed){geometry.dispose();return}
    const layer=part.layer as Layer,skin=layer==='skin';
-   if(skin){this.nerveSkin=new NerveSkinGuard(geometry);this.rig.floorSamples=surfaceFootSupport(geometry);this.skinRig.floorSamples=this.rig.floorSamples;if(this.renderer.extensions.has('EXT_color_buffer_float'))this.nerveCache=new NervePoseCache(this.nerveSkin,this.rig,this.softBody);}
+   if(skin){if(profile==='full')this.nerveSkin=new NerveSkinGuard(geometry);this.rig.floorSamples=surfaceFootSupport(geometry);this.skinRig.floorSamples=this.rig.floorSamples;if(this.nerveSkin&&this.renderer.extensions.has('EXT_color_buffer_float'))this.nerveCache=new NervePoseCache(this.nerveSkin,this.rig,this.softBody);}
    const mat=new THREE.MeshStandardMaterial({color:new THREE.Color().fromArray(part.color),vertexColors:!skin,roughness:.52,metalness:skin?0:.07,transparent:true,side:THREE.FrontSide});
    this.applyDeformation(mat,part.part,layer==='skeleton'||part.part==='pelvic'||part.part==='hepatic'||isRespiratoryPart(part.part),layer==='cardiovascular',layer==='muscular',layer==='nervous');
    if(skin)applySkinTissue(mat,'skin');if(part.part==='lung')applyCardiacClearance(mat);
@@ -121,7 +123,7 @@ export class AnatomyScene{
    applyComfortMask(mat,this.comfortUniform);
    const mesh=new THREE.Mesh(geometry,mat);geometry.boundingSphere=this.bodyBounds;mesh.userData={...part.userData};mesh.renderOrder=part.renderOrder;
    if(skin)mesh.userData.ranges=[{end:Infinity,name:'피부 · BodyParts3D 성인 남성'}];
-   let group=this.groups.get(layer);if(!group){group=new THREE.Group();this.groups.set(layer,group);this.root.add(group)}group.add(mesh);this.meshes.push(mesh);this.packedParts.set(mesh,{part,low:geometry});this.setLayers(this.layers);onProgress(Math.round(++done/manifest.parts.length*100));
+   let group=this.groups.get(layer);if(!group){group=new THREE.Group();this.groups.set(layer,group);this.root.add(group)}group.add(mesh);this.meshes.push(mesh);this.packedParts.set(mesh,{part,low:geometry});this.setLayers(this.layers);onProgress(Math.round(++done/parts.length*100));
   }this.ready=true;this.lastStats=performance.now();this.frameCount=0;this.updateLod();this.invalidate();
  }
  /** Offline asset baker only. Production uses the lossless precomputed meshes. */

@@ -4,3 +4,10 @@
 /manual/*.md
   Content-Type: text/markdown; charset=utf-8
   X-Content-Type-Options: nosniff
+
+/models/body/*.bin.gz
+  Cache-Control: public, max-age=31536000, immutable
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+/models/body/manifest.json
+  Cache-Control: public, max-age=0, must-revalidate
