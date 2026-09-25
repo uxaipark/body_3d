@@ -1,6 +1,6 @@
 # Wrist Sensing
 
-Use **Performance** at the top of the Radial Artery Digital Twin card to choose Auto, Low-power, Balanced or High detail. It remains visible when the card is collapsed. The saved browser preference is shared with the other simulators. The avatar uses the whole-body detail modes; wrist and skin sections use the corresponding resolution and 30/60FPS caps while retaining detailed anatomy. High detail also enables wrist shadows. Auto considers hardware and sustained rendering performance. Signal generation, acquisition and blood-pressure estimation settings are unchanged.
+Use **Performance** in the shared top navigation to choose Auto, Low-power, Balanced or High detail. The embedded wrist card has no duplicate selector. Standalone experiment windows retain their top selector. The saved browser preference is shared with the other simulators. The avatar uses the whole-body detail modes; wrist and skin sections use the corresponding resolution and 30/60FPS caps while retaining detailed anatomy. High detail also enables wrist shadows. Auto considers hardware and sustained rendering performance. Signal generation, acquisition and blood-pressure estimation settings are unchanged.
 
 Collapse the Radial Artery Digital Twin overview to free space for the experiment below.
 

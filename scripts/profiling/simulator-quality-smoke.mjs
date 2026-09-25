@@ -15,14 +15,15 @@ try{
  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value};
  await send('Page.enable');await send('Runtime.enable');await send('Emulation.setDeviceMetricsOverride',{width:1400,height:1000,deviceScaleFactor:2,mobile:false});const errors=[];ws.on('message',raw=>{const data=JSON.parse(raw);if(data.method==='Runtime.exceptionThrown')errors.push(data.params.exceptionDetails.text+': '+data.params.exceptionDetails.exception?.description)});
  const delay=ms=>new Promise(r=>setTimeout(r,ms));
- for(const route of ['/simulators/sleep','/simulators/radial/index.html?theme=dark&wrist3d=A']){
+ for(const route of ['/simulators/body','/simulators/sleep','/simulators/wrist']){
   await send('Page.navigate',{url:(process.env.SOMA_TEST_URL||'http://localhost:3000')+route});
-  for(let i=0;i<100;i++){if(await evaluate(`!!document.querySelector('select') && (!document.querySelector('#renderQuality') || !!document.querySelector('#renderQuality')._dd) && !!document.querySelector('canvas') && !document.querySelector('.sleep-loading,.soma-load')`))break;await delay(300);if(i===99)throw Error('Load timeout '+route+' '+JSON.stringify({errors,body:await evaluate('document.body.innerText.slice(0,1800)')}))}
-  const selector=route.includes('/sleep')?'.render-quality-control select':'#renderQuality';
+  for(let i=0;i<100;i++){if(await evaluate(`(()=>{const d=document.querySelector('iframe')?.contentDocument||document;return !!document.querySelector('.topbar .render-quality-control select') && (!d.querySelector('#renderQuality') || !!d.querySelector('#renderQuality')._dd) && !!d.querySelector('canvas') && !d.querySelector('.sleep-loading,.soma-load,.model-loading')})()`))break;await delay(300);if(i===99)throw Error('Load timeout '+route+' '+JSON.stringify({errors,body:await evaluate('document.body.innerText.slice(0,1800)')}))}
+  const selector='.topbar .render-quality-control select';
   for(const quality of ['low','high','balanced']){
    await evaluate(`(()=>{const s=document.querySelector('${selector}');if(!s)throw Error('Quality selector missing');s.value='${quality}';s.dispatchEvent(new Event('change',{bubbles:true}))})()`);await delay(1600);if(await evaluate("localStorage.getItem('soma.body.quality')")!==quality)throw Error('Selection not saved: '+route+' '+quality);
-   console.log(JSON.stringify({route,quality,state:await evaluate(`({saved:localStorage.getItem('soma.body.quality'),canvases:[...document.querySelectorAll('canvas')].filter(c=>c.clientWidth>100).map(c=>({width:c.width,css:c.clientWidth})).slice(0,3),status:document.querySelector('#renderQualityStatus')?.textContent})`)}));
+   const ratio=await evaluate(`(()=>{const d=document.querySelector('iframe')?.contentDocument||document,c=d.querySelector('canvas');return c.width/c.clientWidth})()`);const expected={low:.85,balanced:1.15,high:1.5}[quality];if(Math.abs(ratio-expected)>.02)throw Error('DPR mismatch: '+route+' '+quality+' '+ratio);
+   console.log(JSON.stringify({route,quality,state:await evaluate(`({saved:localStorage.getItem('soma.body.quality'),canvases:[...(document.querySelector('iframe')?.contentDocument||document).querySelectorAll('canvas')].filter(c=>c.clientWidth>100).map(c=>({width:c.width,css:c.clientWidth})).slice(0,3),status:document.querySelector('#renderQualityStatus')?.textContent})`)}));
   }
  }
- if(errors.length)throw Error(errors.join('\n'));console.log('Sleep and wrist runtime smoke passed');
+ if(errors.length)throw Error(errors.join('\n'));console.log('Shared header quality and all three renderers passed');
 }finally{ws?.close();chrome.kill();await new Promise(r=>chrome.once('exit',r));await rm(profile,{recursive:true,force:true})}

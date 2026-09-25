@@ -1,6 +1,6 @@
 # Sleep apnea experiment
 
-Use **Performance** at the top to choose Auto, Low-power, Balanced or High detail. The choice is saved in this browser and shared with the other simulators. Low-power caps 3D rendering at 30FPS with lower resolution; Balanced uses lightweight whole-body geometry with detailed close-ups; High detail loads visible detailed regions. Auto considers device information and sustained frame rate. CAP/ECG/ACC generation, socket acquisition and fusion analysis retain their existing rates.
+Use **Performance** in the shared top navigation to choose Auto, Low-power, Balanced or High detail. The choice is saved in this browser and shared with the other simulators. Low-power caps 3D rendering at 30FPS with lower resolution; Balanced uses lightweight whole-body geometry with detailed close-ups; High detail loads visible detailed regions. Auto considers device information and sustained frame rate. CAP/ECG/ACC generation, socket acquisition and fusion analysis retain their existing rates.
 
 ## Getting started
 

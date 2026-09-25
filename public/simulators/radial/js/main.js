@@ -132,6 +132,8 @@ fillSelect($('armPos'), ARM_POSITIONS);
 fillSelect($('bodyPosture'), BODY_POSTURES);
 $('rhythm').value = 'normal'; $('armPos').value = 'heart_level'; $('bodyPosture').value = 'standing';
 const qualitySelect=$('renderQuality');
+if(window.parent!==window)qualitySelect.parentElement.hidden=true;
+window.addEventListener('message',event=>{if(event.source!==window.parent||event.origin!==location.origin||event.data?.type!=='soma-quality-change'||!['auto','low','balanced','high'].includes(event.data.choice))return;qualitySelect.value=event.data.choice;applyQuality(event.data.choice)});
 const qualityNames=getLanguage()==='en'?{auto:'Auto',low:'Low-power',balanced:'Balanced',high:'High detail'}:{auto:'자동',low:'저사양',balanced:'균형',high:'고화질'};
 for(const option of qualitySelect.options)option.textContent=qualityNames[option.value];
 qualitySelect.parentElement.firstChild.textContent=getLanguage()==='en'?'Performance ':'성능 모드 ';
@@ -148,6 +150,7 @@ setInterval(()=>{
   if(avatar&&tier!=='low'){avatar.view.qualityTier='low';avatar.view.renderer.setPixelRatio(Math.min(devicePixelRatio,qualitySettings.low.dpr));avatar.view.resize();avatar.view.updateLod()}
   if(wristView?.qualityTier!=='low')wristView?.setQuality('auto','low');
  }
+ if(window.parent!==window)window.parent.postMessage({type:'soma-quality-status',tier:wristView?.qualityTier||tier||resolveQuality(qualitySelect.value)},location.origin);
  $('renderQualityStatus').textContent=qualityNames[wristView?.qualityTier||tier||resolveQuality(qualitySelect.value)];
 },1000);
 enhanceAllSelects(); // custom dropdowns (native <select> kept hidden as the data model)
