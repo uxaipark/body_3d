@@ -36,3 +36,11 @@ Apple M4 Pro / macOS arm64 / Chrome 153 headless / ANGLE Metal, 로컬 HTTP, 100
 재현: `node scripts/profiling/body-profile.mjs`. 결과는 Git 제외 경로 `outputs/profiling/body-profile.json`에 저장된다. `POSE_QA=1`을 지정하면 동작 캡처를 만든다. 모델 갱신 후 `npm run build:body-assets`, `npm test`, `npx tsc --noEmit --incremental false`, `npm run build` 순서로 검증한다.
 
 남은 검증은 실제 저사양 랩탑에서 여러 레이어·센서 조합의 장시간 FPS·GPU 비용·발열을 측정하는 것이다. 자동 모드의 선택과 수동 재정의가 가능하며, 현재 수치로 해당 랩탑의 FPS를 보장하지 않는다.
+
+## 수면·손목 화면 확장
+
+수면 상단과 손목 카드 제목줄에 같은 모드 선택을 연결했다. `soma.body.quality` 저장값을 세 화면에서 공유한다. 별도 재생 루프도 공통 렌더 예산을 사용하며, 수면과 손목 아바타는 원래의 신호·자세 계산과 독립적으로 LOD·DPR·FPS를 적용한다. 손목 국소 구조는 유지하고 렌더 해상도·프레임 상한·그림자만 조절한다. 전극 설정·Worker 분석·샘플링 레이트는 변경하지 않았다. 손목 어댑터에서도 GPU 신경 캐시를 렌더 직전에 갱신한다.
+
+실제 로컬 서버 브라우저 검증에서 `.gz` 응답에 Content-Encoding이 있으면 fetch가 이미 압축을 해제하는 문제가 확인되어, 파일의 gzip 헤더 유무를 판별하도록 디코더를 수정했다. 원본 압축/HTTP 해제 응답 모두 테스트한다. 손목 스크롤바의 기존 번역 import 별칭 오류도 함께 보정했다.
+
+151개 테스트, TypeScript, 문서 검사 통과. `node scripts/profiling/simulator-quality-smoke.mjs`는 포트 3000의 로컬 앱에서 수면/손목을 실제 로드하고 세 모드와 저장값·런타임 오류를 검사한다. DPR 2 환경에서 수면 캔버스 CSS 991px의 실제 너비는 저사양 842 / 균형 1139 / 고화질 1486px, 손목 두 3D 캔버스 CSS 504px는 각각 428 / 579 / 756px였다. 이는 해상도 적용 확인이며 FPS 성능 개선율 측정은 아니다.

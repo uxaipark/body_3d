@@ -1,6 +1,7 @@
 
 import {t as translateUI} from '../../public/i18n/locale.js';
-import {bedViewPoint,followBedView} from '../rig-view';
+export {readQualityPreference,resolveQuality,qualitySettings} from '../render-quality';
+import {bedViewPoint,followBedView,updateDeformedBounds} from '../rig-view';
 import * as T from 'three';
 import {AnatomyScene} from '../anatomy';
 import {defaults} from '../physiology';
@@ -40,7 +41,7 @@ export class Avatar {
   v.chair.visible=this.posture==='sitting';v.bedGroup.visible=this.posture==='lying';
   v.uniforms.uBeat.value=pulse?.heart||0;v.uniforms.uCardiacCycles.value=(state?.t||0)*(state?.instantHR||72)/60;v.uniforms.uPulseGain.value=1;
   const orbit=JSON.stringify(this.orbit);if(orbit!==this.lastOrbit){const target=v.controls.target,dist=v.camera.position.distanceTo(target);v.camera.position.set(target.x+dist*Math.sin(this.orbit.phi)*Math.sin(this.orbit.theta),target.y+dist*Math.cos(this.orbit.phi),target.z+dist*Math.sin(this.orbit.phi)*Math.cos(this.orbit.theta));this.lastOrbit=orbit;}
-  v.controls.update();v.renderer.render(v.scene,v.camera);
+  updateDeformedBounds(r.bones,v.bodyBounds);v.renderExternal(performance.now(),dt>0);
  }
  measureWristHeartDelta_cm(){const r=this.view.rig,w=r.bone('hand.r').getWorldPosition(new T.Vector3()),h=r.transform(new T.Vector3(0,1.27,.02));return (h.y-w.y)*100;}
  resize(){this.view.resize();}

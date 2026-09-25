@@ -1,5 +1,7 @@
 # Sleep apnea experiment
 
+Use **Performance** at the top to choose Auto, Low-power, Balanced or High detail. The choice is saved in this browser and shared with the other simulators. Low-power caps 3D rendering at 30FPS with lower resolution; Balanced uses lightweight whole-body geometry with detailed close-ups; High detail loads visible detailed regions. Auto considers device information and sustained frame rate. CAP/ECG/ACC generation, socket acquisition and fusion analysis retain their existing rates.
+
 ## Getting started
 
 Open Sleep apnea immediately after Whole-body twin in the top navigation. The epigastric patch shows three capacitive electrodes (C1–C3), ECG and an accelerometer. Skin and Patch focus controls reveal the exterior and thorax. The view reuses the full-body anatomical meshes.

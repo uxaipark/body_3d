@@ -977,3 +977,5 @@ html:lang(en) .card.wide2.h248 .sub.emg .emg-body canvas { height:180px!importan
 
 /* Hidden state stores; visible selects are always SOMA custom controls. */
 select{display:none}
+
+.wrist-quality{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:11px;flex-wrap:wrap}.wrist-quality .soma-select{min-width:110px}.wrist-quality small{color:var(--muted,#8aa1ac)}.twin-heading{flex-wrap:wrap;gap:10px}

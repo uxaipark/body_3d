@@ -21,7 +21,7 @@ test('wrist acquisition clock uses the whole-body captured stride duration',()=>
 });
 
 test('walking wrist avatar preserves both captured arms and palm orientation across the complete stride',()=>{
- const rig=new HumanRig(),skinRig=new HumanRig(),reference=new HumanRig(),view={rig,skinRig,focus(){},
+ const rig=new HumanRig(),skinRig=new HumanRig(),reference=new HumanRig(),view={rig,skinRig,bodyBounds:new T.Sphere(),renderExternal(){},focus(){},
   uniforms:Object.fromEntries(['uLungInflation','uResp','uBeat','uCardiacCycles','uPulseGain'].map(k=>[k,{value:0}])),
   softBody:{update(){}},chair:{},bedGroup:{},controls:{update(){}},renderer:{render(){}}};
  const avatar=Object.create(Avatar.prototype);Object.assign(avatar,{view,lastTime:0,orbit:{},lastOrbit:'{}'});avatar.setBodyPosture('walking');
@@ -45,7 +45,7 @@ test('walking wrist avatar preserves both captured arms and palm orientation acr
 });
 
 test('shipped wrist avatar holds a seated pelvis and bent knees with planted feet, then returns to standing',()=>{
- const rig=new HumanRig(),skinRig=new HumanRig(),view={rig,skinRig,focus(){},
+ const rig=new HumanRig(),skinRig=new HumanRig(),view={rig,skinRig,bodyBounds:new T.Sphere(),renderExternal(){},focus(){},
   uniforms:Object.fromEntries(['uLungInflation','uResp','uBeat','uCardiacCycles','uPulseGain'].map(k=>[k,{value:0}])),
   softBody:{update(){}},chair:{visible:false},bedGroup:{visible:false},controls:{update(){}},renderer:{render(){}}};
  const avatar=Object.create(Avatar.prototype);Object.assign(avatar,{view,lastTime:0,orbit:{},lastOrbit:'{}'});

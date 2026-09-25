@@ -4,7 +4,8 @@ import {arteryTether} from './arteryDeformation.js';
 import {atlasArteryAt} from './atlasProfile.js';
 import {rotatePatchPoint,patchAlongHalf,normalizePatchAngle} from './patchGeometry.js';
 import {wristDragMode,axialRotationSign,dragWristCamera} from './viewInteraction.js';
-import {makeWristSection} from '../bridge/soma-bridge.js';
+import {makeWristSection,readQualityPreference,resolveQuality,qualitySettings} from '../bridge/soma-bridge.js';
+import {RenderBudget} from '../../../ui/render-budget.js';
 // 3D wrist close-up: forearm/wrist segment, radial artery (pulsating), FCR & palmaris
 // tendons, radius bone, and the flexible electrode sheet with its pads. The sheet can be
 // dragged (left-drag) laterally / along the forearm; the model's coupling changes live.
@@ -47,6 +48,7 @@ function snrColor(db) {
 
 export class WristView {
   constructor(container) {
+    this.qualityChoice=readQualityPreference();this.qualityTier=resolveQuality(this.qualityChoice);this.renderBudget=new RenderBudget();
     this.container = container;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0b1020);
@@ -55,9 +57,9 @@ export class WristView {
     // Initial azimuth chosen so the hand (+X) points to the screen's north-west:
     // screen-x of +X = cos θ < 0 and screen-up of +X = −sin θ·cos φ > 0 → θ ≈ π + atan(1/cos φ).
     this.orbit = { theta: Math.PI + Math.atan(1 / Math.cos(0.75)), phi: 0.75, radius: 0.165, mode: null, lastX: 0, lastY: 0 };
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
-    this.renderer.shadowMap.enabled = true;
+    this.renderer = new THREE.WebGLRenderer({ antialias: this.qualityTier!=='low' });
+    this.renderer.setPixelRatio(Math.min(qualitySettings[this.qualityTier].dpr, window.devicePixelRatio || 1));
+    this.renderer.shadowMap.enabled = this.qualityTier==='high';
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     container.appendChild(this.renderer.domElement);
 
@@ -410,7 +412,14 @@ export class WristView {
 
   // arteryOffset {lateral_mm, depth_mm}; channelNorm Float32Array (0..1 per pad); snrDb number[] (per pad) or null;
   // pulseNorm 0..1 (at the wrist); pulseFn(delay_s) → 0..1 pulse value `delay_s` earlier (for the travelling wave).
-  update(arteryOffset, channelNorm, snrDb, pulseNorm = 0, pulseFn = null, tissue = null) {
+  setQuality(choice,tier=resolveQuality(choice)){
+    this.qualityChoice=choice;this.qualityTier=tier;this.renderBudget.reset();
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio||1,qualitySettings[tier].dpr));this.renderer.shadowMap.enabled=tier==='high';this.resize();
+  }
+  update(arteryOffset, channelNorm, snrDb, pulseNorm = 0, pulseFn = null, tissue = null, active = true) {
+    const budget=this.renderBudget.frame(performance.now(),this.qualityTier,this.qualityChoice,active,document.hidden);
+    if(budget.lower)this.setQuality('auto','low');if(!budget.draw)return;
+    if(this.section){const dpr=Math.min(devicePixelRatio||1,qualitySettings[this.qualityTier].dpr);if(this.section.renderer.getPixelRatio()!==dpr){this.section.renderer.setPixelRatio(dpr);this.section.resize();}}
     const gain=Number(document.getElementById('tissueGain')?.value||1);
     const meter=document.getElementById('tissueReadout');if(meter)meter.textContent=translateUI(`반경 변화 ${((tissue?.radiusDelta_mm||0)*1000).toFixed(1)} µm · 표면 ${Math.max(0,...(tissue?.displacement_mm||[]).map(Math.abs)).toFixed(4)} mm · 표시 ×${gain}`);
     if(this._handModel==='S'||this._handModel==='T'){

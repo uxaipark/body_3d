@@ -1,4 +1,5 @@
 import * as T from 'three';
+import type {QualityChoice} from '../render-quality';
 import {poseSupportedSleep} from './posture';
 import {AnatomyScene} from '../anatomy';
 import {defaults} from '../physiology';
@@ -14,7 +15,7 @@ export class SleepScene{
  dragging:number|null=null;dragOffset={x:0,y:0};controlsEnabled=true;ray=new T.Raycaster();
  constructor(host:HTMLDivElement,progress:(n:number)=>void,private onPosition:(p:PatchPosition,geometry:{electrodes:number[][];up:number[]})=>void=()=>{}){
   this.view=new AnatomyScene(host,{...defaults,motion:'lie'},{skin:10,dermis:0,adipose:0,skeleton:50,muscular:24,cardiovascular:90,nervous:0,visceral:85},{stats:()=>{},pick:()=>{},time:()=>{},site:()=>{},skin:()=>{}});
-  const v=this.view;cancelAnimationFrame(v.frame);v.setComfortMode(true);v.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));v.chair.visible=false;v.bedGroup.visible=true;
+  const v=this.view;cancelAnimationFrame(v.frame);v.setComfortMode(true);v.chair.visible=false;v.bedGroup.visible=true;
   for(const marker of v.markers.values())marker.visible=false;
   const base=new T.Mesh(this.patchBase,new T.MeshStandardMaterial({color:'#cbebe1',transparent:true,opacity:.8,roughness:.65,side:T.DoubleSide}));this.patch.add(base);
   for(let i=0;i<3;i++){const pad=new T.Mesh(new T.CylinderGeometry(.011,.011,.0015,32),new T.MeshStandardMaterial({color:['#f8c86a','#50e6c4','#7baeff'][i],metalness:.45,roughness:.38}));pad.rotation.x=Math.PI/2;pad.position.set((i-1)*.028,0,.0025);this.patch.add(pad);this.attachments.push({mesh:pad,x:(i-1)*.028,y:0,height:.0025,anchors:[]});}
@@ -23,6 +24,8 @@ export class SleepScene{
   v.rig.poseBed(14);v.skinRig.copyPose(v.rig);v.focus('bed');v.controls.target.set(-.15,.6,-.805);v.camera.position.set(1.2,1.8,1.0);v.controls.update();
   v.load(progress).then(()=>{if(this.disposed)return;const skin=v.meshes.find(m=>m.userData.layer==='skin'&&m.geometry.getAttribute('position').count>10000);if(skin){this.surface=new PatchSurface(skin.geometry);this.setPatchPosition(this.position);}}).catch(()=>progress(-1));
  }
+ get qualityTier(){return this.view.qualityTier;}
+ setQuality(choice:QualityChoice){this.view.externalBudget.reset();this.view.setQuality(choice);}
  setLayers(skin:boolean){this.view.setLayers({skin:skin?92:10,dermis:0,adipose:0,skeleton:skin?20:50,muscular:skin?12:24,cardiovascular:90,nervous:0,visceral:85});}
  focus(chest:boolean){const v=this.view;if(chest){const p=this.anchors.length?this.deform(this.attachments[1].anchors[0]):v.rig.transform(new T.Vector3(0,1.24,.07));v.controls.target.copy(p);v.camera.position.copy(p).add(new T.Vector3(.25,.62,.55));}else{v.controls.target.set(-.15,.6,-.805);v.camera.position.set(1.2,1.8,1.0);}v.controls.update();}
  update(dt:number,target:number,volume:number,effort:number,heart:number){
@@ -32,7 +35,7 @@ export class SleepScene{
   v.skinRig.copyPose(r);updateDeformedBounds(r.bones,v.bodyBounds);v.bedGroup.position.set(bedPlacement.x,0,bedPlacement.z);v.bedLoad.value=1;
   v.uniforms.uLungInflation.value=Math.min(.85,volume);v.uniforms.uResp.value=effort*2-1;v.softBody.update(dt,effort,500);v.uniforms.uCardiacCycles.value=heart;v.uniforms.uBeat.value=Math.exp(-(((heart%1-.12)/.09)**2));
   this.updatePatch();
-  v.controls.update();v.renderer.render(v.scene,v.camera);
+  v.renderExternal(performance.now(),dt>0);
  }
  setPatchEditing(editing:boolean){this.editing=editing;if(!editing)this.endDrag();this.view.renderer.domElement.style.cursor=editing?'crosshair':'';}
  setPatchPosition(position:PatchPosition){

@@ -1,5 +1,5 @@
 
-import {html,t} from '../../../i18n/locale.js';
+import {html as localizeHTML,t as translateUI} from '../../../i18n/locale.js';
 // Custom vertical scrollbars for the two scrolling columns (left controls / right charts).
 //  • The native scrollbar of each column is hidden; a thick track (.vsb) is drawn next to it.
 //  • Every top-level card/panel in the column gets a small shortcut icon on the track at the position

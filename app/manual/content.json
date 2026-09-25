@@ -344,6 +344,10 @@
     "title": "수면무호흡 실험",
     "blocks": [
       {
+        "type": "paragraph",
+        "text": "상단 **성능 모드**에서 자동·저사양·균형·고화질을 선택합니다. 전신 트윈과 선택값을 공유하며 브라우저에 저장합니다. 저사양은 3D 최대 30FPS와 낮은 해상도, 균형은 전신 경량 모델과 확대 영역 정밀 모델, 고화질은 보이는 정밀 모델을 사용합니다. 자동은 기기 사양과 재생 중 프레임 속도로 판단합니다. CAP·ECG·ACC 생성 및 소켓 입력·융합 분석 주기는 성능 모드에 따라 바뀌지 않습니다."
+      },
+      {
         "type": "heading",
         "text": "시작하기"
       },
@@ -499,6 +503,10 @@
     "en": {
       "title": "Sleep apnea experiment",
       "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Use **Performance** at the top to choose Auto, Low-power, Balanced or High detail. The choice is saved in this browser and shared with the other simulators. Low-power caps 3D rendering at 30FPS with lower resolution; Balanced uses lightweight whole-body geometry with detailed close-ups; High detail loads visible detailed regions. Auto considers device information and sustained frame rate. CAP/ECG/ACC generation, socket acquisition and fusion analysis retain their existing rates."
+        },
         {
           "type": "heading",
           "text": "Getting started"
@@ -660,6 +668,10 @@
     "blocks": [
       {
         "type": "paragraph",
+        "text": "Radial Artery Digital Twin 카드 맨 위의 **성능 모드**에서 자동·저사양·균형·고화질을 선택합니다. 카드를 접어도 선택기는 남습니다. 전신·수면 화면과 선택값을 공유하며 브라우저에 저장합니다. 아바타에는 전신과 같은 정밀도 전환을 적용하고, 손목·피부 단면에는 해상도와 30/60FPS 상한을 적용합니다. 손목의 세부 해부학 구조는 유지합니다. 고화질에서는 손목 그림자도 켭니다. 자동은 기기 사양과 재생 성능에 따라 낮춥니다. 신호 생성·수집·혈압 추정 설정은 바뀌지 않습니다."
+      },
+      {
+        "type": "paragraph",
         "text": "갱신: 2026-09-13. Radial Artery Digital Twin 개요의 접기 버튼으로 아래 실험 공간을 넓힐 수 있습니다."
       },
       {
@@ -731,6 +743,10 @@
     "en": {
       "title": "Wrist Sensing",
       "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Use **Performance** at the top of the Radial Artery Digital Twin card to choose Auto, Low-power, Balanced or High detail. It remains visible when the card is collapsed. The saved browser preference is shared with the other simulators. The avatar uses the whole-body detail modes; wrist and skin sections use the corresponding resolution and 30/60FPS caps while retaining detailed anatomy. High detail also enables wrist shadows. Auto considers hardware and sustained rendering performance. Signal generation, acquisition and blood-pressure estimation settings are unchanged."
+        },
         {
           "type": "paragraph",
           "text": "Collapse the Radial Artery Digital Twin overview to free space for the experiment below."

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {gunzipSync} from 'node:zlib';
 import {decodeBodyGeometry} from '../lib/body-packed.ts';
 import {chooseInitialQuality,readQualityPreference,qualitySettings} from '../lib/render-quality.ts';
 import {waveformSample} from '../lib/wave-sample-cache.ts';
@@ -27,6 +28,9 @@ test('shipped LOD assets retain attachment attributes and valid pick ranges',asy
  assert.equal(manifest.source,await bodySourceHash());
  const load=async file=>{const bytes=await readFile('public/models/body/'+file);return decodeBodyGeometry(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength))};
  const skin=await load(manifest.parts.find(p=>p.layer==='skin').file),skinCount=skin.getAttribute('position').count;
+ const raw=gunzipSync(await readFile('public/models/body/'+manifest.parts.find(p=>p.layer==='skin').file));
+ const decoded=await decodeBodyGeometry(raw.buffer.slice(raw.byteOffset,raw.byteOffset+raw.byteLength));
+ assert.deepEqual(decoded.getAttribute('position').array,skin.getAttribute('position').array);decoded.dispose();
  let low=0,high=0;
  for(const part of manifest.parts){
   low+=part.triangles;high+=part.detailTriangles??part.triangles;

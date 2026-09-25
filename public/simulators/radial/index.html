@@ -20,7 +20,7 @@
 <style>.soma-load{position:absolute;bottom:15px;left:15px;color:#aadac8;font:12px sans-serif}#wrist3d{position:relative}#tissueGain,#tissueFat{width:90px}.wf-row{flex-wrap:wrap}#tissueReadout{width:100%}</style></head>
 <body>
 <header id="twinHeader">
-  <div class="twin-heading"><h1>Radial Artery Digital Twin</h1><button id="twinHeaderToggle" type="button" aria-expanded="true" aria-controls="twinDescription twinMetrics">접기 ▴</button></div>
+  <div class="twin-heading"><h1>Radial Artery Digital Twin</h1><label class="wrist-quality">성능 모드 <select id="renderQuality" aria-label="렌더링 품질"><option value="auto">자동</option><option value="low">저사양</option><option value="balanced">균형</option><option value="high">고화질</option></select><small id="renderQualityStatus" aria-live="polite"></small></label><button id="twinHeaderToggle" type="button" aria-expanded="true" aria-controls="twinDescription twinMetrics">접기 ▴</button></div>
   <div class="brand" id="twinDescription">
     <p>심장 → 어깨 → 팔 → 손목 → 손바닥 → 손가락 동맥/정맥 · 맥파 · EMG · 정전용량 어레이 · PPG/SpO₂ · IMU · 16 kHz</p>
     <p class="sim-banner" title="이 화면의 모든 수치·파형은 파라메트릭 시뮬레이션이며, 추정기는 시뮬레이터의 생성 관계를 역산합니다(모델 일치 상한). 임상 측정·검증 데이터가 아닙니다.">⚠ 시뮬레이션 값 — 임상 검증 아님</p>

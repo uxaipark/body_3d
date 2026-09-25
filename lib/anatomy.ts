@@ -6,6 +6,7 @@ import {connectVesselJunctions,bakeAnatomyTransform,type VesselPart} from './ves
 import {refineFlexibleTissue} from './flexible-tissue';
 import {updateDeformedBounds,bedViewPoint,followBedView} from './rig-view';
 import * as THREE from 'three';
+import {RenderBudget} from '../public/ui/render-budget.js';
 import {chair} from './chair.js';
 import {applyComfortMask,comfortRegion} from './comfort';
 import {bed,bedShader,bedPlacement} from './bed.js';
@@ -260,6 +261,16 @@ export class AnatomyScene{
   const hit=this.raycaster.intersectObject(mesh,false)[0];let result:[number,number,number]|null=null;
   if(hit?.face){const {a,b,c}=hit.face,local=mesh.worldToLocal(hit.point.clone()),bary=THREE.Triangle.getBarycoord(local,new THREE.Vector3().fromBufferAttribute(position,a),new THREE.Vector3().fromBufferAttribute(position,b),new THREE.Vector3().fromBufferAttribute(position,c),new THREE.Vector3());if(bary){const point=new THREE.Vector3().fromBufferAttribute(original,a).multiplyScalar(bary.x).addScaledVector(new THREE.Vector3().fromBufferAttribute(original,b),bary.y).addScaledVector(new THREE.Vector3().fromBufferAttribute(original,c),bary.z);result=point.toArray() as [number,number,number];}}
   geometry.dispose();material.dispose();return result&&this.comfortMode&&comfortRegion(...result)?null:result;
+ }
+ externalBudget=new RenderBudget();
+ renderExternal(now=performance.now(),active=true){
+  const budget=this.externalBudget.frame(now,this.qualityTier,this.qualityChoice,active&&this.ready,document.hidden);
+  if(budget.lower){this.qualityTier='low';this.renderer.setPixelRatio(Math.min(devicePixelRatio,qualitySettings.low.dpr));this.resize();}
+  if(!budget.draw)return;
+  this.controls.update();
+  if(now-this.lastLod>500){this.lastLod=now;this.updateLod()}
+  if(this.nerveCache&&this.useNerveCache&&this.meshes.some(m=>m.visible&&m.userData.layer==='nervous'))this.nerveCache.update(this.renderer);
+  this.renderer.render(this.scene,this.camera);this.dirty=false;
  }
  previousRunning=true;
  animate=(now:number)=>{if(this.disposed)return;this.frame=requestAnimationFrame(this.animate);

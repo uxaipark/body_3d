@@ -1,3 +1,4 @@
+import {readQualityPreference,resolveQuality,qualitySettings} from '../bridge/soma-bridge.js';
 import {getLanguage,localizeDOM} from '../../../i18n/locale.js';
 document.documentElement.lang=getLanguage();
 localizeDOM(document.body);
@@ -130,6 +131,25 @@ fillSelect($('rhythm'), RHYTHMS);
 fillSelect($('armPos'), ARM_POSITIONS);
 fillSelect($('bodyPosture'), BODY_POSTURES);
 $('rhythm').value = 'normal'; $('armPos').value = 'heart_level'; $('bodyPosture').value = 'standing';
+const qualitySelect=$('renderQuality');
+const qualityNames=getLanguage()==='en'?{auto:'Auto',low:'Low-power',balanced:'Balanced',high:'High detail'}:{auto:'자동',low:'저사양',balanced:'균형',high:'고화질'};
+for(const option of qualitySelect.options)option.textContent=qualityNames[option.value];
+qualitySelect.parentElement.firstChild.textContent=getLanguage()==='en'?'Performance ':'성능 모드 ';
+qualitySelect.setAttribute('aria-label',getLanguage()==='en'?'Rendering quality':'렌더링 품질');
+function applyQuality(choice){
+ avatar?.view.setQuality(choice);avatar?.view.externalBudget.reset();
+ wristView?.setQuality(choice);
+}
+qualitySelect.value=readQualityPreference();applyQuality(qualitySelect.value);
+qualitySelect.addEventListener('change',()=>{try{localStorage.setItem('soma.body.quality',qualitySelect.value)}catch{}applyQuality(qualitySelect.value)});
+setInterval(()=>{
+ const tier=avatar?.view.qualityTier;
+ if(qualitySelect.value==='auto'&&(tier==='low'||wristView?.qualityTier==='low')){
+  if(avatar&&tier!=='low'){avatar.view.qualityTier='low';avatar.view.renderer.setPixelRatio(Math.min(devicePixelRatio,qualitySettings.low.dpr));avatar.view.resize();avatar.view.updateLod()}
+  if(wristView?.qualityTier!=='low')wristView?.setQuality('auto','low');
+ }
+ $('renderQualityStatus').textContent=qualityNames[wristView?.qualityTier||tier||resolveQuality(qualitySelect.value)];
+},1000);
 enhanceAllSelects(); // custom dropdowns (native <select> kept hidden as the data model)
 const menubar = initMenubar({ actions: {
   // 시뮬레이션 설정 프리셋 (js/simPresets.js) — 저장 / 불러오기 / 삭제 / 기본값 초기화
@@ -1221,7 +1241,7 @@ function loopBody(ts) {
     // Pulse value `d` seconds before "now" at the proximal end of the shown wrist segment
     const arrival = (L.radialPulseDelay_ms || 0) / 1000, pp = Math.max(1, engine.cardiac.sbp - engine.cardiac.dbp);
     const pulseFn = (d) => (engine.cardiac.pressureAt(engine.t - arrival - d) - engine.cardiac.dbp) / pp;
-    wristView.update(L.arteryOffset, chNorm, lastAnalysis ? lastAnalysis.trueSnr_db : null, sitePulse.radial, pulseFn, L.tissue);
+    wristView.update(L.arteryOffset, chNorm, lastAnalysis ? lastAnalysis.trueSnr_db : null, sitePulse.radial, pulseFn, L.tissue, !paused);
   }
 
   // Charts (throttle heavier draws to every other frame)
